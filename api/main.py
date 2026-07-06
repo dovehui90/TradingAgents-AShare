@@ -3288,6 +3288,20 @@ def get_kline(
         stock_name = quote.get("name")
     except Exception:
         pass
+    # 记录K线查询日志
+    try:
+        with get_db_ctx() as db:
+            db.add(UserQueryLogDB(
+                id=uuid4().hex,
+                user_id=None,
+                email=None,
+                endpoint="/v1/market/kline",
+                query_text=f"K线查询: {symbol} ({period})",
+                symbol=symbol,
+            ))
+            db.commit()
+    except Exception:
+        pass
     return KlineResponse(
         symbol=symbol,
         name=stock_name,
