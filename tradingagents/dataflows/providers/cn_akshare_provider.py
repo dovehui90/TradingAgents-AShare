@@ -1027,7 +1027,7 @@ class CnAkshareProvider(BaseMarketDataProvider):
             return f"涨停板情绪池数据获取失败：{type(exc).__name__}: {exc}"
 
     def get_hot_stocks_xq(self) -> str:
-        """获取雪球热搜股票，反映散户关注度。"""
+        """获取东财热门股票排行，反映市场关注度。"""
         try:
             ak = self._ak()
             with AKSHARE_CALL_LOCK:
