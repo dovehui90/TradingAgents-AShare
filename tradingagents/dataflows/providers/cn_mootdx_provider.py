@@ -341,46 +341,58 @@ class CnMootdxProvider(BaseMarketDataProvider):
 
     def get_f10_detail(self, symbol: str, category: int = 0) -> str:
         """F10 公司资料，category: 0=最新提示 1=公司概况 2=财务分析 3=股东研究
-        4=主力追踪 5=行业分析 6=公司大事 7=经营分析 8=分红融资。"""
+        4=主力追踪 5=行业分析 6=公司大事 7=经营分析 8=分红融资。
+        云服务器无通达信数据时自动回退到 cninfo 公司概况。"""
         code = self._normalize_symbol(symbol)
+        f10_data = None
+
         try:
             from mootdx.reader import Reader
         except ImportError:
-            return f"F10 数据不可用（mootdx Reader 未安装）。"
-        import os
-        import tempfile
+            f10_data = None
+        else:
+            import os
+            import tempfile
 
-        # 尝试常见通达信数据目录，都找不到则创建临时目录（无本地数据返回空）
-        tdx_candidates = [
-            os.path.expanduser("~/.mootdx"),
-            os.path.expanduser("~/tdx"),
-            "C:\\new_tdx",
-            "D:\\tdx",
-            "/opt/tdx",
-        ]
-        tdxdir = None
-        for d in tdx_candidates:
-            if os.path.isdir(d):
-                tdxdir = d
-                break
-        if tdxdir is None:
-            tdxdir = tempfile.mkdtemp(prefix="mootdx_")
+            tdx_candidates = [
+                os.path.expanduser("~/.mootdx"),
+                os.path.expanduser("~/tdx"),
+                "C:\\new_tdx",
+                "D:\\tdx",
+                "/opt/tdx",
+            ]
+            tdxdir = None
+            for d in tdx_candidates:
+                if os.path.isdir(d):
+                    tdxdir = d
+                    break
+            if tdxdir is None:
+                tdxdir = tempfile.mkdtemp(prefix="mootdx_")
 
+            try:
+                reader = Reader.factory(market="std", tdxdir=tdxdir)
+                f10_data = reader.F10(code, category)
+            except Exception:
+                f10_data = None
+
+        if f10_data:
+            cat_names = {
+                0: "最新提示", 1: "公司概况", 2: "财务分析", 3: "股东研究",
+                4: "主力追踪", 5: "行业分析", 6: "公司大事", 7: "经营分析", 8: "分红融资",
+            }
+            cat_label = cat_names.get(category, f"Category {category}")
+            return f"## F10 {cat_label} ({symbol})\n\n{str(f10_data)}"
+
+        # 回退：用 cninfo 公司概况替代（更全面且不依赖本地数据）
         try:
-            reader = Reader.factory(market="std", tdxdir=tdxdir)
-            result = reader.F10(code, category)
+            import akshare as ak
+            df = ak.stock_profile_cninfo(symbol=self._normalize_symbol(symbol))
+            if df is not None and not df.empty:
+                return f"## F10 公司概况（cninfo，通达信本地数据不可用）\n\n{df.T.to_string(header=False)}"
         except Exception:
-            return f"F10 category {category} data empty for {symbol}"
+            pass
 
-        if not result:
-            return f"F10 category {category} data empty for {symbol}"
-
-        cat_names = {
-            0: "最新提示", 1: "公司概况", 2: "财务分析", 3: "股东研究",
-            4: "主力追踪", 5: "行业分析", 6: "公司大事", 7: "经营分析", 8: "分红融资",
-        }
-        cat_label = cat_names.get(category, f"Category {category}")
-        return f"## F10 {cat_label} ({symbol})\n\n{str(result)}"
+        return f"F10 公司资料暂不可用（{symbol}）。"
 
     def get_level2_quotes(self, symbol: str, date: str = None) -> str:
         """逐笔成交数据（非交易时间返回空）。"""
