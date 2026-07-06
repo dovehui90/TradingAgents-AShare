@@ -186,37 +186,38 @@ def _extract_price_regex(text: Optional[str], price_type: str = "target") -> Opt
     if price_type == "target":
         patterns = [
             # 看空/看跌方向目标（优先：更精确的方向性目标）
-            r'下行目标[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'下跌目标[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'downside\s+target[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'下行目标[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'下跌目标[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'downside\s+target[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             # 看多方向目标
-            r'上方目标[^：:\n]{0,20}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'upside\s+target[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'上方目标[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'upside\s+target[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             # 通用目标价（排除减仓目标价——那是反弹逃逸价，不是预测目标）
-            r'(?<!减仓)目标[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'(?<!减仓)target[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            # .*? 允许表格格式中分隔符和价格之间有较长描述文字（如 |目标价| ...设定为13.00元|）
+            r'(?<!减仓)目标[^：:\|\n]{0,30}[：:\|].*?(\d+\.?\d+)\s*元',
+            r'(?<!减仓)target[^：:\|\n]{0,30}[：:\|].*?(\d+\.?\d+)\s*元',
             # 英文变体
-            r'price\s+target[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'price\s+objective[^：:\n]{0,15}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'support\s+level[^：:\n]{0,10}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'resistance\s+level[^：:\n]{0,10}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'price\s+target[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'price\s+objective[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'support\s+level[^：:\n]{0,10}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'resistance\s+level[^：:\n]{0,10}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             # 关键价位/阻力位/压力位 可作为目标价参考
-            r'关键[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'阻力位[^：:\n]{0,20}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'压力位[^：:\n]{0,20}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'关键[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'阻力位[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'压力位[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             # 突破做多 + 紧邻价格（限10字符内，避免跨句误匹配止损价）
             r'突破做多[^，。,.\n]{0,10}?(\d+\.?\d+)\s*元',
             # 入场区间取上限作为目标参考
-            r'入场区间[：:]\s*[¥$]?\s*(\d+\.?\d+)\s*[–\-—至~]\s*\d+\.?\d+',
+            r'入场区间[：:\|]\s*[¥$]?\s*(\d+\.?\d+)\s*[–\-—至~]\s*\d+\.?\d+',
             # 看空/看跌方向
-            r'下[行看跌][^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
-            r'看[空跌][^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'下[行看跌][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'看[空跌][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
         ]
     else:
         patterns = [
-            r'止损[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d*)',
-            r'stop[-\s_]?loss[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d*)',
-            r'硬止损[^：:\n]{0,30}[：:]\s*[¥$]?\s*(\d+\.?\d*)',
+            r'止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            r'stop[-\s_]?loss[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            r'硬止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
         ]
     for p in patterns:
         m = re.search(p, clean, re.IGNORECASE)
@@ -280,18 +281,22 @@ def resolve_report_fields(
 
     # 后置校验：从报告中提取当前价，验证目标价与决策方向是否一致
     if target_price is not None and market_report:
-        # 尝试从市场报告中提取最新收盘价/当前价
         current_m = re.search(r'(?:当前价|最新价|现价|收盘价|close)[^\d]*(\d+\.?\d+)', str(market_report), re.IGNORECASE)
         if current_m:
             current = float(current_m.group(1))
             is_bearish = direction and direction.upper() in ("SELL", "BEARISH", "看空", "看跌", "减持")
             is_bullish = direction and direction.upper() in ("BUY", "BULLISH", "看多", "看涨", "增持")
             if is_bearish and target_price > current:
-                logger.info(f"Target {target_price} > current {current} for bearish {direction}, discarding")
+                logger.info(f"Target {target_price} > current {current} for bearish {direction}, discarding LLM extraction")
                 target_price = None
             if is_bullish and target_price < current:
-                logger.info(f"Target {target_price} < current {current} for bullish {direction}, discarding")
+                logger.info(f"Target {target_price} < current {current} for bullish {direction}, discarding LLM extraction")
                 target_price = None
+    # LLM提取被丢弃时，回退到regex重提取
+    if target_price is None and target_price_override is not None:
+        target_price = _extract_price_regex(final_trade_decision, "target")
+        if target_price is None:
+            target_price = _extract_price_regex(trader_investment_plan, "target")
 
     stop_loss_price = stop_loss_override if stop_loss_override is not None else _extract_price_regex(final_trade_decision, "stop_loss")
     if stop_loss_price is None:
