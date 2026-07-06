@@ -961,6 +961,26 @@ class CnAkshareProvider(BaseMarketDataProvider):
         except Exception as exc:
             return f"板块资金流向数据获取失败：{type(exc).__name__}: {exc}"
 
+    def get_concept_fund_flow(self) -> str:
+        """获取概念板块资金流向排名。"""
+        try:
+            ak = self._ak()
+            with AKSHARE_CALL_LOCK:
+                df = ak.stock_fund_flow_concept()
+            if df is None or df.empty:
+                return "今日概念板块资金流向数据暂不可用。"
+            sort_col = "净额"
+            if sort_col in df.columns:
+                df_sorted = df.sort_values(sort_col, ascending=False).reset_index(drop=True)
+            else:
+                df_sorted = df.reset_index(drop=True)
+            df_sorted.insert(0, "排名", range(1, len(df_sorted) + 1))
+            total = len(df_sorted)
+            result = df_sorted.head(10).to_string(index=False)
+            return f"概念板块资金流向排名（共{total}个概念，前10名）：\n{result}"
+        except Exception as exc:
+            return f"概念板块资金流向数据获取失败：{type(exc).__name__}: {exc}"
+
     def get_individual_fund_flow(self, symbol: str) -> str:
         """获取个股近期主力资金净流向。"""
         try:

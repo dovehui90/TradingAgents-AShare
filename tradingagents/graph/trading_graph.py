@@ -35,6 +35,7 @@ from tradingagents.agents.utils.agent_utils import (
     get_insider_transactions,
     get_global_news,
     get_board_fund_flow,
+    get_concept_fund_flow,
     get_individual_fund_flow,
     get_lhb_detail,
 )
@@ -218,6 +219,7 @@ class TradingAgentsGraph:
                 [
                     # Macro analyst tools
                     get_board_fund_flow,
+                    get_concept_fund_flow,
                     get_news,
                 ]
             ),

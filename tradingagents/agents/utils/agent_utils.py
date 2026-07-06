@@ -20,6 +20,7 @@ from tradingagents.agents.utils.news_data_tools import (
 )
 from tradingagents.agents.utils.game_theory_tools import (
     get_board_fund_flow,
+    get_concept_fund_flow,
     get_individual_fund_flow,
     get_lhb_detail,
     get_zt_pool,

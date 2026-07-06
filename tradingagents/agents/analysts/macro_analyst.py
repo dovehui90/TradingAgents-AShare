@@ -31,12 +31,13 @@ def create_macro_analyst(llm, data_collector=None):
 
         if pool is not None:
             board_flow = pool.get("fund_flow_board", "无数据")
+            concept_fund_flow = pool.get("fund_flow_concept", "无数据")
             recent_news = pool.get("news", "无数据")
             concept_board = pool.get("concept_board", "无数据")
             concept_resonance_text = pool.get("concept_resonance_text", "")
         else:
             from datetime import datetime, timedelta
-            from tradingagents.agents.utils.agent_utils import get_board_fund_flow, get_news, get_concept_board
+            from tradingagents.agents.utils.agent_utils import get_board_fund_flow, get_concept_fund_flow, get_news, get_concept_board
             days = 7
             end_dt = datetime.strptime(current_date, "%Y-%m-%d")
             start_dt = end_dt - timedelta(days=days)
@@ -44,12 +45,13 @@ def create_macro_analyst(llm, data_collector=None):
             # Parallelize fallback fetches
             results = await asyncio.gather(
                 _safe(get_board_fund_flow, {}),
+                _safe(get_concept_fund_flow, {}),
                 _safe(get_news, {
                     "ticker": ticker, "start_date": start_dt.strftime("%Y-%m-%d"), "end_date": current_date,
                 }),
                 _safe(get_concept_board, {"symbol": ticker}),
             )
-            board_flow, recent_news, concept_board = results
+            board_flow, concept_fund_flow, recent_news, concept_board = results
             concept_resonance_text = ""
 
         resonance_block = ""
@@ -65,6 +67,7 @@ def create_macro_analyst(llm, data_collector=None):
                 horizon_ctx + "\n"
                 f"请分析 {ticker} 在 {current_date} 的宏观与板块环境。\n\n"
                 f"【今日行业板块资金流向】\n{board_flow}\n\n"
+                f"【今日概念板块资金流向】\n{concept_fund_flow}\n\n"
                 f"【个股概念板块归属】\n{concept_board}\n\n"
                 f"【近期相关新闻】\n{recent_news}"
                 + resonance_block

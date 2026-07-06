@@ -57,6 +57,7 @@ TOOLS_CATEGORIES = {
         "description": "China A-share market sentiment and fund flow data",
         "tools": [
             "get_board_fund_flow",
+            "get_concept_fund_flow",
             "get_individual_fund_flow",
             "get_lhb_detail",
             "get_zt_pool",

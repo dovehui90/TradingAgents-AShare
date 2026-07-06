@@ -10,6 +10,12 @@ def get_board_fund_flow() -> str:
 
 
 @tool
+def get_concept_fund_flow() -> str:
+    """获取今日概念板块资金流向排名，用于判断个股所属概念的资金吸引力和概念轮动方向。"""
+    return route_to_vendor("get_concept_fund_flow")
+
+
+@tool
 def get_individual_fund_flow(
     symbol: Annotated[str, "股票代码，格式如 600519.SH"],
 ) -> str:
