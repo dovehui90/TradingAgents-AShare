@@ -3179,9 +3179,11 @@ _RESOLVABLE_SYMBOL_RE = re.compile(
 @app.get("/v1/market/kline", response_model=KlineResponse)
 def get_kline(
     symbol: str,
+    request: Request,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     period: Optional[str] = "daily",
+    db: Session = Depends(get_db),
 ) -> KlineResponse:
     period = period if period in _KLINE_PERIOD_MAP else "daily"
     end = end_date or cn_today_str()
@@ -3290,16 +3292,26 @@ def get_kline(
         pass
     # 记录K线查询日志
     try:
-        with get_db_ctx() as db:
-            db.add(UserQueryLogDB(
-                id=uuid4().hex,
-                user_id="anonymous",
-                email=None,
-                endpoint="/v1/market/kline",
-                query_text=f"K线查询: {symbol} ({period})",
-                symbol=symbol,
-            ))
-            db.commit()
+        uid, uemail = "anonymous", None
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            try:
+                from api.services.auth_service import decode_access_token
+                payload = decode_access_token(auth[7:])
+                uid = str(payload.get("sub") or "anonymous")
+                uemail = payload.get("email")
+            except Exception:
+                pass
+        display_name = f"{stock_name} ({symbol})" if stock_name else symbol
+        db.add(UserQueryLogDB(
+            id=uuid4().hex,
+            user_id=uid,
+            email=uemail,
+            endpoint="/v1/market/kline",
+            query_text=f"K线查询: {display_name} ({period})",
+            symbol=symbol,
+        ))
+        db.commit()
     except Exception:
         pass
     return KlineResponse(
@@ -6152,7 +6164,7 @@ class QueryLogResponse(BaseModel):
     symbol: Optional[str] = None
     endpoint: Optional[str] = None
     ip_address: Optional[str] = None
-    created_at: Optional[datetime] = None
+    created_at: Optional[str] = None
 
 
 class QueryLogListResponse(BaseModel):
@@ -6175,7 +6187,7 @@ def admin_get_query_logs(
             id=l.id, user_id=l.user_id, email=l.email,
             query_text=l.query_text, symbol=l.symbol,
             endpoint=l.endpoint, ip_address=l.ip_address,
-            created_at=l.created_at,
+            created_at=(l.created_at + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M") if l.created_at else None,
         ) for l in logs],
         total=total,
     )
