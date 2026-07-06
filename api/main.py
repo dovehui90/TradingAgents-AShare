@@ -353,81 +353,8 @@ app.add_middleware(
 )
 
 # ── 股票查询日志路径 ─────────────────────────────────────────────────────────
-def _write_query_log(
-    user_id: str, email: str, endpoint: str,
-    query_text: str, symbol: str, ip: str,
-) -> None:
-    try:
-        with get_db_ctx() as db:
-            db.add(UserQueryLogDB(
-                id=uuid4().hex,
-                user_id=user_id,
-                email=email or None,
-                endpoint=endpoint,
-                query_text=query_text[:1024] if query_text else None,
-                symbol=symbol[:20] if symbol else None,
-                ip_address=ip or None,
-            ))
-            db.commit()
-    except Exception:
-        pass
-
-
-# 仅对用户主动查询的端点记录日志（排除前端自动轮询）
-_USER_QUERY_PATHS = {
-    "/v1/market/stock-search": "search",   # 股票搜索
-    "/v1/strategy/39rules-decision": "strategy",
-}
-
-def _extract_user_query(request: Request) -> tuple[str, str]:
-    """从请求中提取有意义的查询文本和股票代码。"""
-    path = request.url.path
-    params = request.query_params
-
-    if path == "/v1/market/stock-search":
-        q = params.get("q", "")
-        # 搜索词是用户主动输入的有意义查询
-        return f"搜索: {q}", ""
-
-    if path == "/v1/strategy/39rules-decision":
-        sym = params.get("symbol", "")
-        return f"39规则决策: {sym}", sym
-
-    return str(request.url.query), params.get("symbol") or ""
-
-
-@app.middleware("http")
-async def _log_user_queries(request: Request, call_next):
-    response = await call_next(request)
-    if request.method != "GET":
-        return response
-    if response.status_code < 200 or response.status_code >= 300:
-        return response
-
-    # 只记录用户主动查询的端点，跳过前端自动轮询
-    path = request.url.path
-    if path not in _USER_QUERY_PATHS and not path.startswith("/v1/portfolio/"):
-        return response
-
-    user_id, email = "anonymous", ""
-    try:
-        import jwt as _jwt
-        from api.services.auth_service import decode_access_token
-        auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer "):
-            payload = decode_access_token(auth[7:])
-            user_id = str(payload.get("sub") or "anonymous")
-            email = payload.get("email", "") or ""
-    except Exception:
-        pass
-
-    query_text, symbol = _extract_user_query(request)
-    _write_query_log(
-        user_id=user_id, email=email, endpoint=path,
-        query_text=query_text, symbol=symbol,
-        ip=_get_real_ip(request) or "",
-    )
-    return response
+# 查询日志仅在用户主动触发分析时记录（POST /v1/analyze、/v1/analyze/batch、/v1/chat/completions）
+# 不再通过中间件自动记录 GET 请求，避免前端自动轮询和输入联想产生大量噪音
 
 _executor = ThreadPoolExecutor(max_workers=int(os.getenv("TA_MAX_WORKERS", "2")))
 
