@@ -147,6 +147,13 @@ class CnMootdxProvider(BaseMarketDataProvider):
         if not pd.isna(start_dt) and not pd.isna(end_dt):
             fmt = fmt[(fmt["Date"] >= start_dt) & (fmt["Date"] <= end_dt)]
 
+        if not fmt.empty:
+            latest = fmt["Date"].max()
+            if not pd.isna(end_dt) and latest < end_dt:
+                raise NotImplementedError(
+                    f"cn_mootdx latest date {latest.date()} < {end_dt.date()}, fallback to akshare"
+                )
+
         return self._format_hist_csv(fmt, symbol, start_date, end_date)
 
     def get_indicators(
