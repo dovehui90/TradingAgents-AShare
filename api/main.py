@@ -4891,6 +4891,25 @@ async def analyze_batch(
         failed_count=failed_count,
     )
 
+    # 记录批量分析日志
+    try:
+        names = [f"{code_to_name.get(s, s)} ({s})" for s in symbols[:5]]
+        display = "、".join(names)
+        if len(symbols) > 5:
+            display += f" 等{len(symbols)}只"
+        with get_db_ctx() as db:
+            db.add(UserQueryLogDB(
+                id=uuid4().hex,
+                user_id=current_user.id,
+                email=current_user.email,
+                endpoint="/v1/analyze/batch",
+                query_text=f"批量分析: {display}",
+                symbol=",".join(symbols[:10]),
+            ))
+            db.commit()
+    except Exception:
+        pass
+
     return BatchAnalyzeResponse(
         batch_id=batch_id,
         jobs=[BatchAnalyzeJobItem(**j) for j in jobs],
