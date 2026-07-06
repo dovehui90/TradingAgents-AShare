@@ -13,6 +13,23 @@ from ..trade_calendar import cn_market_phase, cn_no_data_reason, cn_today_str, i
 
 logger = _logging.getLogger(__name__)
 
+# 股票代码→名称缓存（避免重复加载全量股票列表）
+_stock_name_cache: dict = {}
+
+
+def _get_stock_name(code: str) -> str:
+    """获取股票名称，带缓存。"""
+    if code in _stock_name_cache:
+        return _stock_name_cache[code]
+    try:
+        import akshare as _ak
+        df = _ak.stock_info_a_code_name()
+        for _, row in df.iterrows():
+            _stock_name_cache[str(row["code"])] = str(row["name"])
+    except Exception:
+        pass
+    return _stock_name_cache.get(code, "")
+
 
 # ── akshare 并发控制 ──
 # 总并发上限 5（防反爬 + akshare 全局状态安全）
@@ -641,6 +658,24 @@ class CnAkshareProvider(BaseMarketDataProvider):
                 if df.empty:
                     return f"No news found for {ticker} between {start_date} and {end_date}"
 
+                # 过滤：排除指数代码误匹配（如 000815.CSI vs 000815.SZ）
+                stock_name = _get_stock_name(code)
+
+                def _is_index_mislabel(row) -> bool:
+                    title = str(row.get("新闻标题", row.get("标题", "")))
+                    content = str(row.get("新闻内容", row.get("内容", "")))
+                    text = title + content
+                    # 1. 显式指数代码（.CSI后缀）
+                    if re.search(rf"\b{re.escape(code)}\.CSI\b", text):
+                        return True
+                    # 2. 标题含"指数"但未提及股票名（隐式指数文章）
+                    if stock_name and "指数" in title and stock_name not in title and stock_name not in content:
+                        return True
+                    return False
+
+                original = len(df)
+                df = df[~df.apply(_is_index_mislabel, axis=1)]
+
                 rows = []
                 for _, row in df.head(20).iterrows():
                     title = str(row.get("新闻标题", row.get("标题", "No title")))
@@ -654,7 +689,10 @@ class CnAkshareProvider(BaseMarketDataProvider):
                         rows.append(f"Link: {link}")
                     rows.append("")
 
-                return f"## {ticker} 新闻（{start_date} 至 {end_date}）：\n\n" + "\n".join(rows)
+                filtered_note = ""
+                if len(df) < original:
+                    filtered_note = f"（已过滤 {original - len(df)} 条指数代码误匹配新闻）"
+                return f"## {ticker} 新闻（{start_date} 至 {end_date}）{filtered_note}：\n\n" + "\n".join(rows)
             except Exception as exc:
                 raise NotImplementedError(
                     f"cn_akshare is temporarily unavailable for news: {exc}"
