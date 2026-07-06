@@ -290,9 +290,9 @@ export default function Analysis() {
 
             <RadarPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('radar', c)} onSyncNow={syncNow} />
 
-            <VolumeWashPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('volumeWash', c)} onSyncNow={syncNow} />
-
             <TrendStrengthPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('trendStrength', c)} onSyncNow={syncNow} />
+
+            <VolumeWashPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('volumeWash', c)} onSyncNow={syncNow} />
 
             {/* <FundFlowPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('fundFlow', c)} onSyncNow={syncNow} /> */}
 
