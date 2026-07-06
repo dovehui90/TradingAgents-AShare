@@ -3293,7 +3293,7 @@ def get_kline(
         with get_db_ctx() as db:
             db.add(UserQueryLogDB(
                 id=uuid4().hex,
-                user_id=None,
+                user_id="anonymous",
                 email=None,
                 endpoint="/v1/market/kline",
                 query_text=f"K线查询: {symbol} ({period})",
