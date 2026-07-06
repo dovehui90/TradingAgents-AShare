@@ -97,6 +97,7 @@ class StructuredReport(BaseModel):
 def extract_structured_data(
     final_trade_decision: str,
     fundamentals_report: str = "",
+    current_price: Optional[float] = None,
     config: Optional[Dict[str, Any]] = None,
 ) -> Optional[StructuredReport]:
     """Use LLM structured output to extract key data from report text."""
@@ -118,10 +119,19 @@ def extract_structured_data(
         )
         llm = client.get_llm()
 
+        price_hint = ""
+        if current_price and current_price > 0:
+            price_hint = (
+                f"\n**重要：当前股价为 {current_price:.2f} 元。**"
+                f"若方向偏多，target_price 应高于当前价；若方向偏空，target_price 应低于当前价。"
+                f"若报告中目标价与当前价关系矛盾（如看空但目标>当前价），target_price 设为 null。"
+            )
+
         prompt = (
             "请从以下投资分析报告中提取结构化信息，并以 JSON 格式返回。\n\n"
             f"【最终交易决策】\n{final_trade_decision[:3000]}\n\n"
-            f"【基本面报告摘要】\n{fundamentals_report[:1000]}\n\n"
+            f"【基本面报告摘要】\n{fundamentals_report[:1000]}\n"
+            f"{price_hint}\n"
             "提取要求（请确保输出为有效的 JSON 对象，不要包裹在 markdown 代码块中）：\n"
             "1. decision：决策方向关键词（BUY/SELL/HOLD 或 增持/减持/持有）\n"
             "2. confidence：整体置信度（0-100整数），若文中未明确给出则根据语气判断\n"
@@ -136,6 +146,17 @@ def extract_structured_data(
         result = StructuredReport(**parsed)
         if result.confidence is not None and not (0 <= result.confidence <= 100):
             result.confidence = None
+        # 后置校验：目标价与决策方向/当前价矛盾时丢弃
+        if result.target_price is not None and current_price and current_price > 0:
+            decision_upper = str(result.decision or "").upper()
+            is_bearish = any(kw in decision_upper for kw in ("SELL", "减持", "看空", "看跌"))
+            is_bullish = any(kw in decision_upper for kw in ("BUY", "增持", "看多", "看涨"))
+            if is_bearish and result.target_price > current_price:
+                logger.info(f"Target price {result.target_price} > current {current_price} for bearish decision, discarding")
+                result.target_price = None
+            if is_bullish and result.target_price < current_price:
+                logger.info(f"Target price {result.target_price} < current {current_price} for bullish decision, discarding")
+                result.target_price = None
         return result
     except Exception as e:
         logger.warning(f"LLM structured extraction failed: {e}")
@@ -253,6 +274,21 @@ def resolve_report_fields(
     target_price = target_price_override if target_price_override is not None else _extract_price_regex(final_trade_decision, "target")
     if target_price is None:
         target_price = _extract_price_regex(trader_investment_plan, "target")
+
+    # 后置校验：从报告中提取当前价，验证目标价与决策方向是否一致
+    if target_price is not None and market_report:
+        # 尝试从市场报告中提取最新收盘价/当前价
+        current_m = re.search(r'(?:当前价|最新价|现价|收盘价|close)[^\d]*(\d+\.?\d+)', str(market_report), re.IGNORECASE)
+        if current_m:
+            current = float(current_m.group(1))
+            is_bearish = direction and direction.upper() in ("SELL", "BEARISH", "看空", "看跌", "减持")
+            is_bullish = direction and direction.upper() in ("BUY", "BULLISH", "看多", "看涨", "增持")
+            if is_bearish and target_price > current:
+                logger.info(f"Target {target_price} > current {current} for bearish {direction}, discarding")
+                target_price = None
+            if is_bullish and target_price < current:
+                logger.info(f"Target {target_price} < current {current} for bullish {direction}, discarding")
+                target_price = None
 
     stop_loss_price = stop_loss_override if stop_loss_override is not None else _extract_price_regex(final_trade_decision, "stop_loss")
     if stop_loss_price is None:
