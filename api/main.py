@@ -3290,30 +3290,32 @@ def get_kline(
         stock_name = quote.get("name")
     except Exception:
         pass
-    # 记录K线查询日志
-    try:
-        uid, uemail = "anonymous", None
-        auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer "):
-            try:
-                from api.services.auth_service import decode_access_token
-                payload = decode_access_token(auth[7:])
-                uid = str(payload.get("sub") or "anonymous")
-                uemail = payload.get("email")
-            except Exception:
-                pass
-        display_name = f"{stock_name} ({symbol})" if stock_name else symbol
-        db.add(UserQueryLogDB(
-            id=uuid4().hex,
-            user_id=uid,
-            email=uemail,
-            endpoint="/v1/market/kline",
-            query_text=f"K线查询: {display_name} ({period})",
-            symbol=symbol,
-        ))
-        db.commit()
-    except Exception:
-        pass
+    # 记录K线查询日志（仅记录用户从搜索框主动查询的K线，跳过分析页/自选页自动加载）
+    referer = request.headers.get("Referer", "")
+    if "/analysis" not in referer and "/portfolio" not in referer and "/reports" not in referer:
+        try:
+            uid, uemail = "anonymous", None
+            auth = request.headers.get("Authorization", "")
+            if auth.startswith("Bearer "):
+                try:
+                    from api.services.auth_service import decode_access_token
+                    payload = decode_access_token(auth[7:])
+                    uid = str(payload.get("sub") or "anonymous")
+                    uemail = payload.get("email")
+                except Exception:
+                    pass
+            display_name = f"{stock_name} ({symbol})" if stock_name else symbol
+            db.add(UserQueryLogDB(
+                id=uuid4().hex,
+                user_id=uid,
+                email=uemail,
+                endpoint="/v1/market/kline",
+                query_text=f"K线查询: {display_name} ({period})",
+                symbol=symbol,
+            ))
+            db.commit()
+        except Exception:
+            pass
     return KlineResponse(
         symbol=symbol,
         name=stock_name,
@@ -4736,12 +4738,19 @@ async def analyze(
     )
     # Log user query
     try:
+        stock_name = ""
+        try:
+            code_to_name = _get_reverse_stock_map()
+            stock_name = code_to_name.get(request.symbol, "")
+        except Exception:
+            pass
+        display = f"{stock_name} ({request.symbol})" if stock_name else request.symbol
         with get_db_ctx() as db:
             db.add(UserQueryLogDB(
                 id=uuid4().hex,
                 user_id=current_user.id,
                 email=current_user.email,
-                query_text=request.symbol,
+                query_text=f"分析报告: {display}",
                 symbol=request.symbol,
             ))
             db.commit()
@@ -5306,12 +5315,20 @@ async def chat_completions(
                 )
                 # Log user query
                 try:
+                    stock_name = ""
+                    try:
+                        code_to_name = _get_reverse_stock_map()
+                        stock_name = code_to_name.get(analyze_req.symbol, "")
+                    except Exception:
+                        pass
+                    display = f"{stock_name} ({analyze_req.symbol})" if stock_name else analyze_req.symbol
+                    prefix = f"分析报告: {display}" if text == display or text == analyze_req.symbol else f"聊天分析: {text} → {display}"
                     with get_db_ctx() as db:
                         db.add(UserQueryLogDB(
                             id=uuid4().hex,
                             user_id=current_user.id,
                             email=current_user.email,
-                            query_text=text,
+                            query_text=prefix,
                             symbol=analyze_req.symbol,
                         ))
                         db.commit()
