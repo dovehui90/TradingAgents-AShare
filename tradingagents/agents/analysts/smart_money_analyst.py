@@ -68,6 +68,8 @@ def create_smart_money_analyst(llm, data_collector=None):
                 _safe(get_individual_fund_flow_120d, {"symbol": ticker}),
             )
             fund_flow, lhb, volume, hsgt_individual, hsgt_flow, block_trades, lhb_inst, lhb_seats, fund_flow_120d = results
+            concept_board = "无数据"
+            concept_fund_flow = "无数据"
 
         messages = [
             SystemMessage(content=(
