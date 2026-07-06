@@ -1,4 +1,4 @@
-import type { AnalysisRequest, AnalysisResponse, BatchAnalyzeRequest, BatchAnalyzeResponse, BatchAnalyzeStatusResponse, Announcement, AuthUser, AuthVerifyResponse, JobStatus, AnalysisReport, KlineResponse, NiuxiongResponse, GSResponse, RadarResponse, PositionResponse, VolumeWashResponse, FundFlowResponse, BollingerDeviationResponse, DarkPoolAnalysisResponse, LatestAnnouncementResponse, PortfolioImportState, PortfolioOverviewResponse, PortfolioPositionInput, Report, ReportDetail, ReportListResponse, RuntimeConfig, RuntimeConfigUpdate, RuntimeConfigUpdateResponse, RuntimeWarmupRequest, RuntimeWarmupResponse, WatchlistItem, WatchlistBatchResponse, ConceptBoard, ScheduledAnalysis, ScheduledBatchTriggerResponse, StockSearchResult, TrackingBoardResponse, UserToken, UserTokenCreateRequest, WecomWarmupRequest, WecomWarmupResponse, FeedbackItem, FeedbackListResponse, FeedbackUnreadResponse, BriefingDetailResponse, BriefingListResponse, YangYinHistoryPoint, GoldFingerPoint, RedGreenBgPoint, StrategyDecisionResponse, BiasAnalysisResponse, BiasSnapshotResponse } from '@/types'
+import type { AnalysisRequest, AnalysisResponse, BatchAnalyzeRequest, BatchAnalyzeResponse, BatchAnalyzeStatusResponse, Announcement, AuthUser, AuthVerifyResponse, JobStatus, AnalysisReport, KlineResponse, NiuxiongResponse, GSResponse, RadarResponse, PositionResponse, VolumeWashResponse, FundFlowResponse, BollingerDeviationResponse, TrendStrengthResponse, DarkPoolAnalysisResponse, LatestAnnouncementResponse, PortfolioImportState, PortfolioOverviewResponse, PortfolioPositionInput, Report, ReportDetail, ReportListResponse, RuntimeConfig, RuntimeConfigUpdate, RuntimeConfigUpdateResponse, RuntimeWarmupRequest, RuntimeWarmupResponse, WatchlistItem, WatchlistBatchResponse, ConceptBoard, ScheduledAnalysis, ScheduledBatchTriggerResponse, StockSearchResult, TrackingBoardResponse, UserToken, UserTokenCreateRequest, WecomWarmupRequest, WecomWarmupResponse, FeedbackItem, FeedbackListResponse, FeedbackUnreadResponse, BriefingDetailResponse, BriefingListResponse, YangYinHistoryPoint, GoldFingerPoint, RedGreenBgPoint, StrategyDecisionResponse, BiasAnalysisResponse, BiasSnapshotResponse } from '@/types'
 
 export function getBaseUrl(): string {
     const envUrl = (import.meta.env.VITE_API_URL as string) || ''
@@ -152,6 +152,14 @@ class ApiService {
         if (endDate) params.append('end_date', endDate)
         if (period) params.append('period', period)
         return this.request<BollingerDeviationResponse>(`/v1/market/bollinger-deviation?${params}`, { signal })
+    }
+
+    async getTrendStrength(symbol: string, startDate?: string, endDate?: string, period?: string, signal?: AbortSignal): Promise<TrendStrengthResponse> {
+        const params = new URLSearchParams({ symbol })
+        if (startDate) params.append('start_date', startDate)
+        if (endDate) params.append('end_date', endDate)
+        if (period) params.append('period', period)
+        return this.request<TrendStrengthResponse>(`/v1/market/trend-strength?${params}`, { signal })
     }
 
     async getDarkPoolAnalysis(symbol: string, date?: string): Promise<DarkPoolAnalysisResponse> {

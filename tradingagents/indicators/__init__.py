@@ -30,6 +30,10 @@ from .bollinger_deviation import (
     calculate_bollinger_deviation,
     get_bollinger_deviation_signal,
 )
+from .trend_strength import (
+    calculate_trend_strength,
+    get_trend_strength_signal,
+)
 
 __all__ = [
     'calculate_niuxiong_line',
@@ -56,4 +60,6 @@ __all__ = [
     'get_volume_wash_signal',
     'calculate_bollinger_deviation',
     'get_bollinger_deviation_signal',
+    'calculate_trend_strength',
+    'get_trend_strength_signal',
 ]

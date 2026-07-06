@@ -9,6 +9,7 @@ import KlinePanel from '@/components/KlinePanel'
 import RadarPanel from '@/components/RadarPanel'
 import PositionPanel from '@/components/PositionPanel'
 import VolumeWashPanel from '@/components/VolumeWashPanel'
+import TrendStrengthPanel from '@/components/TrendStrengthPanel'
 // import FundFlowPanel from '@/components/FundFlowPanel'
 // import BollingerDeviationPanel from '@/components/BollingerDeviationPanel'
 import DecisionCard from '@/components/DecisionCard'
@@ -290,6 +291,8 @@ export default function Analysis() {
             <RadarPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('radar', c)} onSyncNow={syncNow} />
 
             <VolumeWashPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('volumeWash', c)} onSyncNow={syncNow} />
+
+            <TrendStrengthPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('trendStrength', c)} onSyncNow={syncNow} />
 
             {/* <FundFlowPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('fundFlow', c)} onSyncNow={syncNow} /> */}
 

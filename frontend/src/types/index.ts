@@ -456,6 +456,20 @@ export interface BollingerDeviationResponse {
     signal?: Record<string, any> | null
 }
 
+export interface TrendStrengthPoint {
+    date: string
+    close: number
+    trend_strength?: number | null
+    zone?: string | null
+}
+
+export interface TrendStrengthResponse {
+    symbol: string
+    name?: string | null
+    points: TrendStrengthPoint[]
+    signal?: Record<string, any> | null
+}
+
 export interface DarkPoolEvent {
     start: string
     end: string

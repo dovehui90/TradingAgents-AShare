@@ -902,6 +902,21 @@ class BollingerDeviationResponse(BaseModel):
     signal: Optional[Dict[str, Any]] = None
 
 
+# Trend Strength Models (趋势强度指数)
+class TrendStrengthPoint(BaseModel):
+    date: str
+    close: float
+    trend_strength: Optional[float] = None
+    zone: Optional[str] = None
+
+
+class TrendStrengthResponse(BaseModel):
+    symbol: str
+    name: Optional[str] = None
+    points: List[TrendStrengthPoint]
+    signal: Optional[Dict[str, Any]] = None
+
+
 # Bias Analysis Models (乖离率分析)
 class BiasPoint(BaseModel):
     date: str
@@ -4078,6 +4093,82 @@ def get_bollinger_deviation(
         pass
 
     return BollingerDeviationResponse(
+        symbol=symbol,
+        name=name,
+        points=points,
+        signal=signal,
+    )
+
+
+@app.get("/v1/market/trend-strength", response_model=TrendStrengthResponse)
+def get_trend_strength(
+    symbol: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = "daily",
+) -> TrendStrengthResponse:
+    """趋势强度指数接口 — 乖离率/ATR波动率标准化"""
+    from tradingagents.indicators import calculate_trend_strength, get_trend_strength_signal, fetch_realtime_data, fetch_realtime_quote
+
+    period = period if period in _KLINE_PERIOD_MAP else "daily"
+    if start_date and end_date:
+        days = max(250, (pd.Timestamp(end_date) - pd.Timestamp(start_date)).days + 60)
+    else:
+        days = _indicator_days_map.get(period, 250)
+
+    try:
+        df = fetch_realtime_data(symbol, days=days, period=period)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
+
+    if period != "daily":
+        df = _aggregate_daily_df(df, period)
+        df.index = pd.to_datetime(df.index)
+
+    result = calculate_trend_strength(df)
+    signal = get_trend_strength_signal(result)
+
+    def _to_native(obj):
+        if isinstance(obj, dict):
+            return {k: _to_native(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [_to_native(v) for v in obj]
+        if isinstance(obj, (np.bool_,)):
+            return bool(obj)
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, pd.Timestamp):
+            return obj.strftime("%Y-%m-%d %H:%M:%S")
+        return obj
+
+    signal = _to_native(signal)
+
+    if start_date:
+        result = result[result.index >= start_date]
+    if end_date:
+        end_dt = pd.Timestamp(end_date) + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        result = result[result.index <= end_dt]
+
+    points = []
+    for idx, row in result.iterrows():
+        date_str = idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)[:10]
+        points.append(TrendStrengthPoint(
+            date=date_str,
+            close=round(float(row["close"]), 2) if pd.notna(row["close"]) else 0,
+            trend_strength=round(float(row["trend_strength"]), 2) if pd.notna(row["trend_strength"]) else None,
+            zone=row.get("zone", "unknown"),
+        ))
+
+    name = None
+    try:
+        quote = fetch_realtime_quote(symbol)
+        name = quote.get("name")
+    except Exception:
+        pass
+
+    return TrendStrengthResponse(
         symbol=symbol,
         name=name,
         points=points,
