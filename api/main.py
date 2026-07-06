@@ -353,14 +353,7 @@ app.add_middleware(
 )
 
 # ── 股票查询日志路径 ─────────────────────────────────────────────────────────
-_STOCK_QUERY_PREFIXES = (
-    "/v1/market/", "/v1/yang-yin/", "/v1/gold-finger/",
-    "/v1/red-green-bg/", "/v1/dapan-dianjin/", "/v1/strategy/",
-    "/v1/watchlist", "/v1/portfolio/",
-)
-
-
-async def _write_query_log(
+def _write_query_log(
     user_id: str, email: str, endpoint: str,
     query_text: str, symbol: str, ip: str,
 ) -> None:
@@ -380,14 +373,40 @@ async def _write_query_log(
         pass
 
 
+# 仅对用户主动查询的端点记录日志（排除前端自动轮询）
+_USER_QUERY_PATHS = {
+    "/v1/market/stock-search": "search",   # 股票搜索
+    "/v1/strategy/39rules-decision": "strategy",
+}
+
+def _extract_user_query(request: Request) -> tuple[str, str]:
+    """从请求中提取有意义的查询文本和股票代码。"""
+    path = request.url.path
+    params = request.query_params
+
+    if path == "/v1/market/stock-search":
+        q = params.get("q", "")
+        # 搜索词是用户主动输入的有意义查询
+        return f"搜索: {q}", ""
+
+    if path == "/v1/strategy/39rules-decision":
+        sym = params.get("symbol", "")
+        return f"39规则决策: {sym}", sym
+
+    return str(request.url.query), params.get("symbol") or ""
+
+
 @app.middleware("http")
-async def _log_market_queries(request: Request, call_next):
+async def _log_user_queries(request: Request, call_next):
     response = await call_next(request)
     if request.method != "GET":
         return response
     if response.status_code < 200 or response.status_code >= 300:
         return response
-    if not request.url.path.startswith(_STOCK_QUERY_PREFIXES):
+
+    # 只记录用户主动查询的端点，跳过前端自动轮询
+    path = request.url.path
+    if path not in _USER_QUERY_PATHS and not path.startswith("/v1/portfolio/"):
         return response
 
     user_id, email = "anonymous", ""
@@ -402,11 +421,12 @@ async def _log_market_queries(request: Request, call_next):
     except Exception:
         pass
 
-    asyncio.create_task(_write_query_log(
-        user_id=user_id, email=email, endpoint=request.url.path,
-        query_text=str(request.url.query), symbol=request.query_params.get("symbol") or "",
+    query_text, symbol = _extract_user_query(request)
+    _write_query_log(
+        user_id=user_id, email=email, endpoint=path,
+        query_text=query_text, symbol=symbol,
         ip=_get_real_ip(request) or "",
-    ))
+    )
     return response
 
 _executor = ThreadPoolExecutor(max_workers=int(os.getenv("TA_MAX_WORKERS", "2")))
