@@ -694,9 +694,8 @@ class CnAkshareProvider(BaseMarketDataProvider):
                     filtered_note = f"（已过滤 {original - len(df)} 条指数代码误匹配新闻）"
                 return f"## {ticker} 新闻（{start_date} 至 {end_date}）{filtered_note}：\n\n" + "\n".join(rows)
             except Exception as exc:
-                raise NotImplementedError(
-                    f"cn_akshare is temporarily unavailable for news: {exc}"
-                ) from exc
+                logger.warning("get_news failed for %s: %s", ticker, exc)
+                return f"## {ticker} 新闻（{start_date} 至 {end_date}）\n\n新闻数据暂时获取失败（{type(exc).__name__}），请稍后重试。"
 
     def get_global_news(
         self, curr_date: str, look_back_days: int = 7, limit: int = 50
