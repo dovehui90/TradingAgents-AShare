@@ -42,6 +42,8 @@ def create_smart_money_analyst(llm, data_collector=None):
             lhb_inst = pool.get("lhb_institution_stats", "无数据")
             lhb_seats = pool.get("lhb_active_seats", "无数据")
             fund_flow_120d = pool.get("fund_flow_120d", "无数据")
+            concept_board = pool.get("concept_board", "无数据")
+            concept_fund_flow = pool.get("fund_flow_concept", "无数据")
         else:
             from tradingagents.agents.utils.agent_utils import (
                 get_individual_fund_flow, get_lhb_detail, get_indicators,
@@ -83,7 +85,9 @@ def create_smart_money_analyst(llm, data_collector=None):
                 f"【大宗交易明细】\n{block_trades}\n\n"
                 f"【龙虎榜机构买卖统计】\n{lhb_inst}\n\n"
                 f"【龙虎榜活跃营业部】\n{lhb_seats}\n\n"
-                f"【120日主力资金净流向（中长期趋势）】\n{fund_flow_120d}"
+                f"【120日主力资金净流向（中长期趋势）】\n{fund_flow_120d}\n\n"
+                f"【个股概念板块归属】\n{concept_board}\n\n"
+                f"【今日概念板块资金流向排名】\n{concept_fund_flow}"
             )),
         ]
 
