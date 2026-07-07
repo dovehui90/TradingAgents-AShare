@@ -4001,6 +4001,8 @@ class BoardConstituentsResponse(BaseModel):
 
 _board_constituents_cache: Dict[str, tuple] = {}   # symbol -> (timestamp, data)
 _BOARD_CONS_TTL = 86400 * 10  # 10 days for stock list (rarely changes)
+_mcap_cache: Dict[str, float] = {}
+_mcap_ts: float = 0
 
 def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     """Fetch constituent stocks for a board.
@@ -4173,7 +4175,30 @@ def get_board_constituents(
     if not stock_list:
         return BoardConstituentsResponse(symbol=s, name=board_name or s, stocks=[])
 
-    # 2. (Tushare fallback removed — THS scrape and EM API already provide prices)
+    # 2. Fill market cap from Tushare (cached per session, 1-hour TTL)
+    global _mcap_cache, _mcap_ts
+    if not _mcap_cache or time.time() - _mcap_ts > 3600:
+        try:
+            import tushare as ts
+            ts.set_token(os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
+            pro = ts.pro_api()
+            trade_date = cn_today_str().replace("-", "")
+            raw = pro.daily_basic(trade_date=trade_date, fields="ts_code,circ_mv")
+            if raw is not None and not raw.empty:
+                _mcap_cache = {}
+                for _, row in raw.iterrows():
+                    c = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
+                    mv = row.get("circ_mv")
+                    if c and pd.notna(mv):
+                        try: _mcap_cache[c] = round(float(mv) / 1e4, 0)
+                        except: pass
+                _mcap_ts = time.time()
+                _log(f"[BoardCons] Tushare mcap loaded: {len(_mcap_cache)} stocks")
+        except Exception as e:
+            _log(f"[BoardCons] Tushare mcap failed: {e}")
+            _mcap_cache = {}
+            _mcap_ts = 0
+    mcap_lookup = _mcap_cache
 
     # 3. Deduplicate, sort by change% descending
     seen = set()
@@ -4193,6 +4218,8 @@ def get_board_constituents(
         if mcap is not None:
             try: mcap = round(float(mcap) / 1e8, 1)
             except: mcap = None
+        if mcap is None:
+            mcap = mcap_lookup.get(sl["code"])
         stocks_data.append({
             "code": sl["code"],
             "name": sl["name"],
