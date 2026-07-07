@@ -34,6 +34,10 @@ from .trend_strength import (
     calculate_trend_strength,
     get_trend_strength_signal,
 )
+from .support_resistance import (
+    calculate_support_resistance,
+    get_support_resistance_signal,
+)
 
 __all__ = [
     'calculate_niuxiong_line',
@@ -62,4 +66,6 @@ __all__ = [
     'get_bollinger_deviation_signal',
     'calculate_trend_strength',
     'get_trend_strength_signal',
+    'calculate_support_resistance',
+    'get_support_resistance_signal',
 ]

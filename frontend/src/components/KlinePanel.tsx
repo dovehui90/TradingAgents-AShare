@@ -17,7 +17,7 @@ import {
 } from 'lightweight-charts'
 import { Activity, CandlestickChart, TrendingUp, Search, Star } from 'lucide-react'
 import { api } from '@/services/api'
-import type { KlineCandle, NiuxiongPoint, GSPoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
+import type { KlineCandle, NiuxiongPoint, GSPoint, SupportResistancePoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import DarkPoolDrawer from './DarkPoolDrawer'
 
@@ -109,6 +109,10 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const [gsData, setGsData] = useState<GSPoint[]>([])
     const [showGsLines, setShowGsLines] = useState(false)
     const showGsLinesRef = useRef(false)
+    const [srData, setSrData] = useState<SupportResistancePoint[]>([])
+    const [showSr, setShowSr] = useState(false)
+    const showSrRef = useRef(false)
+    const srSeriesRefs = useRef<Record<string, ISeriesApi<'Line'>>>({})
     const candlesRef = useRef<KlineCandle[]>([])
     const candlesPeriodRef = useRef<KlinePeriod>('daily')
     const [stockName, setStockName] = useState<string | null>(null)
@@ -267,6 +271,43 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         chartRef.current?.timeScale().fitContent()
     }
 
+    const updateSrSeries = (points: SupportResistancePoint[]) => {
+        const srMap = srSeriesRefs.current
+        if (!srMap.sr_support) return
+        const show = showSrRef.current
+
+        // Convert to step data: insert intermediate points for step-like rendering
+        const toStep = (raw: { time: Time; value: number }[]) => {
+            const step: LineData[] = []
+            for (let i = 0; i < raw.length; i++) {
+                if (i > 0 && raw[i].value !== raw[i - 1].value) {
+                    step.push({ time: raw[i].time, value: raw[i - 1].value })
+                }
+                step.push(raw[i])
+            }
+            return step
+        }
+
+        const buildRaw = (getter: (p: SupportResistancePoint) => number | null | undefined) => {
+            const raw: { time: Time; value: number }[] = []
+            for (const p of points) {
+                const val = getter(p)
+                if (val == null) continue
+                const time = toChartTime(p.date, klinePeriod)
+                if (!time) continue
+                raw.push({ time, value: val })
+            }
+            return raw
+        }
+
+        srMap.sr_support.setData(show ? toStep(buildRaw(p => p.support)) : [])
+        srMap.sr_resistance.setData(show ? toStep(buildRaw(p => p.resistance)) : [])
+        srMap.sr_stop_loss.setData(show ? toStep(buildRaw(p => p.stop_loss)) : [])
+        srMap.sr_take_profit.setData(show ? toStep(buildRaw(p => p.take_profit)) : [])
+
+        chartRef.current?.timeScale().fitContent()
+    }
+
     // Listen for theme changes
     useEffect(() => {
         const observer = new MutationObserver(() => {
@@ -379,6 +420,26 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         })
         gsSeriesRefs.current = gsMap
 
+        // Support/Resistance indicator line series
+        const srMap: Record<string, ISeriesApi<'Line'>> = {}
+        srMap.sr_support = chart.addSeries(LineSeries, {
+            color: '#ef4444', lineWidth: 1, lineStyle: LineStyle.Solid,
+            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        })
+        srMap.sr_resistance = chart.addSeries(LineSeries, {
+            color: '#3b82f6', lineWidth: 1, lineStyle: LineStyle.Solid,
+            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        })
+        srMap.sr_stop_loss = chart.addSeries(LineSeries, {
+            color: '#f97316', lineWidth: 1, lineStyle: LineStyle.Dashed,
+            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        })
+        srMap.sr_take_profit = chart.addSeries(LineSeries, {
+            color: '#22c55e', lineWidth: 1, lineStyle: LineStyle.Dashed,
+            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        })
+        srSeriesRefs.current = srMap
+
         chartRef.current = chart
         seriesRef.current = series
         markersRef.current = createSeriesMarkers(series)
@@ -454,10 +515,11 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             setLoading(true)
             setError(null)
             try {
-                const [klineResp, niuxiongResp, gsResp] = await Promise.all([
+                const [klineResp, niuxiongResp, gsResp, srResp] = await Promise.all([
                     api.getKline(symbol, range.start, range.end, klinePeriod, ac.signal),
                     api.getNiuxiong(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
                     api.getGsStrategy(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
+                    api.getSupportResistance(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
                 ])
                 const data: CandlestickData[] = klineResp.candles.flatMap((c: KlineCandle) => {
                     const time = toChartTime((c.date || '').slice(0, 10), klinePeriod)
@@ -467,16 +529,21 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                     const close = Number(c.close)
                     if (!time) return []
                     if (![open, high, low, close].every(Number.isFinite)) return []
+                    if (open === 0 && high === 0 && low === 0) return []
                     return [{ time, open, high, low, close }]
                 })
 
                 if (cancelled || ac.signal.aborted) return
                 if (useAnalysisStore.getState().klinePeriod !== klinePeriod) return
-                setCandles(klineResp.candles)
+                const validCandles = klineResp.candles.filter((c: KlineCandle) => {
+                    const o = Number(c.open), h = Number(c.high), l = Number(c.low)
+                    return !(o === 0 && h === 0 && l === 0)
+                })
+                setCandles(validCandles)
                 setStockName(klineResp.name || null)
-                candlesRef.current = klineResp.candles
+                candlesRef.current = validCandles
                 candlesPeriodRef.current = klinePeriod
-                setActiveCandle(klineResp.candles.length ? klineResp.candles[klineResp.candles.length - 1] : null)
+                setActiveCandle(validCandles.length ? validCandles[validCandles.length - 1] : null)
                 seriesRef.current?.setData(data)
 
                 // Update niuxiong overlay
@@ -489,6 +556,12 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                 if (gsResp?.points) {
                     setGsData(gsResp.points)
                     updateGsSeries(gsResp.points)
+                }
+
+                // Update Support/Resistance overlay
+                if (srResp?.points) {
+                    setSrData(srResp.points)
+                    if (showSrRef.current) updateSrSeries(srResp.points)
                 }
 
                 chartRef.current?.timeScale().fitContent()
@@ -672,6 +745,21 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                             BB·A
                         </button>
                     )}
+                    <button
+                        onClick={() => {
+                            const next = !showSrRef.current
+                            showSrRef.current = next
+                            setShowSr(next)
+                            if (srData.length) updateSrSeries(srData)
+                        }}
+                        className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
+                            ? 'border-red-500 text-red-500 bg-red-50 dark:bg-red-500/10'
+                            : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                        }`}
+                        title="显示/隐藏支撑压力位"
+                    >
+                        S·R
+                    </button>
                 </div>
             </div>
             <div className="relative flex-1 min-h-0 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">

@@ -471,6 +471,24 @@ export interface TrendStrengthResponse {
     signal?: Record<string, any> | null
 }
 
+export interface SupportResistancePoint {
+    date: string
+    close: number
+    support?: number | null
+    resistance?: number | null
+    stop_loss?: number | null
+    take_profit?: number | null
+    buy_signal?: boolean
+    sell_signal?: boolean
+}
+
+export interface SupportResistanceResponse {
+    symbol: string
+    name?: string | null
+    points: SupportResistancePoint[]
+    signal?: Record<string, any> | null
+}
+
 export interface DarkPoolEvent {
     start: string
     end: string
