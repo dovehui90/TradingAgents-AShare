@@ -831,24 +831,24 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                     >
                         牛熊高阶
                     </button>
-                    <button
-                        onClick={() => {
-                            const next = !showSrRef.current
-                            showSrRef.current = next
-                            setShowSr(next)
-                            if (srData.length) updateSrSeries(srData)
-                            if (next && tdData.length) renderTdMarkers(tdData)
-                            else tdMarkerContainerRef.current && (tdMarkerContainerRef.current.innerHTML = '')
-                        }}
-                        className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
-                            ? 'border-red-500 text-red-500 bg-red-50 dark:bg-red-500/10'
-                            : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                        }`}
-                        title="显示/隐藏支撑压力位"
-                    >
-                        止盈止损
-                    </button>
                 </div>
+                <button
+                    onClick={() => {
+                        const next = !showSrRef.current
+                        showSrRef.current = next
+                        setShowSr(next)
+                        if (srData.length) updateSrSeries(srData)
+                        if (next && tdData.length) renderTdMarkers(tdData)
+                        else tdMarkerContainerRef.current && (tdMarkerContainerRef.current.innerHTML = '')
+                    }}
+                    className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
+                        ? 'border-red-500 text-red-500 bg-red-50 dark:bg-red-500/10'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                    title="显示/隐藏支撑压力位"
+                >
+                    止盈止损
+                </button>
             </div>
             <div className="relative flex-1 min-h-0 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
                 <div ref={containerRef} className="absolute inset-0" />
