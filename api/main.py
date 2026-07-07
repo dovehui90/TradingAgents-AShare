@@ -924,8 +924,6 @@ class SupportResistancePoint(BaseModel):
     close: float
     support: Optional[float] = None
     resistance: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
     buy_signal: bool = False
     sell_signal: bool = False
 
@@ -4203,8 +4201,9 @@ def get_support_resistance(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     period: Optional[str] = "daily",
+    channel_mode: Optional[str] = "hybrid",
 ) -> SupportResistanceResponse:
-    """支撑压力位 + 止盈止损 + 买卖信号"""
+    """支撑压力位 + 买卖信号（hybrid/rolling/rolling_filtered/swing）"""
     from tradingagents.indicators import calculate_support_resistance, get_support_resistance_signal, fetch_realtime_data, fetch_realtime_quote
 
     period = period if period in _KLINE_PERIOD_MAP else "daily"
@@ -4222,7 +4221,7 @@ def get_support_resistance(
         df = _aggregate_daily_df(df, period)
         df.index = pd.to_datetime(df.index)
 
-    result = calculate_support_resistance(df)
+    result = calculate_support_resistance(df, channel_mode=channel_mode or "hybrid")
     signal = get_support_resistance_signal(result)
 
     def _to_native(obj):
@@ -4256,8 +4255,6 @@ def get_support_resistance(
             close=round(float(row["close"]), 2) if pd.notna(row["close"]) else 0,
             support=round(float(row["support"]), 2) if pd.notna(row["support"]) else None,
             resistance=round(float(row["resistance"]), 2) if pd.notna(row["resistance"]) else None,
-            stop_loss=round(float(row["stop_loss"]), 2) if pd.notna(row["stop_loss"]) else None,
-            take_profit=round(float(row["take_profit"]), 2) if pd.notna(row["take_profit"]) else None,
             buy_signal=bool(row.get("buy_signal", False)),
             sell_signal=bool(row.get("sell_signal", False)),
         ))

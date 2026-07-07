@@ -93,6 +93,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const klinePeriod = useAnalysisStore((state) => state.klinePeriod)
     const setKlinePeriod = useAnalysisStore((state) => state.setKlinePeriod)
     const containerRef = useRef<HTMLDivElement | null>(null)
+    const srMarkerContainerRef = useRef<HTMLDivElement | null>(null)
     const chartRef = useRef<IChartApi | null>(null)
     const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
     const markersRef = useRef<any>(null)
@@ -275,37 +276,120 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         const srMap = srSeriesRefs.current
         if (!srMap.sr_support) return
         const show = showSrRef.current
+        const chart = chartRef.current
 
-        // Convert to step data: insert intermediate points for step-like rendering
-        const toStep = (raw: { time: Time; value: number }[]) => {
-            const step: LineData[] = []
-            for (let i = 0; i < raw.length; i++) {
-                if (i > 0 && raw[i].value !== raw[i - 1].value) {
-                    step.push({ time: raw[i].time, value: raw[i - 1].value })
-                }
-                step.push(raw[i])
+        // Remove old segment series
+        for (const key of Object.keys(srMap)) {
+            if (key.startsWith('sr_seg_')) {
+                srMap[key].setData([])
             }
-            return step
         }
 
-        const buildRaw = (getter: (p: SupportResistancePoint) => number | null | undefined) => {
-            const raw: { time: Time; value: number }[] = []
+        if (!show || !chart) {
+            srMap.sr_support.setData([])
+            srMap.sr_resistance.setData([])
+            chart?.timeScale().fitContent()
+            return
+        }
+
+        // Build segments for a field (support or resistance)
+        const buildSegments = (getter: (p: SupportResistancePoint) => number | null | undefined, color: string) => {
+            let segStart: { time: Time; value: number } | null = null
+            let prevVal: number | null = null
+            const segments: { start: { time: Time; value: number }; end: { time: Time; value: number } }[] = []
+
             for (const p of points) {
                 const val = getter(p)
                 if (val == null) continue
                 const time = toChartTime(p.date, klinePeriod)
                 if (!time) continue
-                raw.push({ time, value: val })
+
+                if (segStart === null) {
+                    segStart = { time, value: val }
+                } else if (val !== prevVal) {
+                    // Value changed — close previous segment, start new one
+                    segments.push({ start: segStart, end: { time, value: prevVal! } })
+                    segStart = { time, value: val }
+                }
+                prevVal = val
             }
-            return raw
+            // Close last segment
+            if (segStart && prevVal !== null) {
+                const lastPt = points.filter(p => getter(p) != null).slice(-1)[0]
+                if (lastPt) {
+                    const lastTime = toChartTime(lastPt.date, klinePeriod)
+                    if (lastTime) segments.push({ start: segStart, end: { time: lastTime, value: prevVal } })
+                }
+            }
+
+            // Create line series for each segment + marker at start
+            segments.forEach((seg, i) => {
+                const key = `sr_seg_${color}_${i}`
+                if (!srMap[key]) {
+                    srMap[key] = chart.addSeries(LineSeries, {
+                        color,
+                        lineWidth: 1,
+                        lineStyle: LineStyle.Solid,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                    })
+                }
+                srMap[key].setData([seg.start, seg.end])
+                // Collect marker position for HTML triangle overlay
+                srMarkerList.push({ time: seg.start.time, value: seg.start.value, isSupport: color === '#ef4444' })
+            })
         }
 
-        srMap.sr_support.setData(show ? toStep(buildRaw(p => p.support)) : [])
-        srMap.sr_resistance.setData(show ? toStep(buildRaw(p => p.resistance)) : [])
-        srMap.sr_stop_loss.setData(show ? toStep(buildRaw(p => p.stop_loss)) : [])
-        srMap.sr_take_profit.setData(show ? toStep(buildRaw(p => p.take_profit)) : [])
+        // Use main series for the most recent segment (shows last value in price scale)
+        const lastSupport = points.filter(p => p.support != null).slice(-1)[0]
+        const lastResistance = points.filter(p => p.resistance != null).slice(-1)[0]
+        if (lastSupport) {
+            const t = toChartTime(lastSupport.date, klinePeriod)
+            if (t) srMap.sr_support.setData([{ time: t, value: lastSupport.support! }])
+        }
+        if (lastResistance) {
+            const t = toChartTime(lastResistance.date, klinePeriod)
+            if (t) srMap.sr_resistance.setData([{ time: t, value: lastResistance.resistance! }])
+        }
 
-        chartRef.current?.timeScale().fitContent()
+        const srMarkerList: { time: Time; value: number; isSupport: boolean }[] = []
+        buildSegments(p => p.support, '#ef4444')
+        buildSegments(p => p.resistance, '#22c55e')
+
+        // Render HTML triangle markers
+        const renderSrMarkers = () => {
+            const container = srMarkerContainerRef.current
+            if (!container || !chart) { if (container) container.innerHTML = ''; return }
+            container.innerHTML = ''
+            for (const m of srMarkerList) {
+                const x = chart.timeScale().timeToCoordinate(m.time)
+                const series = m.isSupport ? srMap.sr_support : srMap.sr_resistance
+                const y = series?.priceToCoordinate(m.value)
+                if (x == null || y == null) continue
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+                svg.setAttribute('width', '10')
+                svg.setAttribute('height', '8')
+                svg.setAttribute('viewBox', '0 0 10 8')
+                svg.style.position = 'absolute'
+                svg.style.left = `${x - 5}px`
+                svg.style.top = m.isSupport ? `${y + 2}px` : `${y - 10}px`
+                svg.style.pointerEvents = 'none'
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+                if (m.isSupport) {
+                    poly.setAttribute('points', '0,8 5,0 10,8')
+                    poly.setAttribute('fill', '#ef4444')
+                } else {
+                    poly.setAttribute('points', '0,0 5,8 10,0')
+                    poly.setAttribute('fill', '#22c55e')
+                }
+                svg.appendChild(poly)
+                container.appendChild(svg)
+            }
+        }
+        renderSrMarkers()
+        chart.timeScale().subscribeVisibleLogicalRangeChange(() => renderSrMarkers())
+        chart.subscribeCrosshairMove(() => renderSrMarkers())
     }
 
     // Listen for theme changes
@@ -427,15 +511,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         })
         srMap.sr_resistance = chart.addSeries(LineSeries, {
-            color: '#3b82f6', lineWidth: 1, lineStyle: LineStyle.Solid,
-            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        })
-        srMap.sr_stop_loss = chart.addSeries(LineSeries, {
-            color: '#f97316', lineWidth: 1, lineStyle: LineStyle.Dashed,
-            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        })
-        srMap.sr_take_profit = chart.addSeries(LineSeries, {
-            color: '#22c55e', lineWidth: 1, lineStyle: LineStyle.Dashed,
+            color: '#22c55e', lineWidth: 1, lineStyle: LineStyle.Solid,
             priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         })
         srSeriesRefs.current = srMap
@@ -559,6 +635,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                 }
 
                 // Update Support/Resistance overlay
+                console.log('[SR] srResp received:', !!srResp, 'points:', srResp?.points?.length)
                 if (srResp?.points) {
                     setSrData(srResp.points)
                     if (showSrRef.current) updateSrSeries(srResp.points)
@@ -750,6 +827,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                             const next = !showSrRef.current
                             showSrRef.current = next
                             setShowSr(next)
+                            console.log('[SR] button clicked, next:', next, 'srData.length:', srData.length)
                             if (srData.length) updateSrSeries(srData)
                         }}
                         className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
@@ -764,6 +842,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             </div>
             <div className="relative flex-1 min-h-0 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
                 <div ref={containerRef} className="absolute inset-0" />
+                <div ref={srMarkerContainerRef} className="absolute inset-0 pointer-events-none z-10" />
                 {indicatorMode !== 'off' && (() => {
                     const showNx = indicatorMode === 'niuxiong' || indicatorMode === 'combined'
                     const showGs = indicatorMode === 'gs' || indicatorMode === 'combined'
@@ -790,10 +869,24 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                                     </span>
                                 </div>
                             )}
+                            {(() => {
+                                const lastSr = srData.length
+                                    ? srData.find(p => p.date === activeDate) ?? srData[srData.length - 1]
+                                    : null
+                                if (!lastSr) return null
+                                return (
+                                    <div className="flex items-center gap-4">
+                                        {lastSr.support != null && (
+                                            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-red-500" />支撑 <span className="text-red-500 font-medium">{lastSr.support}</span></span>
+                                        )}
+                                        {lastSr.resistance != null && (
+                                            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-green-500" />压力 <span className="text-green-500 font-medium">{lastSr.resistance}</span></span>
+                                        )}
+                                    </div>
+                                )
+                            })()}
                             {lastGs && (
                                 <div className="flex items-center gap-4">
-                                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-slate-300" />BB <span className="text-slate-200 font-medium">{lastGs.bb_line ?? '--'}</span></span>
-                                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-amber-400" />A线 <span className="text-amber-400 font-medium">{lastGs.a_line ?? '--'}</span></span>
                                     <span className="flex items-center gap-1">
                                         <span className={`inline-block w-2 h-2 rounded-full ${(lastGs.trend_state ?? '').includes('上涨') ? 'bg-red-500' : 'bg-green-500'}`} />
                                         {lastGs.trend_state ?? '--'}
