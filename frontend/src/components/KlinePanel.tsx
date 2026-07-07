@@ -15,7 +15,7 @@ import {
     createChart,
     createSeriesMarkers,
 } from 'lightweight-charts'
-import { Activity, CandlestickChart, TrendingUp, Search, Star } from 'lucide-react'
+import { Activity, CandlestickChart, Search, Star } from 'lucide-react'
 import { api } from '@/services/api'
 import type { KlineCandle, NiuxiongPoint, GSPoint, SupportResistancePoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
 import { useAnalysisStore } from '@/stores/analysisStore'
@@ -85,7 +85,6 @@ const INDEX_PRESETS = [
     { symbol: '399001.SZ', label: '深证成指' },
     { symbol: '399006.SZ', label: '创业板指' },
     { symbol: '000688.SH', label: '科创50' },
-    { symbol: '899050.BJ', label: '北证50' },
 ] as const
 
 export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyncNow }: KlinePanelProps) {
@@ -108,7 +107,6 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const indicatorModeRef = useRef<IndicatorMode>('combined')
     const gsSeriesRefs = useRef<Record<string, ISeriesApi<'Line'>>>({})
     const [gsData, setGsData] = useState<GSPoint[]>([])
-    const [showGsLines, setShowGsLines] = useState(false)
     const showGsLinesRef = useRef(false)
     const [srData, setSrData] = useState<SupportResistancePoint[]>([])
     const [showSr, setShowSr] = useState(false)
@@ -221,7 +219,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         if (!seriesMap.gs_bb) return
 
         const mode = indicatorModeRef.current
-        const showGs = mode === 'gs' || mode === 'combined'
+        const showGs = mode === 'niuxiong' || mode === 'combined'
         const showLines = showGs && showGsLinesRef.current
 
         // BB line
@@ -288,6 +286,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         if (!show || !chart) {
             srMap.sr_support.setData([])
             srMap.sr_resistance.setData([])
+            srMarkerContainerRef.current && (srMarkerContainerRef.current.innerHTML = '')
             chart?.timeScale().fitContent()
             return
         }
@@ -761,67 +760,28 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                             {item.label}
                         </button>
                     ))}
-                    {(['niuxiong', 'gs', 'combined', 'off'] as IndicatorMode[]).map((mode) => {
-                        const labels: Record<IndicatorMode, string> = {
-                            niuxiong: '牛熊线',
-                            gs: 'GS策略',
-                            combined: '组合',
-                            off: '关闭',
-                        }
-                        const isActive = indicatorMode === mode
-                        return (
-                            <button
-                                key={mode}
-                                onClick={() => {
-                                    setIndicatorMode(mode)
-                                    indicatorModeRef.current = mode
-                                    // Update niuxiong series
-                                    const showNx = mode === 'niuxiong' || mode === 'combined'
-                                    if (showNx) {
-                                        updateNiuxiongSeries(niuxiongData)
-                                    } else {
-                                        for (const s of Object.values(niuxiongSeriesRefs.current)) {
-                                            s.setData([])
-                                        }
-                                    }
-                                    // Update GS series
-                                    const showGs = mode === 'gs' || mode === 'combined'
-                                    if (showGs && gsData.length) {
-                                        updateGsSeries(gsData)
-                                    } else {
-                                        for (const s of Object.values(gsSeriesRefs.current)) {
-                                            s.setData([])
-                                        }
-                                        markersRef.current?.setMarkers([])
-                                    }
-                                }}
-                                className={`text-xs px-2 py-1 rounded border transition-colors flex items-center gap-1 ${isActive
-                                    ? 'border-cyan-500 text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
-                                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500'
-                                }`}
-                            >
-                                {mode === 'niuxiong' && <TrendingUp className="w-3 h-3" />}
-                                {labels[mode]}
-                            </button>
-                        )
-                    })}
-                    {(indicatorMode === 'gs' || indicatorMode === 'combined') && (
-                        <button
-                            onClick={() => {
-                                const next = !showGsLinesRef.current
-                                showGsLinesRef.current = next
-                                setShowGsLines(next)
+                    <button
+                        onClick={() => {
+                            const next = indicatorMode === 'off' ? 'combined' : 'off'
+                            setIndicatorMode(next)
+                            indicatorModeRef.current = next
+                            const show = next === 'combined'
+                            if (show) {
+                                updateNiuxiongSeries(niuxiongData)
                                 if (gsData.length) updateGsSeries(gsData)
-                            }}
-                            className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showGsLines
-                                ? 'border-amber-500 text-amber-500 bg-amber-50 dark:bg-amber-500/10'
-                                : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                            }`}
-                            title="显示/隐藏GS BB和A线"
-                        >
-                            BB·A
-                        </button>
-                    )}
+                            } else {
+                                for (const s of Object.values(niuxiongSeriesRefs.current)) s.setData([])
+                                for (const s of Object.values(gsSeriesRefs.current)) s.setData([])
+                                markersRef.current?.setMarkers([])
+                            }
+                        }}
+                        className={`text-xs px-2 py-1 rounded border transition-colors ${indicatorMode !== 'off'
+                            ? 'border-cyan-500 text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
+                            : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500'
+                        }`}
+                    >
+                        牛熊高阶
+                    </button>
                     <button
                         onClick={() => {
                             const next = !showSrRef.current
@@ -836,7 +796,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                         }`}
                         title="显示/隐藏支撑压力位"
                     >
-                        S·R
+                        止盈止损
                     </button>
                 </div>
             </div>
@@ -845,7 +805,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                 <div ref={srMarkerContainerRef} className="absolute inset-0 pointer-events-none z-10" />
                 {indicatorMode !== 'off' && (() => {
                     const showNx = indicatorMode === 'niuxiong' || indicatorMode === 'combined'
-                    const showGs = indicatorMode === 'gs' || indicatorMode === 'combined'
+                    const showGs = indicatorMode === 'gs' || indicatorMode === 'niuxiong' || indicatorMode === 'combined'
                     const activeDate = panelCandle?.date
                     const lastNx = showNx && niuxiongData.length
                         ? niuxiongData.find(p => p.date === activeDate) ?? niuxiongData[niuxiongData.length - 1]

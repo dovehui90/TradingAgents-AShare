@@ -173,6 +173,7 @@ export default function Analysis() {
     const {
         report,
         currentSymbol,
+        setCurrentSymbol,
         jobConfidence,
         jobTargetPrice,
         jobStopLoss,
@@ -242,6 +243,7 @@ export default function Analysis() {
                                 )
                                 if (matched) {
                                     setActiveSymbol(matched.symbol)
+                                    setCurrentSymbol(matched.symbol)
                                     setSymbolSearch('')
                                     setShowSymbolDropdown(false)
                                 } else {
@@ -265,6 +267,7 @@ export default function Analysis() {
                                 type="button"
                                 onClick={() => {
                                     setActiveSymbol(r.symbol)
+                                    setCurrentSymbol(r.symbol)
                                     setSymbolSearch('')
                                     setShowSymbolDropdown(false)
                                 }}
@@ -283,6 +286,7 @@ export default function Analysis() {
                     symbol={activeSymbol}
                     onSymbolChange={(symbol) => {
                         setActiveSymbol(symbol)
+                        setCurrentSymbol(symbol)
                     }}
                     onChartReady={registerKlineChart}
                     onSyncNow={syncNow}
