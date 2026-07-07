@@ -4011,6 +4011,7 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     import requests as _requests, time as _time
 
     s = board_symbol.strip().upper()
+    _load_board_maps()
     board_rev = _get_board_reverse_map()
     info = board_rev.get(s)
     if not info:
@@ -4019,43 +4020,49 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     btype = info[1]
 
     if btype == "概念":
-        # Scrape THS concept detail page — HTTP pagination works with delay
+        # Scrape THS concept detail page — HTTP pagination with delay
         from bs4 import BeautifulSoup
         import akshare as ak
-        code_map = ak.stock_board_concept_name_ths()
-        ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://q.10jqka.com.cn/"}
-        all_rows = []
-        for page in range(1, 10):  # max 10 pages (safety limit)
-            if page > 1:
-                _time.sleep(0.6)  # delay to avoid IP block
-            url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
-            r = _requests.get(url, headers=headers, proxies={"http": None, "https": None}, timeout=8)
-            if "Nginx forbidden" in r.text or "404" in r.text[:200]:
-                break
-            soup = BeautifulSoup(r.text, "html.parser")
-            table = soup.find("table", class_=re.compile("m-table"))
-            if not table:
-                break
-            trs = table.find_all("tr")[1:]
-            if not trs:
-                break
-            for tr in trs:
-                tds = tr.find_all("td")
-                if len(tds) < 4:
-                    continue
-                all_rows.append({
-                    "代码": tds[1].get_text(strip=True),
-                    "名称": tds[2].get_text(strip=True),
-                    "最新价": tds[3].get_text(strip=True),
-                    "涨跌幅": tds[4].get_text(strip=True),
-                })
-            page_info = soup.find(class_="page_info")
-            if page_info:
-                parts = page_info.text.strip().split("/")
-                if len(parts) == 2 and int(parts[0]) >= int(parts[1]):
+        try:
+            code_map = ak.stock_board_concept_name_ths()
+            ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://q.10jqka.com.cn/"}
+            all_rows = []
+            for page in range(1, 10):
+                if page > 1:
+                    _time.sleep(0.8)
+                url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
+                r = _requests.get(url, headers=headers, proxies={"http": None, "https": None}, timeout=10)
+                if r.status_code != 200 or "Nginx forbidden" in r.text:
+                    _log(f"[BoardCons] THS page {page}: status={r.status_code} len={len(r.text)}")
                     break
-        df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
+                soup = BeautifulSoup(r.text, "html.parser")
+                table = soup.find("table", class_=re.compile("m-table"))
+                if not table:
+                    break
+                trs = table.find_all("tr")[1:]
+                if not trs:
+                    break
+                for tr in trs:
+                    tds = tr.find_all("td")
+                    if len(tds) < 4:
+                        continue
+                    all_rows.append({
+                        "代码": tds[1].get_text(strip=True),
+                        "名称": tds[2].get_text(strip=True),
+                        "最新价": tds[3].get_text(strip=True),
+                        "涨跌幅": tds[4].get_text(strip=True),
+                    })
+                page_info = soup.find(class_="page_info")
+                if page_info:
+                    parts = page_info.text.strip().split("/")
+                    if len(parts) == 2 and int(parts[0]) >= int(parts[1]):
+                        break
+            _log(f"[BoardCons] THS scraped: {len(all_rows)} stocks across pages")
+            df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
+        except Exception as e:
+            _log(f"[BoardCons] THS scrape failed: {type(e).__name__}: {e}")
+            raise HTTPException(502, f"同花顺成分股获取失败: {e}")
     else:
         # EastMoney industry board: use push2 API
         r = _requests.get(
