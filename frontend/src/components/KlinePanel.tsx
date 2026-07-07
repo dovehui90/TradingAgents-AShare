@@ -293,13 +293,13 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             if (p.sell_count > 0) {
                 const div = document.createElement('div')
                 div.textContent = String(p.sell_count)
-                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yHigh - 14}px;font-size:${p.sell_count === 9 ? '9px' : '8px'};font-weight:bold;color:${p.sell_count === 9 ? '#fff' : '#ef4444'};background:${p.sell_count === 9 ? '#ef4444' : 'transparent'};border-radius:50%;width:${p.sell_count === 9 ? '14px' : '11px'};height:${p.sell_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
+                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yHigh - 14}px;font-size:${p.sell_count === 9 ? '9px' : '8px'};color:${p.sell_count === 9 ? '#fff' : '#ef4444'};background:${p.sell_count === 9 ? '#ef4444' : 'transparent'};border-radius:50%;width:${p.sell_count === 9 ? '14px' : '11px'};height:${p.sell_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
                 container.appendChild(div)
             }
             if (p.buy_count > 0) {
                 const div = document.createElement('div')
                 div.textContent = String(p.buy_count)
-                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yLow + 2}px;font-size:${p.buy_count === 9 ? '9px' : '8px'};font-weight:bold;color:${p.buy_count === 9 ? '#fff' : '#22c55e'};background:${p.buy_count === 9 ? '#22c55e' : 'transparent'};border-radius:50%;width:${p.buy_count === 9 ? '14px' : '11px'};height:${p.buy_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
+                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yLow + 2}px;font-size:${p.buy_count === 9 ? '9px' : '8px'};color:${p.buy_count === 9 ? '#fff' : '#22c55e'};background:${p.buy_count === 9 ? '#22c55e' : 'transparent'};border-radius:50%;width:${p.buy_count === 9 ? '14px' : '11px'};height:${p.buy_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
                 container.appendChild(div)
             }
         }
@@ -832,6 +832,8 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                         牛熊高阶
                     </button>
                 </div>
+            </div>
+            <div className="flex items-center gap-2 mb-2 shrink-0">
                 <button
                     onClick={() => {
                         const next = !showSrRef.current
