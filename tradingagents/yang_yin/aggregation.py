@@ -111,10 +111,6 @@ def save_snapshot(snapshot: YangYinSnapshot, pipeline: YangYinPipeline = None):
 
     if history_path.exists():
         hist = pd.read_parquet(history_path)
-        existing = hist[hist["trade_date"] == snapshot.trade_date]
-        if not existing.empty and any(existing["updated_at"].astype(str).str.endswith("15:00")):
-            logger.debug(f"跳过: {snapshot.trade_date} 已有收盘记录")
-            return
         # 先追加再去重，避免删除旧记录后新记录保存失败导致数据丢失
         hist = pd.concat([hist, new_row], ignore_index=True)
         hist = hist.drop_duplicates(subset=["trade_date"], keep="last")
