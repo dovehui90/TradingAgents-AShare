@@ -19,14 +19,21 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
     seen = set()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, executable_path="/usr/bin/chromium-browser")
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 800})
 
         url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/"
-        page.goto(url, timeout=15000, wait_until="networkidle")
-
-        # Get total pages from page info
+        page.goto(url, timeout=15000, wait_until="domcontentloaded")
+        page.wait_for_timeout(2000)
+        content = page.content()
+        print(f"Page title: {page.title()}")
+        print(f"Content length: {len(content)}")
+        print(f"Has m-table: {'m-table' in content}")
+        if 'Nginx forbidden' in content:
+            print("BLOCKED by Nginx!")
+            browser.close()
+            return []
         page_info = page.query_selector(".page_info")
         total_pages = 1
         if page_info:
@@ -34,13 +41,16 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
             parts = text.split("/")
             if len(parts) == 2:
                 total_pages = int(parts[1])
+        print(f"Total pages: {total_pages}")
 
         for _ in range(total_pages):
             # Extract rows from current table
             table = page.query_selector("table.m-table")
             if not table:
+                print(f"Page {_+1}: NO TABLE")
                 break
             rows = table.query_selector_all("tr")
+            print(f"Page {_+1}: {len(rows)-1} rows found")
             new_found = 0
             for row in rows[1:]:
                 cells = row.query_selector_all("td")
