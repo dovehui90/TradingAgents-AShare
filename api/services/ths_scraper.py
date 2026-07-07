@@ -70,10 +70,16 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
 
             # Click "下一页" to go to next page
             next_btn = page.query_selector("text=下一页")
+            print(f"Next button found: {next_btn is not None}")
             if not next_btn:
                 break
             next_btn.click()
-            page.wait_for_timeout(600)
+            page.wait_for_timeout(800)
+            # Verify new rows loaded
+            table2 = page.query_selector("table.m-table")
+            if table2:
+                rows2 = table2.query_selector_all("tr")
+                print(f"After click: {len(rows2)-1} rows")
 
         browser.close()
 
