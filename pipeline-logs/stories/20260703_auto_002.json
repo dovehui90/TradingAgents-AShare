@@ -1,0 +1,388 @@
+{
+  "storyId": "20260703_auto_002",
+  "title": "（自动）",
+  "sessionId": "28f64aac-5773-4f3e-a702-662fed0f53c7",
+  "startedAt": "2026-07-03T08:47:38.004Z",
+  "steps": [
+    {
+      "step": "Explore",
+      "seq": 1,
+      "start": "2026-07-03T08:47:38.005Z",
+      "end": "2026-07-03T08:49:46.699Z",
+      "durationMs": 128694,
+      "success": false,
+      "inputTokens": 28501,
+      "outputTokens": 5441,
+      "estInputTokens": 345,
+      "estOutputTokens": 5713,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Bash",
+          "start": "2026-07-03T08:47:40.560Z",
+          "end": "2026-07-03T08:47:50.996Z",
+          "durationMs": 10436
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-07-03T08:47:51.151Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-07-03T08:47:57.344Z",
+          "end": "2026-07-03T08:48:02.187Z",
+          "durationMs": 4843
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-07-03T08:47:57.730Z",
+          "end": "2026-07-03T08:48:01.917Z",
+          "durationMs": 4187
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-07-03T08:48:04.683Z",
+          "end": "2026-07-03T08:48:09.995Z",
+          "durationMs": 5312
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:12.047Z",
+          "end": "2026-07-03T08:48:12.190Z",
+          "durationMs": 143
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:12.443Z",
+          "end": "2026-07-03T08:48:12.579Z",
+          "durationMs": 136
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:12.636Z",
+          "end": "2026-07-03T08:48:12.779Z",
+          "durationMs": 143
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:12.950Z",
+          "end": "2026-07-03T08:48:13.091Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:13.255Z",
+          "end": "2026-07-03T08:48:13.958Z",
+          "durationMs": 703
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:17.224Z",
+          "end": "2026-07-03T08:48:17.370Z",
+          "durationMs": 146
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:17.623Z",
+          "end": "2026-07-03T08:48:17.770Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:17.925Z",
+          "end": "2026-07-03T08:48:18.064Z",
+          "durationMs": 139
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:18.104Z",
+          "end": "2026-07-03T08:48:18.256Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:18.332Z",
+          "end": "2026-07-03T08:48:18.484Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:18.730Z",
+          "end": "2026-07-03T08:48:18.877Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:21.240Z",
+          "end": "2026-07-03T08:48:21.387Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:21.584Z",
+          "end": "2026-07-03T08:48:21.741Z",
+          "durationMs": 157
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:21.892Z",
+          "end": "2026-07-03T08:48:22.048Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:22.243Z",
+          "end": "2026-07-03T08:48:22.401Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:22.485Z",
+          "end": "2026-07-03T08:48:22.640Z",
+          "durationMs": 155
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:22.764Z",
+          "end": "2026-07-03T08:48:22.920Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:27.019Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:27.027Z",
+          "end": "2026-07-03T08:48:27.342Z",
+          "durationMs": 315
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:27.032Z",
+          "end": "2026-07-03T08:48:27.224Z",
+          "durationMs": 192
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:27.160Z",
+          "end": "2026-07-03T08:48:27.216Z",
+          "durationMs": 56
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:27.162Z",
+          "end": "2026-07-03T08:48:27.210Z",
+          "durationMs": 48
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:28.617Z",
+          "end": "2026-07-03T08:48:28.761Z",
+          "durationMs": 144
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:31.967Z",
+          "end": "2026-07-03T08:48:32.119Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:32.245Z",
+          "end": "2026-07-03T08:48:32.385Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:32.610Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:32.913Z",
+          "end": "2026-07-03T08:48:33.061Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:33.231Z",
+          "end": "2026-07-03T08:48:33.384Z",
+          "durationMs": 153
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:33.536Z",
+          "end": "2026-07-03T08:48:33.688Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:37.148Z",
+          "end": "2026-07-03T08:48:37.486Z",
+          "durationMs": 338
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:37.491Z",
+          "end": "2026-07-03T08:48:37.659Z",
+          "durationMs": 168
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:37.818Z",
+          "end": "2026-07-03T08:48:37.965Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:38.136Z",
+          "end": "2026-07-03T08:48:38.296Z",
+          "durationMs": 160
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:41.481Z",
+          "end": "2026-07-03T08:48:41.632Z",
+          "durationMs": 151
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:41.819Z",
+          "end": "2026-07-03T08:48:41.990Z",
+          "durationMs": 171
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:42.178Z",
+          "end": "2026-07-03T08:48:42.346Z",
+          "durationMs": 168
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:42.443Z",
+          "end": "2026-07-03T08:48:42.607Z",
+          "durationMs": 164
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:42.747Z",
+          "end": "2026-07-03T08:48:43.138Z",
+          "durationMs": 391
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:48:43.208Z",
+          "end": "2026-07-03T08:48:43.425Z",
+          "durationMs": 217
+        }
+      ],
+      "cacheReadTokens": 115456,
+      "cacheCreateTokens": 0
+    },
+    {
+      "step": "_main",
+      "start": "2026-07-03T08:50:05.390Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": null,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:50:05.391Z",
+          "end": "2026-07-03T08:50:05.539Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:50:05.908Z",
+          "end": "2026-07-03T08:50:06.060Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:50:06.432Z",
+          "end": "2026-07-03T08:50:06.578Z",
+          "durationMs": 146
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:50:09.621Z",
+          "end": "2026-07-03T08:50:09.768Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-03T08:50:10.117Z",
+          "end": "2026-07-03T08:50:10.262Z",
+          "durationMs": 145
+        },
+        {
+          "tool": "WebSearch",
+          "start": "2026-07-03T08:59:23.073Z",
+          "end": "2026-07-03T08:59:50.577Z",
+          "durationMs": 27504
+        },
+        {
+          "tool": "WebSearch",
+          "start": "2026-07-03T08:59:23.737Z",
+          "end": "2026-07-03T08:59:43.953Z",
+          "durationMs": 20216
+        },
+        {
+          "tool": "WebSearch",
+          "start": "2026-07-03T08:59:24.403Z",
+          "end": "2026-07-03T08:59:41.734Z",
+          "durationMs": 17331
+        }
+      ]
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-07-03T09:00:10.959Z",
+    "totalDurationMs": 128694,
+    "totalSteps": 2,
+    "completed": 1,
+    "running": 1,
+    "totalEstIn": 345,
+    "totalEstOut": 5713,
+    "estCost": 0.005145886,
+    "successRate": "0/1",
+    "peakContextPct": null,
+    "stepStats": {
+      "Explore": {
+        "count": 1,
+        "totalMs": 128694,
+        "min": 128694,
+        "max": 128694,
+        "fails": 1,
+        "estIn": 345,
+        "estOut": 5713,
+        "cacheHit": 115456,
+        "cacheMiss": 0
+      },
+      "_main": {
+        "count": 0,
+        "totalMs": 0,
+        "min": null,
+        "max": 0,
+        "fails": 0,
+        "estIn": 0,
+        "estOut": 0,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

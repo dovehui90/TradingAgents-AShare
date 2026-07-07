@@ -1,0 +1,42 @@
+{
+  "resonance_score": -0.01,
+  "leading_boards": [
+    {
+      "name": "生物质能发电",
+      "correlation": 0.21538558820591902,
+      "direction": "跌",
+      "strength": 0.46672526288261457
+    },
+    {
+      "name": "碳交易",
+      "correlation": 0.1849120523656899,
+      "direction": "跌",
+      "strength": 0.1803767803457279
+    },
+    {
+      "name": "绿色电力",
+      "correlation": 0.16164607360566133,
+      "direction": "跌",
+      "strength": 0.27393166374827693
+    },
+    {
+      "name": "固废处理",
+      "correlation": 0.14757370503363682,
+      "direction": "跌",
+      "strength": 0.616283158878812
+    },
+    {
+      "name": "碳中和",
+      "correlation": 0.10755015970465773,
+      "direction": "跌",
+      "strength": 0.3134115392812098
+    }
+  ],
+  "board_trend_summary": "主导概念：生物质能发电、碳交易、绿色电力。共振评分：-0.01（跟跌）",
+  "divergence_alert": false,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-07"
+}

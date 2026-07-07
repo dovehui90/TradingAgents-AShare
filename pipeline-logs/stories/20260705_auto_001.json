@@ -1,0 +1,464 @@
+{
+  "storyId": "20260705_auto_001",
+  "title": "（自动）",
+  "sessionId": "14ccf4b7-6631-4de5-a46e-752d06bb1ce6",
+  "startedAt": "2026-07-04T16:40:21.138Z",
+  "steps": [
+    {
+      "step": "Explore",
+      "seq": 1,
+      "start": "2026-07-04T16:40:21.140Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 378,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Bash",
+          "start": "2026-07-04T16:40:25.375Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:25.632Z",
+          "end": null,
+          "durationMs": null
+        }
+      ]
+    },
+    {
+      "step": "Explore",
+      "seq": 2,
+      "start": "2026-07-04T16:40:26.188Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 296,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:28.507Z",
+          "end": "2026-07-04T16:40:29.074Z",
+          "durationMs": 567
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:28.980Z",
+          "end": "2026-07-04T16:40:29.172Z",
+          "durationMs": 192
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:29.385Z",
+          "end": "2026-07-04T16:40:29.570Z",
+          "durationMs": 185
+        }
+      ]
+    },
+    {
+      "step": "Explore",
+      "seq": 3,
+      "start": "2026-07-04T16:40:31.436Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 292,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:31.703Z",
+          "end": "2026-07-04T16:40:31.928Z",
+          "durationMs": 225
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:32.081Z",
+          "end": "2026-07-04T16:40:32.282Z",
+          "durationMs": 201
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:32.391Z",
+          "end": "2026-07-04T16:40:32.569Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:32.643Z",
+          "end": "2026-07-04T16:40:32.815Z",
+          "durationMs": 172
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:32.928Z",
+          "end": "2026-07-04T16:40:33.118Z",
+          "durationMs": 190
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:33.171Z",
+          "end": "2026-07-04T16:40:33.332Z",
+          "durationMs": 161
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:33.384Z",
+          "end": "2026-07-04T16:40:33.544Z",
+          "durationMs": 160
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:33.622Z",
+          "end": "2026-07-04T16:40:34.548Z",
+          "durationMs": 926
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:33.938Z",
+          "end": "2026-07-04T16:40:34.049Z",
+          "durationMs": 111
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:34.179Z",
+          "end": "2026-07-04T16:40:34.323Z",
+          "durationMs": 144
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:36.144Z",
+          "end": "2026-07-04T16:40:38.972Z",
+          "durationMs": 2828
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:36.470Z",
+          "end": "2026-07-04T16:40:36.475Z",
+          "durationMs": 5
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:36.770Z",
+          "end": "2026-07-04T16:40:36.811Z",
+          "durationMs": 41
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:36.771Z",
+          "end": "2026-07-04T16:40:36.919Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:36.848Z",
+          "end": "2026-07-04T16:40:37.241Z",
+          "durationMs": 393
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:37.022Z",
+          "end": "2026-07-04T16:40:37.193Z",
+          "durationMs": 171
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:37.054Z",
+          "end": "2026-07-04T16:40:37.170Z",
+          "durationMs": 116
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:37.156Z",
+          "end": "2026-07-04T16:40:37.167Z",
+          "durationMs": 11
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:37.467Z",
+          "end": "2026-07-04T16:40:37.534Z",
+          "durationMs": 67
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:37.490Z",
+          "end": "2026-07-04T16:40:37.692Z",
+          "durationMs": 202
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:37.743Z",
+          "end": "2026-07-04T16:40:37.829Z",
+          "durationMs": 86
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:38.026Z",
+          "end": "2026-07-04T16:40:38.107Z",
+          "durationMs": 81
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:38.069Z",
+          "end": "2026-07-04T16:40:38.255Z",
+          "durationMs": 186
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:38.346Z",
+          "end": "2026-07-04T16:40:38.374Z",
+          "durationMs": 28
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:38.581Z",
+          "end": "2026-07-04T16:40:38.758Z",
+          "durationMs": 177
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:38.621Z",
+          "end": "2026-07-04T16:40:38.693Z",
+          "durationMs": 72
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:39.079Z",
+          "end": "2026-07-04T16:40:39.208Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:39.169Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:39.350Z",
+          "end": "2026-07-04T16:40:39.480Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:39.609Z",
+          "end": "2026-07-04T16:40:39.735Z",
+          "durationMs": 126
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:39.723Z",
+          "end": "2026-07-04T16:40:39.903Z",
+          "durationMs": 180
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:39.860Z",
+          "end": "2026-07-04T16:40:41.955Z",
+          "durationMs": 2095
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.151Z",
+          "end": "2026-07-04T16:40:40.284Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.398Z",
+          "end": "2026-07-04T16:40:40.528Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.570Z",
+          "end": "2026-07-04T16:40:40.810Z",
+          "durationMs": 240
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.677Z",
+          "end": "2026-07-04T16:40:40.704Z",
+          "durationMs": 27
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.835Z",
+          "end": "2026-07-04T16:40:41.030Z",
+          "durationMs": 195
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:40.891Z",
+          "end": "2026-07-04T16:40:40.964Z",
+          "durationMs": 73
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:41.104Z",
+          "end": "2026-07-04T16:40:41.724Z",
+          "durationMs": 620
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:41.159Z",
+          "end": "2026-07-04T16:40:41.251Z",
+          "durationMs": 92
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:41.357Z",
+          "end": "2026-07-04T16:40:41.488Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:41.582Z",
+          "end": "2026-07-04T16:40:41.706Z",
+          "durationMs": 124
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:41.822Z",
+          "end": "2026-07-04T16:40:41.863Z",
+          "durationMs": 41
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:42.069Z",
+          "end": "2026-07-04T16:40:42.197Z",
+          "durationMs": 128
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:42.341Z",
+          "end": "2026-07-04T16:40:42.526Z",
+          "durationMs": 185
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:42.348Z",
+          "end": "2026-07-04T16:40:42.483Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:42.573Z",
+          "end": "2026-07-04T16:40:42.712Z",
+          "durationMs": 139
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:42.872Z",
+          "end": "2026-07-04T16:40:43.060Z",
+          "durationMs": 188
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:43.640Z",
+          "end": "2026-07-04T16:40:43.824Z",
+          "durationMs": 184
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:45.473Z",
+          "end": "2026-07-04T16:40:45.609Z",
+          "durationMs": 136
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:45.794Z",
+          "end": "2026-07-04T16:40:46.136Z",
+          "durationMs": 342
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:46.181Z",
+          "end": "2026-07-04T16:40:46.310Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:46.419Z",
+          "end": "2026-07-04T16:40:46.603Z",
+          "durationMs": 184
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:46.444Z",
+          "end": "2026-07-04T16:40:46.586Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:46.951Z",
+          "end": "2026-07-04T16:40:47.141Z",
+          "durationMs": 190
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:47.867Z",
+          "end": "2026-07-04T16:40:47.999Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:48.249Z",
+          "end": "2026-07-04T16:40:48.437Z",
+          "durationMs": 188
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-04T16:40:48.305Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:48.836Z",
+          "end": "2026-07-04T16:40:49.023Z",
+          "durationMs": 187
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-04T16:40:49.130Z",
+          "end": "2026-07-04T16:40:49.315Z",
+          "durationMs": 185
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:49.476Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-04T16:40:49.770Z",
+          "end": "2026-07-04T16:40:49.826Z",
+          "durationMs": 56
+        }
+      ]
+    }
+  ],
+  "contextLog": []
+}26-07-04T16:40:49.825Z",
+          "end": null,
+          "durationMs": null
+        }
+      ]
+    }
+  ],
+  "contextLog": []
+}

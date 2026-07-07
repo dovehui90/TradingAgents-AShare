@@ -1,0 +1,72 @@
+{
+  "job_id": "84612775a7f54e2da90870e9a118ffc7",
+  "status": "completed",
+  "decision": "HOLD",
+  "result": {
+    "symbol": "002230.SZ",
+    "trade_date": "2026-07-03",
+    "direction": null,
+    "instrument_context": {
+      "symbol": "002230.SZ",
+      "security_name": "002230.SZ",
+      "market_country": "CN",
+      "exchange": "SZ",
+      "currency": "CNY",
+      "asset_type": "equity"
+    },
+    "market_context": {
+      "trade_date": "2026-07-03",
+      "timezone": "Asia/Shanghai",
+      "market_session": "post_close",
+      "market_is_open": false,
+      "analysis_mode": "t_plus_1",
+      "data_as_of": "2026-07-03",
+      "session_note": "请求日期为历史 A 股交易日，市场已收盘。",
+      "market_country": "CN",
+      "exchange": "SZ"
+    },
+    "user_context": {},
+    "workflow_context": {
+      "context_version": "v1",
+      "request_source": "api",
+      "selected_analysts": [
+        "market",
+        "social",
+        "news",
+        "fundamentals",
+        "macro",
+        "smart_money",
+        "volume_price"
+      ]
+    },
+    "market_report": "",
+    "sentiment_report": "",
+    "news_report": "",
+    "fundamentals_report": "",
+    "macro_report": "",
+    "smart_money_report": "",
+    "volume_price_report": null,
+    "game_theory_report": null,
+    "game_theory_signals": null,
+    "analyst_traces": [],
+    "investment_plan": "",
+    "trader_investment_plan": "",
+    "risk_feedback_state": {
+      "retry_count": 0,
+      "max_retries": 1,
+      "revision_required": false,
+      "latest_risk_verdict": "",
+      "hard_constraints": [],
+      "soft_constraints": [],
+      "execution_preconditions": [],
+      "de_risk_triggers": [],
+      "revision_reason": ""
+    },
+    "final_trade_decision": "",
+    "decision": "HOLD",
+    "confidence": null,
+    "target_price": null,
+    "stop_loss_price": null
+  },
+  "finished_at": "2026-07-04T02:36:41.909443+00:00"
+}

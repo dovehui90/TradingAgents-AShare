@@ -1,0 +1,11 @@
+计算日期: 2026-06-29
+共振评分: 0.18
+板块分歧: True
+独立行情: False
+横盘: False
+
+  特高压: corr=+0.42 dir=涨 strength=1.4%
+  光纤概念: corr=+0.42 dir=涨 strength=0.8%
+  柔性直流输电: corr=+0.41 dir=涨 strength=1.3%
+  风电: corr=+0.41 dir=跌 strength=1.4%
+  5G: corr=+0.39 dir=涨 strength=1.3%

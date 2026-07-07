@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Login Helper</title></head>
+<body>
+<p>正在注入登录态并跳转...</p>
+<script>
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZjVmZjE1Ny1jYTMwLTQ0MGEtYWQxNi02MDg1OTE1YWVmNTciLCJlbWFpbCI6ImFkbWluQHRyYWRpbmdhZ2VudHMuY29tIiwiZXhwIjoxNzg0NTY0OTY3LCJpYXQiOjE3ODE5NzI5Njd9._04BnAz9Z5bUHUke1NOkEcu1QvXyMrRKKOaO03txkNg';
+localStorage.setItem('ta-access-token', token);
+document.cookie = 'ta-access-token=' + token + '; path=/';
+const target = location.hash.slice(1) || '/briefing';
+location.href = 'http://127.0.0.1:5173' + target;
+</script>
+</body></html>

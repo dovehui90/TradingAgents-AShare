@@ -1,0 +1,42 @@
+{
+  "resonance_score": -0.18,
+  "leading_boards": [
+    {
+      "name": "专精特新",
+      "correlation": 0.8176977837601705,
+      "direction": "涨",
+      "strength": 0.2992465218807605
+    },
+    {
+      "name": "东数西算(算力)",
+      "correlation": 0.5471048596304648,
+      "direction": "跌",
+      "strength": 0.4084771484560368
+    },
+    {
+      "name": "液冷服务器",
+      "correlation": 0.5346461200926057,
+      "direction": "跌",
+      "strength": 0.08419554055964174
+    },
+    {
+      "name": "阿里巴巴概念",
+      "correlation": 0.5343054579621959,
+      "direction": "跌",
+      "strength": 0.40808320689218697
+    },
+    {
+      "name": "百度概念",
+      "correlation": 0.5288764594557104,
+      "direction": "跌",
+      "strength": 0.5235095025896652
+    }
+  ],
+  "board_trend_summary": "主导概念：专精特新、东数西算(算力)、液冷服务器。共振评分：-0.18（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2025-06-20"
+}

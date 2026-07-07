@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+
+<head>
+  <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;</script>
+
+  <script type="module" src="/@vite/client"></script>
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradingAgents Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <script>
+    // 初始化主题
+    (function () {
+      const saved = localStorage.getItem('ta-theme') || 'system'
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      const shouldBeDark = saved === 'system' ? systemDark : saved === 'dark'
+      if (!shouldBeDark) {
+        document.documentElement.classList.remove('dark')
+      }
+    })()
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx?t=1782127871393"></script>
+</body>
+
+</html>

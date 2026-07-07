@@ -1,0 +1,42 @@
+{
+  "resonance_score": 0.02,
+  "leading_boards": [
+    {
+      "name": "专精特新",
+      "correlation": 0.21352330671541223,
+      "direction": "涨",
+      "strength": 0.3681538879965296
+    },
+    {
+      "name": "传感器",
+      "correlation": 0.1981340926752139,
+      "direction": "涨",
+      "strength": 0.42673611409880685
+    },
+    {
+      "name": "富士康概念",
+      "correlation": 0.19221972316731079,
+      "direction": "涨",
+      "strength": 0.31605692104608396
+    },
+    {
+      "name": "高端装备",
+      "correlation": 0.1872413437644884,
+      "direction": "涨",
+      "strength": 0.5701309866753501
+    },
+    {
+      "name": "工业母机",
+      "correlation": 0.1839539862596221,
+      "direction": "涨",
+      "strength": 0.8751286752200004
+    }
+  ],
+  "board_trend_summary": "主导概念：专精特新、传感器、富士康概念。共振评分：0.02（跟涨）",
+  "divergence_alert": false,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-07"
+}

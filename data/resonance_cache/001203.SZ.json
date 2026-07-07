@@ -1,0 +1,42 @@
+{
+  "resonance_score": 0.06,
+  "leading_boards": [
+    {
+      "name": "金属铅",
+      "correlation": -0.4021738282816285,
+      "direction": "跌",
+      "strength": 0.7367641115557588
+    },
+    {
+      "name": "金属锌",
+      "correlation": -0.3901831259028584,
+      "direction": "跌",
+      "strength": 0.7526717378809789
+    },
+    {
+      "name": "小金属概念",
+      "correlation": -0.3538767879681063,
+      "direction": "涨",
+      "strength": 0.5329317792314914
+    },
+    {
+      "name": "金属回收",
+      "correlation": -0.3038904086355211,
+      "direction": "涨",
+      "strength": 0.4716991757898881
+    },
+    {
+      "name": "锂电池概念",
+      "correlation": -0.2763823927054337,
+      "direction": "涨",
+      "strength": 0.37262341279577393
+    }
+  ],
+  "board_trend_summary": "主导概念：金属铅、金属锌、小金属概念。共振评分：0.06（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-06"
+}

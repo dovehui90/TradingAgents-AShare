@@ -1,0 +1,17 @@
+[
+  {
+    "symbol": "300476.SZ",
+    "name": "胜宏科技",
+    "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+  },
+  {
+    "symbol": "300265.SZ",
+    "name": "通光线缆",
+    "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+  },
+  {
+    "symbol": "301035.SZ",
+    "name": "润丰股份",
+    "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+  }
+]

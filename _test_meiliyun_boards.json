@@ -1,0 +1,172 @@
+{
+  "version": "527fb6d42301afa85c1c97cd7bd38fdc",
+  "result": {
+    "pages": 1,
+    "data": [
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "计算机",
+        "BOARD_RANK": 1,
+        "BOARD_CODE": "1207",
+        "IS_PRECISE": null,
+        "BOARD_TYPE": "行业"
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "IT服务Ⅱ",
+        "BOARD_RANK": 2,
+        "BOARD_CODE": "1238",
+        "IS_PRECISE": null,
+        "BOARD_TYPE": "行业"
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "IT服务Ⅲ",
+        "BOARD_RANK": 3,
+        "BOARD_CODE": "1444",
+        "IS_PRECISE": null,
+        "BOARD_TYPE": "行业"
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "宁夏板块",
+        "BOARD_RANK": 4,
+        "BOARD_CODE": "162",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": "板块"
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "2025年报扭亏",
+        "BOARD_RANK": 5,
+        "BOARD_CODE": "1679",
+        "IS_PRECISE": null,
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "昨日高振幅",
+        "BOARD_RANK": 6,
+        "BOARD_CODE": "1633",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "深股通",
+        "BOARD_RANK": 7,
+        "BOARD_CODE": "804",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "融资融券",
+        "BOARD_RANK": 8,
+        "BOARD_CODE": "596",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "机构重仓",
+        "BOARD_RANK": 9,
+        "BOARD_CODE": "552",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "QFII重仓",
+        "BOARD_RANK": 10,
+        "BOARD_CODE": "535",
+        "IS_PRECISE": "0",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "东数西算",
+        "BOARD_RANK": 11,
+        "BOARD_CODE": "1064",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "绿色电力",
+        "BOARD_RANK": 12,
+        "BOARD_CODE": "1024",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "国资云概念",
+        "BOARD_RANK": 13,
+        "BOARD_CODE": "1008",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "数据中心",
+        "BOARD_RANK": 14,
+        "BOARD_CODE": "922",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "央国企改革",
+        "BOARD_RANK": 15,
+        "BOARD_CODE": "683",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "大数据",
+        "BOARD_RANK": 16,
+        "BOARD_CODE": "634",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "西部大开发",
+        "BOARD_RANK": 17,
+        "BOARD_CODE": "590",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "光伏概念",
+        "BOARD_RANK": 18,
+        "BOARD_CODE": "588",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "云计算",
+        "BOARD_RANK": 19,
+        "BOARD_CODE": "579",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      },
+      {
+        "SECURITY_CODE": "000815",
+        "BOARD_NAME": "新能源",
+        "BOARD_RANK": 20,
+        "BOARD_CODE": "493",
+        "IS_PRECISE": "1",
+        "BOARD_TYPE": null
+      }
+    ],
+    "count": 20
+  },
+  "success": true,
+  "message": "ok",
+  "code": 0
+}

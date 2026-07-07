@@ -1,0 +1,17 @@
+[
+  {
+    "symbol": "300476.SZ",
+    "name": "胜宏科技",
+    "error": "Checkpointer requires one or more of the following 'configurable' keys: thread_id, checkpoint_ns, checkpoint_id"
+  },
+  {
+    "symbol": "300265.SZ",
+    "name": "通光线缆",
+    "error": "Checkpointer requires one or more of the following 'configurable' keys: thread_id, checkpoint_ns, checkpoint_id"
+  },
+  {
+    "symbol": "301035.SZ",
+    "name": "润丰股份",
+    "error": "Checkpointer requires one or more of the following 'configurable' keys: thread_id, checkpoint_ns, checkpoint_id"
+  }
+]

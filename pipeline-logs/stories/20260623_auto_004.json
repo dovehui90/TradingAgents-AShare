@@ -1,0 +1,450 @@
+{
+  "storyId": "20260623_auto_004",
+  "title": "（自动）",
+  "sessionId": "5cbd0b59-908c-4106-af27-cca4e624ad09",
+  "startedAt": "2026-06-23T13:26:58.314Z",
+  "steps": [
+    {
+      "step": "chinese-code-review",
+      "seq": 1,
+      "start": "2026-06-23T13:26:58.316Z",
+      "end": "2026-06-23T13:26:58.583Z",
+      "durationMs": 267,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 15,
+      "estOutputTokens": 13,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-23T13:26:58.360Z",
+          "end": "2026-06-23T13:26:58.538Z",
+          "durationMs": 178
+        }
+      ]
+    },
+    {
+      "step": "_main",
+      "start": "2026-06-23T13:27:00.822Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": null,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:00.823Z",
+          "end": "2026-06-23T13:27:06.499Z",
+          "durationMs": 5676
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:01.854Z",
+          "end": "2026-06-23T13:27:05.518Z",
+          "durationMs": 3664
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:24.491Z",
+          "end": "2026-06-23T13:27:28.914Z",
+          "durationMs": 4423
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:27:29.064Z",
+          "end": "2026-06-23T13:27:30.121Z",
+          "durationMs": 1057
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:33.135Z",
+          "end": "2026-06-23T13:27:37.672Z",
+          "durationMs": 4537
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:40.235Z",
+          "end": "2026-06-23T13:27:44.627Z",
+          "durationMs": 4392
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:27:47.621Z",
+          "end": "2026-06-23T13:27:57.552Z",
+          "durationMs": 9931
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:01.420Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:09.028Z",
+          "end": "2026-06-23T13:28:13.352Z",
+          "durationMs": 4324
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:16.748Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:25.883Z",
+          "end": "2026-06-23T13:28:31.430Z",
+          "durationMs": 5547
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:34.900Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:28:58.347Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:29:16.965Z",
+          "end": "2026-06-23T13:29:26.450Z",
+          "durationMs": 9485
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:29:31.030Z",
+          "end": "2026-06-23T13:29:42.400Z",
+          "durationMs": 11370
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:29:45.717Z",
+          "end": "2026-06-23T13:29:47.090Z",
+          "durationMs": 1373
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T13:34:39.249Z",
+          "end": "2026-06-23T13:34:39.474Z",
+          "durationMs": 225
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-23T13:34:39.585Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T13:35:01.427Z",
+          "end": "2026-06-23T13:35:01.584Z",
+          "durationMs": 157
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:35:05.896Z",
+          "end": "2026-06-23T13:35:14.859Z",
+          "durationMs": 8963
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:35:19.493Z",
+          "end": "2026-06-23T13:35:26.252Z",
+          "durationMs": 6759
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:35:31.685Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T13:35:37.017Z",
+          "end": "2026-06-23T13:35:37.193Z",
+          "durationMs": 176
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:35:40.032Z",
+          "end": "2026-06-23T13:35:45.527Z",
+          "durationMs": 5495
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T13:35:52.049Z",
+          "end": "2026-06-23T13:35:52.211Z",
+          "durationMs": 162
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T13:35:55.146Z",
+          "end": "2026-06-23T13:35:57.759Z",
+          "durationMs": 2613
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T13:36:03.186Z",
+          "end": "2026-06-23T13:36:07.628Z",
+          "durationMs": 4442
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-24T03:44:22.900Z",
+          "end": "2026-06-24T03:44:24.562Z",
+          "durationMs": 1662
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-24T03:44:59.332Z",
+          "end": "2026-06-24T03:44:59.750Z",
+          "durationMs": 418
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-24T03:44:59.805Z",
+          "end": "2026-06-24T03:45:00.006Z",
+          "durationMs": 201
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-24T03:45:02.537Z",
+          "end": "2026-06-24T03:45:02.777Z",
+          "durationMs": 240
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-24T03:45:03.141Z",
+          "end": "2026-06-24T03:45:03.342Z",
+          "durationMs": 201
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-24T03:45:04.050Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:45:10.859Z",
+          "end": "2026-06-24T03:45:12.058Z",
+          "durationMs": 1199
+        },
+        {
+          "tool": "WebFetch",
+          "start": "2026-06-24T03:45:18.936Z",
+          "end": "2026-06-24T03:45:23.906Z",
+          "durationMs": 4970
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-24T03:45:24.062Z",
+          "end": "2026-06-24T03:45:34.843Z",
+          "durationMs": 10781
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-24T03:45:37.539Z",
+          "end": "2026-06-24T03:46:02.927Z",
+          "durationMs": 25388
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:46:06.613Z",
+          "end": "2026-06-24T03:46:07.519Z",
+          "durationMs": 906
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-24T03:46:09.597Z",
+          "end": "2026-06-24T03:46:09.759Z",
+          "durationMs": 162
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-24T03:47:41.426Z",
+          "end": "2026-06-24T03:47:43.698Z",
+          "durationMs": 2272
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-24T03:47:47.034Z",
+          "end": "2026-06-24T03:47:47.268Z",
+          "durationMs": 234
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-24T03:47:47.604Z",
+          "end": "2026-06-24T03:47:47.765Z",
+          "durationMs": 161
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-24T03:50:02.399Z",
+          "end": "2026-06-24T03:50:06.814Z",
+          "durationMs": 4415
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:50:09.577Z",
+          "end": "2026-06-24T03:52:10.373Z",
+          "durationMs": 120796
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-24T03:52:12.521Z",
+          "end": "2026-06-24T03:54:12.812Z",
+          "durationMs": 120291
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-24T03:54:15.173Z",
+          "end": "2026-06-24T03:55:47.097Z",
+          "durationMs": 91924
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-24T03:55:54.688Z",
+          "end": "2026-06-24T03:55:54.846Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:55:57.970Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:56:14.140Z",
+          "end": "2026-06-24T03:56:18.213Z",
+          "durationMs": 4073
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:56:21.584Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-24T03:56:25.356Z",
+          "end": null,
+          "durationMs": null
+        }
+      ]
+    },
+    {
+      "step": "chinese-commit-conventions",
+      "seq": 1,
+      "start": "2026-06-23T13:27:17.036Z",
+      "end": "2026-06-23T13:27:17.289Z",
+      "durationMs": 253,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 35,
+      "estOutputTokens": 15,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-23T13:27:17.080Z",
+          "end": "2026-06-23T13:27:17.242Z",
+          "durationMs": 162
+        }
+      ]
+    },
+    {
+      "step": "find-skills",
+      "seq": 1,
+      "start": "2026-06-24T03:45:14.972Z",
+      "end": "2026-06-24T03:45:15.247Z",
+      "durationMs": 275,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 14,
+      "estOutputTokens": 11,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-24T03:45:15.016Z",
+          "end": "2026-06-24T03:45:15.201Z",
+          "durationMs": 185
+        }
+      ]
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-06-24T03:58:12.717Z",
+    "totalDurationMs": 795,
+    "totalSteps": 4,
+    "completed": 3,
+    "running": 1,
+    "totalEstIn": 64,
+    "totalEstOut": 39,
+    "estCost": 0.00005924999999999999,
+    "successRate": "3/3",
+    "peakContextPct": null,
+    "stepStats": {
+      "chinese-code-review": {
+        "count": 1,
+        "totalMs": 267,
+        "min": 267,
+        "max": 267,
+        "fails": 0,
+        "estIn": 15,
+        "estOut": 13,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "chinese-commit-conventions": {
+        "count": 1,
+        "totalMs": 253,
+        "min": 253,
+        "max": 253,
+        "fails": 0,
+        "estIn": 35,
+        "estOut": 15,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "find-skills": {
+        "count": 1,
+        "totalMs": 275,
+        "min": 275,
+        "max": 275,
+        "fails": 0,
+        "estIn": 14,
+        "estOut": 11,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "_main": {
+        "count": 0,
+        "totalMs": 0,
+        "min": null,
+        "max": 0,
+        "fails": 0,
+        "estIn": 0,
+        "estOut": 0,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

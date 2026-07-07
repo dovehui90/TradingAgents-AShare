@@ -1,0 +1,42 @@
+{
+  "resonance_score": 0.06,
+  "leading_boards": [
+    {
+      "name": "有机硅概念",
+      "correlation": -0.3045153013849788,
+      "direction": "涨",
+      "strength": 0.1455046916686431
+    },
+    {
+      "name": "磷化工",
+      "correlation": -0.2889505773488798,
+      "direction": "涨",
+      "strength": 0.004703216233254981
+    },
+    {
+      "name": "氟化工概念",
+      "correlation": -0.2751141057200139,
+      "direction": "涨",
+      "strength": 0.034168680336637
+    },
+    {
+      "name": "消毒剂",
+      "correlation": -0.19874068291483168,
+      "direction": "跌",
+      "strength": 0.5208269772244134
+    },
+    {
+      "name": "化肥",
+      "correlation": -0.17883318766857823,
+      "direction": "跌",
+      "strength": 0.5281926583373653
+    }
+  ],
+  "board_trend_summary": "主导概念：有机硅概念、磷化工、氟化工概念。共振评分：0.06（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-07"
+}

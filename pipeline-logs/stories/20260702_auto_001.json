@@ -1,0 +1,165 @@
+{
+  "storyId": "20260702_auto_001",
+  "title": "（自动）",
+  "sessionId": "5bcb3561-3d15-4c18-8c1d-44ad85c839f5",
+  "startedAt": "2026-07-02T11:22:59.572Z",
+  "steps": [
+    {
+      "step": "Explore",
+      "seq": 1,
+      "start": "2026-07-02T11:22:59.573Z",
+      "end": "2026-07-02T11:24:08.707Z",
+      "durationMs": 69134,
+      "success": true,
+      "inputTokens": 1780,
+      "outputTokens": 4726,
+      "estInputTokens": 197,
+      "estOutputTokens": 3552,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:01.807Z",
+          "end": "2026-07-02T11:23:01.963Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-02T11:23:02.233Z",
+          "end": "2026-07-02T11:23:02.866Z",
+          "durationMs": 633
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-02T11:23:03.238Z",
+          "end": "2026-07-02T11:23:03.600Z",
+          "durationMs": 362
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:03.490Z",
+          "end": "2026-07-02T11:23:03.707Z",
+          "durationMs": 217
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:06.084Z",
+          "end": "2026-07-02T11:23:06.238Z",
+          "durationMs": 154
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:06.362Z",
+          "end": "2026-07-02T11:23:06.520Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:06.695Z",
+          "end": "2026-07-02T11:23:06.851Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:06.973Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:07.228Z",
+          "end": "2026-07-02T11:23:07.537Z",
+          "durationMs": 309
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:07.789Z",
+          "end": "2026-07-02T11:23:08.021Z",
+          "durationMs": 232
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:10.944Z",
+          "end": "2026-07-02T11:23:11.145Z",
+          "durationMs": 201
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:11.656Z",
+          "end": "2026-07-02T11:23:11.847Z",
+          "durationMs": 191
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:13.921Z",
+          "end": "2026-07-02T11:23:14.065Z",
+          "durationMs": 144
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:14.427Z",
+          "end": "2026-07-02T11:23:14.576Z",
+          "durationMs": 149
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-07-02T11:23:16.868Z",
+          "end": "2026-07-02T11:23:17.246Z",
+          "durationMs": 378
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:17.333Z",
+          "end": "2026-07-02T11:23:17.598Z",
+          "durationMs": 265
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:17.906Z",
+          "end": "2026-07-02T11:23:18.152Z",
+          "durationMs": 246
+        },
+        {
+          "tool": "Read",
+          "start": "2026-07-02T11:23:19.499Z",
+          "end": "2026-07-02T11:23:19.644Z",
+          "durationMs": 145
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-07-02T11:23:20.194Z",
+          "end": "2026-07-02T11:23:20.395Z",
+          "durationMs": 201
+        }
+      ],
+      "cacheReadTokens": 45440,
+      "cacheCreateTokens": 0
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-07-02T11:24:23.573Z",
+    "totalDurationMs": 69134,
+    "totalSteps": 1,
+    "completed": 1,
+    "running": 0,
+    "totalEstIn": 197,
+    "totalEstOut": 3552,
+    "estCost": 0.0031072,
+    "successRate": "1/1",
+    "peakContextPct": null,
+    "stepStats": {
+      "Explore": {
+        "count": 1,
+        "totalMs": 69134,
+        "min": 69134,
+        "max": 69134,
+        "fails": 0,
+        "estIn": 197,
+        "estOut": 3552,
+        "cacheHit": 45440,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

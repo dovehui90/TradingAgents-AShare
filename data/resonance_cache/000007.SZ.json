@@ -1,0 +1,18 @@
+{
+  "resonance_score": -0.02,
+  "leading_boards": [
+    {
+      "name": "物业管理",
+      "correlation": 0.16137608108486076,
+      "direction": "跌",
+      "strength": 0.6565596151739927
+    }
+  ],
+  "board_trend_summary": "主导概念：物业管理。共振评分：-0.02（跟跌）",
+  "divergence_alert": false,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-06"
+}

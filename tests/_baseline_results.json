@@ -1,0 +1,65 @@
+[
+  {
+    "sym": "600519.SH",
+    "date": "2025-05-15",
+    "dec": "HOLD",
+    "bt_ok": null,
+    "bt_ret": null
+  },
+  {
+    "sym": "600519.SH",
+    "date": "2025-05-20",
+    "dec": "HOLD",
+    "bt_ok": null,
+    "bt_ret": null
+  },
+  {
+    "sym": "600519.SH",
+    "date": "2025-06-05",
+    "dec": "BUY",
+    "bt_ok": false,
+    "bt_ret": -3.15
+  },
+  {
+    "sym": "300750.SZ",
+    "date": "2025-05-15",
+    "dec": "SELL",
+    "bt_ok": false,
+    "bt_ret": 4.25
+  },
+  {
+    "sym": "300750.SZ",
+    "date": "2025-05-20",
+    "dec": "HOLD",
+    "bt_ok": null,
+    "bt_ret": null
+  },
+  {
+    "sym": "300750.SZ",
+    "date": "2025-06-05",
+    "dec": "HOLD",
+    "bt_ok": null,
+    "bt_ret": null
+  },
+  {
+    "sym": "000830.SZ",
+    "date": "2025-05-15",
+    "dec": "BUY",
+    "bt_ok": false,
+    "bt_ret": -0.74
+  },
+  {
+    "sym": "000830.SZ",
+    "date": "2025-05-20",
+    "dec": "BUY",
+    "bt_ok": false,
+    "bt_ret": -2.58
+  },
+  {
+    "sym": "000830.SZ",
+    "date": "2025-06-05",
+    "dec": "BUY",
+    "bt_ok": true,
+    "bt_ret": 0.76
+  }
+]

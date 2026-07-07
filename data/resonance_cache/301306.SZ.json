@@ -1,0 +1,44 @@
+{
+  "resonance_score": -0.06,
+  "leading_boards": [
+    {
+      "name": "专精特新",
+      "correlation": 0.2896189073352931,
+      "direction": "涨",
+      "strength": 0.2992465218807605
+    },
+    {
+      "name": "军民融合",
+      "correlation": 0.24441513521974412,
+      "direction": "涨",
+      "strength": 0.3443892590866904
+    },
+    {
+      "name": "军工",
+      "correlation": 0.23969397596450132,
+      "direction": "跌",
+      "strength": 0.415909621140802
+    },
+    {
+      "name": "卫星导航",
+      "correlation": 0.23332352488575364,
+      "direction": "跌",
+      "strength": 0.2705537880958775
+    },
+    {
+      "name": "存储芯片",
+      "correlation": 0.23251882790039827,
+      "direction": "跌",
+      "strength": 0.42000431719649617
+    }
+  ],
+  "board_trend_summary": "主导概念：专精特新、军民融合、军工。共振评分：-0.06（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [
+    "概念'西部大开发'未出现在THS概念板块列表中，跳过"
+  ],
+  "computed_at": "2025-06-20"
+}

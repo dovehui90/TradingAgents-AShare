@@ -1,0 +1,18 @@
+{
+  "resonance_score": 0.0,
+  "leading_boards": [
+    {
+      "name": "数据中心(AIDC)",
+      "correlation": 0.11807272657989988,
+      "direction": "涨",
+      "strength": 0.09753048548071463
+    }
+  ],
+  "board_trend_summary": "主导概念：数据中心(AIDC)。共振评分：0.00（跟涨）",
+  "divergence_alert": false,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-06"
+}

@@ -24,16 +24,7 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
         page.set_viewport_size({"width": 1280, "height": 800})
 
         url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/"
-        page.goto(url, timeout=15000, wait_until="domcontentloaded")
-        page.wait_for_timeout(2000)
-        content = page.content()
-        print(f"Page title: {page.title()}")
-        print(f"Content length: {len(content)}")
-        print(f"Has m-table: {'m-table' in content}")
-        if 'Nginx forbidden' in content:
-            print("BLOCKED by Nginx!")
-            browser.close()
-            return []
+        page.goto(url, timeout=15000, wait_until="networkidle")
         page_info = page.query_selector(".page_info")
         total_pages = 1
         if page_info:

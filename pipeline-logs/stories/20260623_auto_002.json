@@ -1,0 +1,2736 @@
+{
+  "storyId": "20260623_auto_002",
+  "title": "（自动）",
+  "sessionId": "b56f6ec9-a8d8-44da-85ba-5fba12bef79a",
+  "startedAt": "2026-06-23T08:33:11.338Z",
+  "steps": [
+    {
+      "step": "a-stock-data",
+      "seq": 1,
+      "start": "2026-06-23T08:33:11.340Z",
+      "end": "2026-06-23T08:33:11.616Z",
+      "durationMs": 276,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 11,
+      "estOutputTokens": 11,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-23T08:33:11.384Z",
+          "end": "2026-06-23T08:33:11.569Z",
+          "durationMs": 185
+        }
+      ]
+    },
+    {
+      "step": "_main",
+      "start": "2026-06-23T08:33:18.374Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": null,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:33:18.375Z",
+          "end": "2026-06-23T08:33:18.623Z",
+          "durationMs": 248
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:33:19.813Z",
+          "end": "2026-06-23T08:33:20.061Z",
+          "durationMs": 248
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:33:23.409Z",
+          "end": "2026-06-23T08:33:23.586Z",
+          "durationMs": 177
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:33:23.960Z",
+          "end": "2026-06-23T08:33:24.129Z",
+          "durationMs": 169
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:33:27.471Z",
+          "end": "2026-06-23T08:33:27.689Z",
+          "durationMs": 218
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:33:28.532Z",
+          "end": "2026-06-23T08:33:28.753Z",
+          "durationMs": 221
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:33:32.227Z",
+          "end": "2026-06-23T08:33:32.459Z",
+          "durationMs": 232
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:33:35.573Z",
+          "end": "2026-06-23T08:33:35.742Z",
+          "durationMs": 169
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:51:44.854Z",
+          "end": "2026-06-23T08:51:45.046Z",
+          "durationMs": 192
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:51:46.089Z",
+          "end": "2026-06-23T08:51:46.270Z",
+          "durationMs": 181
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:51:47.508Z",
+          "end": "2026-06-23T08:51:47.698Z",
+          "durationMs": 190
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:51:50.948Z",
+          "end": "2026-06-23T08:51:51.086Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:54:08.015Z",
+          "end": "2026-06-23T08:54:08.150Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:54:09.176Z",
+          "end": "2026-06-23T08:54:09.359Z",
+          "durationMs": 183
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:54:12.685Z",
+          "end": "2026-06-23T08:54:12.859Z",
+          "durationMs": 174
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T08:54:14.031Z",
+          "end": "2026-06-23T08:54:14.212Z",
+          "durationMs": 181
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:54:18.716Z",
+          "end": "2026-06-23T08:54:18.856Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:54:19.479Z",
+          "end": "2026-06-23T08:54:19.612Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:54:20.253Z",
+          "end": "2026-06-23T08:54:20.387Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T08:54:30.543Z",
+          "end": "2026-06-23T08:54:30.677Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T09:44:40.741Z",
+          "end": "2026-06-23T09:44:40.953Z",
+          "durationMs": 212
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:44:43.583Z",
+          "end": "2026-06-23T09:44:43.717Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:44:44.001Z",
+          "end": "2026-06-23T09:44:44.130Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:44:48.133Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:44:48.682Z",
+          "end": "2026-06-23T09:44:48.832Z",
+          "durationMs": 150
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:45:00.264Z",
+          "end": "2026-06-23T09:45:01.086Z",
+          "durationMs": 822
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:45:01.223Z",
+          "end": "2026-06-23T09:45:01.365Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:45:04.614Z",
+          "end": "2026-06-23T09:45:06.127Z",
+          "durationMs": 1513
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:45:06.267Z",
+          "end": "2026-06-23T09:45:07.014Z",
+          "durationMs": 747
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:45:12.977Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T09:45:26.453Z",
+          "end": "2026-06-23T09:45:26.624Z",
+          "durationMs": 171
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:45:30.064Z",
+          "end": "2026-06-23T09:45:31.608Z",
+          "durationMs": 1544
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:45:41.706Z",
+          "end": "2026-06-23T09:45:41.840Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:45:44.904Z",
+          "end": "2026-06-23T09:45:45.043Z",
+          "durationMs": 139
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T09:46:20.565Z",
+          "end": "2026-06-23T09:46:20.721Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T09:46:32.448Z",
+          "end": "2026-06-23T09:46:32.596Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:46:36.141Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T09:49:57.977Z",
+          "end": "2026-06-23T09:49:58.163Z",
+          "durationMs": 186
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:50:00.924Z",
+          "end": "2026-06-23T09:50:01.061Z",
+          "durationMs": 137
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T09:50:25.617Z",
+          "end": "2026-06-23T09:50:25.750Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:52:44.877Z",
+          "end": "2026-06-23T09:52:48.913Z",
+          "durationMs": 4036
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:52:49.052Z",
+          "end": "2026-06-23T09:52:52.980Z",
+          "durationMs": 3928
+        },
+        {
+          "tool": "ExitPlanMode",
+          "start": "2026-06-23T09:53:07.464Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T09:54:58.677Z",
+          "end": "2026-06-23T09:54:58.870Z",
+          "durationMs": 193
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:55:04.456Z",
+          "end": "2026-06-23T09:55:08.034Z",
+          "durationMs": 3578
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:55:08.171Z",
+          "end": "2026-06-23T09:55:12.030Z",
+          "durationMs": 3859
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:55:15.491Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:55:21.836Z",
+          "end": "2026-06-23T09:55:25.483Z",
+          "durationMs": 3647
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T09:55:32.422Z",
+          "end": "2026-06-23T09:55:36.544Z",
+          "durationMs": 4122
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T09:57:54.515Z",
+          "end": "2026-06-23T09:57:54.673Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T09:58:11.623Z",
+          "end": "2026-06-23T09:58:11.761Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "ExitPlanMode",
+          "start": "2026-06-23T09:58:18.319Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T09:59:13.543Z",
+          "end": "2026-06-23T09:59:14.973Z",
+          "durationMs": 1430
+        },
+        {
+          "tool": "ExitPlanMode",
+          "start": "2026-06-23T10:00:21.964Z",
+          "end": "2026-06-23T10:00:26.115Z",
+          "durationMs": 4151
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T10:00:29.440Z",
+          "end": "2026-06-23T10:00:29.570Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T10:00:32.040Z",
+          "end": "2026-06-23T10:00:32.169Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T10:00:35.456Z",
+          "end": "2026-06-23T10:00:35.605Z",
+          "durationMs": 149
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T10:00:40.393Z",
+          "end": "2026-06-23T10:00:40.526Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T10:00:49.776Z",
+          "end": "2026-06-23T10:00:49.912Z",
+          "durationMs": 136
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T10:00:53.318Z",
+          "end": "2026-06-23T10:00:53.447Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:00:55.568Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:08:52.831Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:09:31.747Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T10:11:07.858Z",
+          "end": "2026-06-23T10:11:07.992Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T10:11:13.466Z",
+          "end": "2026-06-23T10:11:13.595Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T10:11:22.406Z",
+          "end": "2026-06-23T10:11:22.555Z",
+          "durationMs": 149
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:11:27.059Z",
+          "end": "2026-06-23T10:11:31.105Z",
+          "durationMs": 4046
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:11:41.073Z",
+          "end": "2026-06-23T10:11:46.952Z",
+          "durationMs": 5879
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T10:11:49.188Z",
+          "end": "2026-06-23T10:11:53.032Z",
+          "durationMs": 3844
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T10:12:01.462Z",
+          "end": "2026-06-23T10:12:01.595Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:12:03.912Z",
+          "end": "2026-06-23T10:12:07.618Z",
+          "durationMs": 3706
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:21:28.305Z",
+          "end": "2026-06-23T10:21:32.276Z",
+          "durationMs": 3971
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:21:32.415Z",
+          "end": "2026-06-23T10:21:36.436Z",
+          "durationMs": 4021
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:21:36.572Z",
+          "end": "2026-06-23T10:21:40.938Z",
+          "durationMs": 4366
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:21:46.714Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:21:56.607Z",
+          "end": "2026-06-23T10:22:01.024Z",
+          "durationMs": 4417
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T10:52:40.333Z",
+          "end": "2026-06-23T10:54:40.389Z",
+          "durationMs": 120056
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-23T11:08:42.499Z",
+          "end": "2026-06-23T11:08:43.103Z",
+          "durationMs": 604
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:08:42.942Z",
+          "end": "2026-06-23T11:08:43.089Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:08:46.465Z",
+          "end": "2026-06-23T11:08:46.605Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:08:55.459Z",
+          "end": "2026-06-23T11:08:55.593Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:09:05.079Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:09:38.900Z",
+          "end": "2026-06-23T11:09:42.682Z",
+          "durationMs": 3782
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:11:01.557Z",
+          "end": "2026-06-23T11:11:01.688Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:11:06.147Z",
+          "end": "2026-06-23T11:11:06.283Z",
+          "durationMs": 136
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:11:10.637Z",
+          "end": "2026-06-23T11:11:14.856Z",
+          "durationMs": 4219
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:05.467Z",
+          "end": "2026-06-23T11:12:09.176Z",
+          "durationMs": 3709
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:12.332Z",
+          "end": "2026-06-23T11:12:16.151Z",
+          "durationMs": 3819
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:12:23.628Z",
+          "end": "2026-06-23T11:12:24.590Z",
+          "durationMs": 962
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:27.535Z",
+          "end": "2026-06-23T11:12:31.331Z",
+          "durationMs": 3796
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:34.269Z",
+          "end": "2026-06-23T11:12:38.298Z",
+          "durationMs": 4029
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:42.161Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:49.970Z",
+          "end": "2026-06-23T11:12:53.866Z",
+          "durationMs": 3896
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:12:57.509Z",
+          "end": "2026-06-23T11:13:01.592Z",
+          "durationMs": 4083
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:13:08.725Z",
+          "end": "2026-06-23T11:13:12.878Z",
+          "durationMs": 4153
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:13:21.573Z",
+          "end": "2026-06-23T11:13:26.594Z",
+          "durationMs": 5021
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:13:33.516Z",
+          "end": "2026-06-23T11:13:37.625Z",
+          "durationMs": 4109
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:13:46.170Z",
+          "end": "2026-06-23T11:13:49.969Z",
+          "durationMs": 3799
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:13:54.313Z",
+          "end": "2026-06-23T11:14:01.193Z",
+          "durationMs": 6880
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:14:04.307Z",
+          "end": "2026-06-23T11:16:53.236Z",
+          "durationMs": 168929
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:18:58.463Z",
+          "end": "2026-06-23T11:18:58.596Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:19:05.217Z",
+          "end": "2026-06-23T11:19:05.355Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:19:12.155Z",
+          "end": "2026-06-23T11:19:16.203Z",
+          "durationMs": 4048
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:19:19.263Z",
+          "end": "2026-06-23T11:19:26.230Z",
+          "durationMs": 6967
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:19:31.036Z",
+          "end": "2026-06-23T11:20:09.387Z",
+          "durationMs": 38351
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:20:16.619Z",
+          "end": "2026-06-23T11:20:47.089Z",
+          "durationMs": 30470
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T11:20:49.402Z",
+          "end": "2026-06-23T11:20:50.304Z",
+          "durationMs": 902
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:23:04.036Z",
+          "end": "2026-06-23T11:23:04.234Z",
+          "durationMs": 198
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:23:05.044Z",
+          "end": "2026-06-23T11:23:05.222Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:23:11.560Z",
+          "end": "2026-06-23T11:23:11.734Z",
+          "durationMs": 174
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:23:17.837Z",
+          "end": "2026-06-23T11:23:18.679Z",
+          "durationMs": 842
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:23:22.618Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:26:16.292Z",
+          "end": "2026-06-23T11:26:16.470Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:26:19.043Z",
+          "end": "2026-06-23T11:26:19.178Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:26:27.577Z",
+          "end": "2026-06-23T11:26:27.709Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:26:30.973Z",
+          "end": "2026-06-23T11:26:31.103Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T11:26:46.782Z",
+          "end": "2026-06-23T11:26:46.923Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:26:51.563Z",
+          "end": "2026-06-23T11:26:51.695Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:26:53.886Z",
+          "end": "2026-06-23T11:26:54.023Z",
+          "durationMs": 137
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:26:58.074Z",
+          "end": "2026-06-23T11:26:58.230Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:27:02.926Z",
+          "end": "2026-06-23T11:27:03.061Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:27:07.207Z",
+          "end": "2026-06-23T11:27:14.424Z",
+          "durationMs": 7217
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:27:18.220Z",
+          "end": "2026-06-23T11:28:15.749Z",
+          "durationMs": 57529
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:31:26.670Z",
+          "end": "2026-06-23T11:31:26.801Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:33.685Z",
+          "end": "2026-06-23T11:31:33.912Z",
+          "durationMs": 227
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:34.144Z",
+          "end": "2026-06-23T11:31:34.323Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:34.606Z",
+          "end": "2026-06-23T11:31:34.793Z",
+          "durationMs": 187
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:35.079Z",
+          "end": "2026-06-23T11:31:35.259Z",
+          "durationMs": 180
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:35.531Z",
+          "end": "2026-06-23T11:31:35.704Z",
+          "durationMs": 173
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:31:37.635Z",
+          "end": "2026-06-23T11:31:37.776Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:31:37.919Z",
+          "end": "2026-06-23T11:31:38.057Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:31:38.150Z",
+          "end": "2026-06-23T11:31:38.479Z",
+          "durationMs": 329
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:31:41.655Z",
+          "end": "2026-06-23T11:31:41.795Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:42.310Z",
+          "end": "2026-06-23T11:31:42.500Z",
+          "durationMs": 190
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:31:44.205Z",
+          "end": "2026-06-23T11:31:44.350Z",
+          "durationMs": 145
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:46.484Z",
+          "end": "2026-06-23T11:31:46.681Z",
+          "durationMs": 197
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:31:48.400Z",
+          "end": "2026-06-23T11:31:48.569Z",
+          "durationMs": 169
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:21.780Z",
+          "end": "2026-06-23T11:32:21.914Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:22.355Z",
+          "end": "2026-06-23T11:32:22.496Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:22.956Z",
+          "end": "2026-06-23T11:32:23.086Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:26.684Z",
+          "end": "2026-06-23T11:32:26.818Z",
+          "durationMs": 134
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:27.065Z",
+          "end": "2026-06-23T11:32:27.193Z",
+          "durationMs": 128
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:32:32.496Z",
+          "end": "2026-06-23T11:32:32.666Z",
+          "durationMs": 170
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:34.822Z",
+          "end": "2026-06-23T11:32:34.955Z",
+          "durationMs": 133
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:32:41.993Z",
+          "end": "2026-06-23T11:32:42.132Z",
+          "durationMs": 139
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:44.716Z",
+          "end": "2026-06-23T11:32:44.867Z",
+          "durationMs": 151
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:32:49.579Z",
+          "end": "2026-06-23T11:32:49.733Z",
+          "durationMs": 154
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:32:54.846Z",
+          "end": "2026-06-23T11:32:54.976Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:32:57.297Z",
+          "end": "2026-06-23T11:32:57.435Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:33:05.521Z",
+          "end": "2026-06-23T11:33:05.700Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:33:09.923Z",
+          "end": "2026-06-23T11:33:10.110Z",
+          "durationMs": 187
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:33:12.689Z",
+          "end": "2026-06-23T11:33:12.844Z",
+          "durationMs": 155
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:33:35.866Z",
+          "end": "2026-06-23T11:33:36.031Z",
+          "durationMs": 165
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:33:46.295Z",
+          "end": "2026-06-23T11:33:46.465Z",
+          "durationMs": 170
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:33:51.402Z",
+          "end": "2026-06-23T11:33:51.540Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:33:54.766Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:34:01.077Z",
+          "end": "2026-06-23T11:36:02.747Z",
+          "durationMs": 121670
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:36:05.008Z",
+          "end": "2026-06-23T11:36:09.661Z",
+          "durationMs": 4653
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:36:13.799Z",
+          "end": "2026-06-23T11:36:18.221Z",
+          "durationMs": 4422
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:36:22.424Z",
+          "end": "2026-06-23T11:36:26.797Z",
+          "durationMs": 4373
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:36:29.879Z",
+          "end": "2026-06-23T11:36:34.022Z",
+          "durationMs": 4143
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:36:42.200Z",
+          "end": "2026-06-23T11:36:42.337Z",
+          "durationMs": 137
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:36:47.341Z",
+          "end": "2026-06-23T11:36:48.380Z",
+          "durationMs": 1039
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:36:52.157Z",
+          "end": "2026-06-23T11:36:56.355Z",
+          "durationMs": 4198
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:37:02.222Z",
+          "end": "2026-06-23T11:37:06.270Z",
+          "durationMs": 4048
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:37:11.093Z",
+          "end": "2026-06-23T11:37:11.877Z",
+          "durationMs": 784
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:37:15.869Z",
+          "end": "2026-06-23T11:37:18.687Z",
+          "durationMs": 2818
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:37:21.280Z",
+          "end": "2026-06-23T11:37:24.430Z",
+          "durationMs": 3150
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:37:27.299Z",
+          "end": "2026-06-23T11:37:27.819Z",
+          "durationMs": 520
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:37:30.740Z",
+          "end": "2026-06-23T11:37:37.153Z",
+          "durationMs": 6413
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:37:40.471Z",
+          "end": "2026-06-23T11:37:44.974Z",
+          "durationMs": 4503
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:37:48.037Z",
+          "end": "2026-06-23T11:37:52.072Z",
+          "durationMs": 4035
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:37:56.218Z",
+          "end": "2026-06-23T11:37:56.407Z",
+          "durationMs": 189
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:37:59.158Z",
+          "end": "2026-06-23T11:37:59.305Z",
+          "durationMs": 147
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:38:06.271Z",
+          "end": "2026-06-23T11:38:14.890Z",
+          "durationMs": 8619
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:38:19.337Z",
+          "end": "2026-06-23T11:38:20.068Z",
+          "durationMs": 731
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:38:23.301Z",
+          "end": "2026-06-23T11:38:23.838Z",
+          "durationMs": 537
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:38:26.599Z",
+          "end": "2026-06-23T11:38:32.914Z",
+          "durationMs": 6315
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:38:35.154Z",
+          "end": "2026-06-23T11:38:39.389Z",
+          "durationMs": 4235
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:38:43.422Z",
+          "end": "2026-06-23T11:38:47.728Z",
+          "durationMs": 4306
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:38:53.506Z",
+          "end": "2026-06-23T11:38:54.504Z",
+          "durationMs": 998
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:38:57.635Z",
+          "end": "2026-06-23T11:39:00.697Z",
+          "durationMs": 3062
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:39:03.616Z",
+          "end": "2026-06-23T11:39:03.768Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:39:06.358Z",
+          "end": "2026-06-23T11:39:13.005Z",
+          "durationMs": 6647
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:39:15.153Z",
+          "end": "2026-06-23T11:39:19.555Z",
+          "durationMs": 4402
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:39:23.215Z",
+          "end": "2026-06-23T11:39:23.374Z",
+          "durationMs": 159
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:39:29.308Z",
+          "end": "2026-06-23T11:39:33.865Z",
+          "durationMs": 4557
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:39:37.236Z",
+          "end": "2026-06-23T11:39:37.389Z",
+          "durationMs": 153
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:39:45.375Z",
+          "end": "2026-06-23T11:39:45.559Z",
+          "durationMs": 184
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:39:49.999Z",
+          "end": "2026-06-23T11:39:50.143Z",
+          "durationMs": 144
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:39:53.936Z",
+          "end": "2026-06-23T11:39:57.822Z",
+          "durationMs": 3886
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:40:04.263Z",
+          "end": "2026-06-23T11:40:04.422Z",
+          "durationMs": 159
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:40:08.402Z",
+          "end": "2026-06-23T11:40:15.811Z",
+          "durationMs": 7409
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:40:22.614Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:41:32.631Z",
+          "end": "2026-06-23T11:41:32.766Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:41:36.875Z",
+          "end": "2026-06-23T11:41:37.034Z",
+          "durationMs": 159
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:41:41.243Z",
+          "end": "2026-06-23T11:41:44.390Z",
+          "durationMs": 3147
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:41:47.241Z",
+          "end": "2026-06-23T11:41:47.856Z",
+          "durationMs": 615
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:41:50.625Z",
+          "end": "2026-06-23T11:42:02.223Z",
+          "durationMs": 11598
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:42:04.409Z",
+          "end": "2026-06-23T11:42:08.730Z",
+          "durationMs": 4321
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:42:12.917Z",
+          "end": "2026-06-23T11:42:17.174Z",
+          "durationMs": 4257
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:42:19.905Z",
+          "end": "2026-06-23T11:42:20.040Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:42:29.624Z",
+          "end": "2026-06-23T11:42:38.646Z",
+          "durationMs": 9022
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:42:43.133Z",
+          "end": "2026-06-23T11:42:44.049Z",
+          "durationMs": 916
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:42:47.147Z",
+          "end": "2026-06-23T11:42:51.220Z",
+          "durationMs": 4073
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:42:54.889Z",
+          "end": "2026-06-23T11:42:59.050Z",
+          "durationMs": 4161
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:43:04.355Z",
+          "end": "2026-06-23T11:43:04.543Z",
+          "durationMs": 188
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:43:09.093Z",
+          "end": "2026-06-23T11:43:09.271Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:43:12.373Z",
+          "end": "2026-06-23T11:43:12.551Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:43:15.390Z",
+          "end": "2026-06-23T11:43:15.530Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:43:24.518Z",
+          "end": "2026-06-23T11:43:24.697Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:43:33.865Z",
+          "end": "2026-06-23T11:43:33.997Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:43:38.842Z",
+          "end": "2026-06-23T11:43:39.003Z",
+          "durationMs": 161
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:43:42.108Z",
+          "end": "2026-06-23T11:43:42.235Z",
+          "durationMs": 127
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:43:45.205Z",
+          "end": "2026-06-23T11:43:45.385Z",
+          "durationMs": 180
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:43:48.430Z",
+          "end": "2026-06-23T11:43:56.782Z",
+          "durationMs": 8352
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:44:02.697Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:45:03.593Z",
+          "end": "2026-06-23T11:45:05.775Z",
+          "durationMs": 2182
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:45:08.232Z",
+          "end": "2026-06-23T11:45:09.089Z",
+          "durationMs": 857
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:45:11.929Z",
+          "end": "2026-06-23T11:45:17.070Z",
+          "durationMs": 5141
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:45:20.533Z",
+          "end": "2026-06-23T11:45:27.954Z",
+          "durationMs": 7421
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:45:30.831Z",
+          "end": "2026-06-23T11:45:35.066Z",
+          "durationMs": 4235
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:45:42.621Z",
+          "end": "2026-06-23T11:45:46.679Z",
+          "durationMs": 4058
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:45:51.853Z",
+          "end": "2026-06-23T11:45:52.740Z",
+          "durationMs": 887
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:45:56.097Z",
+          "end": "2026-06-23T11:46:00.058Z",
+          "durationMs": 3961
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:02.721Z",
+          "end": "2026-06-23T11:46:06.629Z",
+          "durationMs": 3908
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:46:09.618Z",
+          "end": "2026-06-23T11:46:11.110Z",
+          "durationMs": 1492
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:16.343Z",
+          "end": "2026-06-23T11:46:20.086Z",
+          "durationMs": 3743
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:22.931Z",
+          "end": "2026-06-23T11:46:23.083Z",
+          "durationMs": 152
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:26.064Z",
+          "end": "2026-06-23T11:46:33.446Z",
+          "durationMs": 7382
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:36.154Z",
+          "end": "2026-06-23T11:46:40.363Z",
+          "durationMs": 4209
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:46:52.143Z",
+          "end": "2026-06-23T11:46:56.268Z",
+          "durationMs": 4125
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:00.412Z",
+          "end": "2026-06-23T11:47:04.737Z",
+          "durationMs": 4325
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:07.818Z",
+          "end": "2026-06-23T11:47:11.763Z",
+          "durationMs": 3945
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:14.275Z",
+          "end": "2026-06-23T11:47:20.358Z",
+          "durationMs": 6083
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:23.661Z",
+          "end": "2026-06-23T11:47:23.798Z",
+          "durationMs": 137
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:26.778Z",
+          "end": "2026-06-23T11:47:34.194Z",
+          "durationMs": 7416
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:47:36.369Z",
+          "end": "2026-06-23T11:47:40.624Z",
+          "durationMs": 4255
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:47:54.317Z",
+          "end": "2026-06-23T11:47:54.452Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:47:58.082Z",
+          "end": "2026-06-23T11:47:58.212Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:48:01.965Z",
+          "end": "2026-06-23T11:48:02.097Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:48:07.039Z",
+          "end": "2026-06-23T11:48:07.203Z",
+          "durationMs": 164
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:48:13.127Z",
+          "end": "2026-06-23T11:48:13.290Z",
+          "durationMs": 163
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:48:17.135Z",
+          "end": "2026-06-23T11:48:17.293Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:48:20.771Z",
+          "end": "2026-06-23T11:48:28.094Z",
+          "durationMs": 7323
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:48:30.230Z",
+          "end": "2026-06-23T11:48:34.393Z",
+          "durationMs": 4163
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:48:38.232Z",
+          "end": "2026-06-23T11:48:38.378Z",
+          "durationMs": 146
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:48:44.016Z",
+          "end": "2026-06-23T11:48:44.170Z",
+          "durationMs": 154
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:48:47.823Z",
+          "end": "2026-06-23T11:48:51.881Z",
+          "durationMs": 4058
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:48:55.944Z",
+          "end": "2026-06-23T11:48:59.994Z",
+          "durationMs": 4050
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:03.061Z",
+          "end": "2026-06-23T11:49:07.296Z",
+          "durationMs": 4235
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:49:12.197Z",
+          "end": "2026-06-23T11:49:12.376Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:19.664Z",
+          "end": "2026-06-23T11:49:23.840Z",
+          "durationMs": 4176
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:27.739Z",
+          "end": "2026-06-23T11:49:32.070Z",
+          "durationMs": 4331
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:34.938Z",
+          "end": "2026-06-23T11:49:38.837Z",
+          "durationMs": 3899
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:42.846Z",
+          "end": "2026-06-23T11:49:46.835Z",
+          "durationMs": 3989
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:49:50.911Z",
+          "end": "2026-06-23T11:49:51.885Z",
+          "durationMs": 974
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:49:55.925Z",
+          "end": "2026-06-23T11:49:59.887Z",
+          "durationMs": 3962
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:04.722Z",
+          "end": "2026-06-23T11:50:08.790Z",
+          "durationMs": 4068
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:15.249Z",
+          "end": "2026-06-23T11:50:19.264Z",
+          "durationMs": 4015
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:50:22.950Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:50:27.332Z",
+          "end": "2026-06-23T11:50:28.381Z",
+          "durationMs": 1049
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:32.797Z",
+          "end": "2026-06-23T11:50:32.953Z",
+          "durationMs": 156
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:35.485Z",
+          "end": "2026-06-23T11:50:45.517Z",
+          "durationMs": 10032
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:47.592Z",
+          "end": "2026-06-23T11:50:54.886Z",
+          "durationMs": 7294
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:50:57.300Z",
+          "end": "2026-06-23T11:51:05.998Z",
+          "durationMs": 8698
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:51:13.446Z",
+          "end": "2026-06-23T11:51:18.451Z",
+          "durationMs": 5005
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:51:24.831Z",
+          "end": "2026-06-23T11:51:27.586Z",
+          "durationMs": 2755
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:51:32.326Z",
+          "end": "2026-06-23T11:51:32.481Z",
+          "durationMs": 155
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:51:35.085Z",
+          "end": "2026-06-23T11:51:42.532Z",
+          "durationMs": 7447
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:51:45.745Z",
+          "end": "2026-06-23T11:51:49.670Z",
+          "durationMs": 3925
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:51:52.409Z",
+          "end": "2026-06-23T11:51:54.490Z",
+          "durationMs": 2081
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:52:01.816Z",
+          "end": "2026-06-23T11:52:01.966Z",
+          "durationMs": 150
+        },
+        {
+          "tool": "TodoWrite",
+          "start": "2026-06-23T11:52:07.615Z",
+          "end": "2026-06-23T11:52:07.745Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "PowerShell",
+          "start": "2026-06-23T11:53:14.658Z",
+          "end": "2026-06-23T11:53:16.675Z",
+          "durationMs": 2017
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T11:53:19.942Z",
+          "end": "2026-06-23T11:53:20.120Z",
+          "durationMs": 178
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:53:27.343Z",
+          "end": "2026-06-23T11:53:27.501Z",
+          "durationMs": 158
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:53:30.976Z",
+          "end": "2026-06-23T11:53:38.508Z",
+          "durationMs": 7532
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:53:41.747Z",
+          "end": "2026-06-23T11:53:55.822Z",
+          "durationMs": 14075
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:53:59.847Z",
+          "end": "2026-06-23T11:53:59.987Z",
+          "durationMs": 140
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:54:02.677Z",
+          "end": "2026-06-23T11:54:09.162Z",
+          "durationMs": 6485
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:54:13.930Z",
+          "end": "2026-06-23T11:54:18.193Z",
+          "durationMs": 4263
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:54:21.923Z",
+          "end": "2026-06-23T11:54:26.223Z",
+          "durationMs": 4300
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-23T11:54:29.189Z",
+          "end": "2026-06-23T11:54:29.522Z",
+          "durationMs": 333
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:54:32.295Z",
+          "end": "2026-06-23T11:54:32.424Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:54:47.289Z",
+          "end": "2026-06-23T11:54:47.455Z",
+          "durationMs": 166
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:54:51.211Z",
+          "end": "2026-06-23T11:55:02.680Z",
+          "durationMs": 11469
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:55:11.593Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:55:18.760Z",
+          "end": "2026-06-23T11:55:28.459Z",
+          "durationMs": 9699
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:55:36.741Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:55:48.725Z",
+          "end": "2026-06-23T11:55:58.887Z",
+          "durationMs": 10162
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:56:08.508Z",
+          "end": "2026-06-23T11:56:15.505Z",
+          "durationMs": 6997
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T11:56:23.479Z",
+          "end": "2026-06-23T11:56:23.617Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:56:27.275Z",
+          "end": "2026-06-23T11:56:37.350Z",
+          "durationMs": 10075
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T11:56:46.255Z",
+          "end": "2026-06-23T11:56:46.393Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:56:50.009Z",
+          "end": "2026-06-23T11:57:00.099Z",
+          "durationMs": 10090
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T11:57:11.059Z",
+          "end": "2026-06-23T11:57:11.212Z",
+          "durationMs": 153
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:57:14.332Z",
+          "end": "2026-06-23T11:57:26.436Z",
+          "durationMs": 12104
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T11:57:40.505Z",
+          "end": "2026-06-23T11:57:40.647Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:57:44.041Z",
+          "end": "2026-06-23T11:58:01.155Z",
+          "durationMs": 17114
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T11:58:08.058Z",
+          "end": "2026-06-23T11:58:08.839Z",
+          "durationMs": 781
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T11:58:13.619Z",
+          "end": "2026-06-23T11:58:13.809Z",
+          "durationMs": 190
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:58:17.660Z",
+          "end": "2026-06-23T11:58:21.696Z",
+          "durationMs": 4036
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:03.577Z",
+          "end": "2026-06-23T11:59:07.589Z",
+          "durationMs": 4012
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:10.114Z",
+          "end": "2026-06-23T11:59:13.996Z",
+          "durationMs": 3882
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:18.465Z",
+          "end": "2026-06-23T11:59:22.335Z",
+          "durationMs": 3870
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:27.035Z",
+          "end": "2026-06-23T11:59:30.929Z",
+          "durationMs": 3894
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:34.328Z",
+          "end": "2026-06-23T11:59:38.480Z",
+          "durationMs": 4152
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:44.220Z",
+          "end": "2026-06-23T11:59:48.146Z",
+          "durationMs": 3926
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T11:59:52.407Z",
+          "end": "2026-06-23T11:59:56.447Z",
+          "durationMs": 4040
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:00.560Z",
+          "end": "2026-06-23T12:00:05.088Z",
+          "durationMs": 4528
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:08.038Z",
+          "end": "2026-06-23T12:00:11.934Z",
+          "durationMs": 3896
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:14.995Z",
+          "end": "2026-06-23T12:00:22.329Z",
+          "durationMs": 7334
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:27.434Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:35.451Z",
+          "end": "2026-06-23T12:00:38.934Z",
+          "durationMs": 3483
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:00:43.960Z",
+          "end": "2026-06-23T12:00:49.383Z",
+          "durationMs": 5423
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:01:52.455Z",
+          "end": "2026-06-23T12:03:04.834Z",
+          "durationMs": 72379
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:06:44.317Z",
+          "end": "2026-06-23T12:06:59.768Z",
+          "durationMs": 15451
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:07:02.922Z",
+          "end": "2026-06-23T12:07:23.157Z",
+          "durationMs": 20235
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:07:29.280Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:07:42.592Z",
+          "end": "2026-06-23T12:07:42.741Z",
+          "durationMs": 149
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:07:46.181Z",
+          "end": "2026-06-23T12:07:50.019Z",
+          "durationMs": 3838
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:07:58.173Z",
+          "end": "2026-06-23T12:08:01.965Z",
+          "durationMs": 3792
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:08:43.998Z",
+          "end": "2026-06-23T12:08:47.878Z",
+          "durationMs": 3880
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:08:50.453Z",
+          "end": "2026-06-23T12:08:54.341Z",
+          "durationMs": 3888
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:08:59.372Z",
+          "end": "2026-06-23T12:09:03.502Z",
+          "durationMs": 4130
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:09:05.918Z",
+          "end": "2026-06-23T12:09:12.606Z",
+          "durationMs": 6688
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:09:15.837Z",
+          "end": "2026-06-23T12:11:16.086Z",
+          "durationMs": 120249
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:11:18.564Z",
+          "end": "2026-06-23T12:13:18.757Z",
+          "durationMs": 120193
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:13:21.606Z",
+          "end": "2026-06-23T12:13:25.686Z",
+          "durationMs": 4080
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:13:28.372Z",
+          "end": "2026-06-23T12:13:28.503Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:13:31.328Z",
+          "end": "2026-06-23T12:15:31.565Z",
+          "durationMs": 120237
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:15:34.818Z",
+          "end": "2026-06-23T12:15:34.967Z",
+          "durationMs": 149
+        },
+        {
+          "tool": "TaskStop",
+          "start": "2026-06-23T12:15:37.787Z",
+          "end": "2026-06-23T12:15:37.962Z",
+          "durationMs": 175
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:15:40.461Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:18:14.795Z",
+          "end": "2026-06-23T12:18:30.218Z",
+          "durationMs": 15423
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:19:29.922Z",
+          "end": "2026-06-23T12:19:30.070Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:19:33.280Z",
+          "end": "2026-06-23T12:19:48.764Z",
+          "durationMs": 15484
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:19:48.902Z",
+          "end": "2026-06-23T12:20:04.351Z",
+          "durationMs": 15449
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:20:06.390Z",
+          "end": "2026-06-23T12:20:06.538Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:20:06.993Z",
+          "end": "2026-06-23T12:20:07.125Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:20:12.163Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:20:28.269Z",
+          "end": "2026-06-23T12:20:43.557Z",
+          "durationMs": 15288
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:20:45.722Z",
+          "end": "2026-06-23T12:20:45.852Z",
+          "durationMs": 130
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:20:48.449Z",
+          "end": "2026-06-23T12:20:54.739Z",
+          "durationMs": 6290
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:20:54.876Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-23T12:21:03.616Z",
+          "end": "2026-06-23T12:21:03.782Z",
+          "durationMs": 166
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:04.328Z",
+          "end": "2026-06-23T12:21:09.023Z",
+          "durationMs": 4695
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:13.795Z",
+          "end": "2026-06-23T12:21:17.872Z",
+          "durationMs": 4077
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:21:22.228Z",
+          "end": "2026-06-23T12:21:22.357Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:25.975Z",
+          "end": "2026-06-23T12:21:29.690Z",
+          "durationMs": 3715
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:29.825Z",
+          "end": "2026-06-23T12:21:34.911Z",
+          "durationMs": 5086
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:38.163Z",
+          "end": "2026-06-23T12:21:41.938Z",
+          "durationMs": 3775
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:44.585Z",
+          "end": "2026-06-23T12:21:48.403Z",
+          "durationMs": 3818
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:21:51.645Z",
+          "end": "2026-06-23T12:21:55.357Z",
+          "durationMs": 3712
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:01.000Z",
+          "end": "2026-06-23T12:22:04.769Z",
+          "durationMs": 3769
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:07.451Z",
+          "end": "2026-06-23T12:22:11.820Z",
+          "durationMs": 4369
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:14.268Z",
+          "end": "2026-06-23T12:22:18.445Z",
+          "durationMs": 4177
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:20.707Z",
+          "end": "2026-06-23T12:22:27.799Z",
+          "durationMs": 7092
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:27.941Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:35.156Z",
+          "end": "2026-06-23T12:22:41.997Z",
+          "durationMs": 6841
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:22:50.524Z",
+          "end": "2026-06-23T12:23:20.983Z",
+          "durationMs": 30459
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:23:23.317Z",
+          "end": "2026-06-23T12:23:31.499Z",
+          "durationMs": 8182
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:23:35.166Z",
+          "end": "2026-06-23T12:23:43.103Z",
+          "durationMs": 7937
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:23:49.362Z",
+          "end": "2026-06-23T12:23:54.203Z",
+          "durationMs": 4841
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:23:54.333Z",
+          "end": "2026-06-23T12:24:09.767Z",
+          "durationMs": 15434
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:24:13.223Z",
+          "end": "2026-06-23T12:24:13.371Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:24:17.674Z",
+          "end": "2026-06-23T12:24:23.436Z",
+          "durationMs": 5762
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:24:26.807Z",
+          "end": "2026-06-23T12:24:42.278Z",
+          "durationMs": 15471
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:24:42.421Z",
+          "end": "2026-06-23T12:24:57.866Z",
+          "durationMs": 15445
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:25:00.191Z",
+          "end": "2026-06-23T12:25:00.333Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:25:00.815Z",
+          "end": "2026-06-23T12:25:00.950Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:25:04.167Z",
+          "end": "2026-06-23T12:25:04.308Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:29:00.631Z",
+          "end": "2026-06-23T12:29:00.770Z",
+          "durationMs": 139
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:29:01.074Z",
+          "end": "2026-06-23T12:29:01.212Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:29:07.501Z",
+          "end": "2026-06-23T12:29:22.970Z",
+          "durationMs": 15469
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:29:23.118Z",
+          "end": "2026-06-23T12:29:38.566Z",
+          "durationMs": 15448
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:29:41.015Z",
+          "end": "2026-06-23T12:29:41.166Z",
+          "durationMs": 151
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:29:41.685Z",
+          "end": "2026-06-23T12:29:41.820Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T12:29:45.688Z",
+          "end": "2026-06-23T12:29:45.864Z",
+          "durationMs": 176
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T12:29:49.787Z",
+          "end": "2026-06-23T12:29:49.968Z",
+          "durationMs": 181
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:29:55.143Z",
+          "end": "2026-06-23T12:30:10.600Z",
+          "durationMs": 15457
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:30:10.749Z",
+          "end": "2026-06-23T12:30:26.221Z",
+          "durationMs": 15472
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:30:28.579Z",
+          "end": "2026-06-23T12:30:28.722Z",
+          "durationMs": 143
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:30:29.211Z",
+          "end": "2026-06-23T12:30:29.349Z",
+          "durationMs": 138
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:30:35.535Z",
+          "end": "2026-06-23T12:30:35.666Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:31:00.149Z",
+          "end": "2026-06-23T12:31:00.281Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T12:31:04.569Z",
+          "end": "2026-06-23T12:31:04.746Z",
+          "durationMs": 177
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T12:31:37.763Z",
+          "end": "2026-06-23T12:31:37.929Z",
+          "durationMs": 166
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:31:41.333Z",
+          "end": "2026-06-23T12:31:41.462Z",
+          "durationMs": 129
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T12:31:51.002Z",
+          "end": "2026-06-23T12:31:51.181Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:31:55.651Z",
+          "end": "2026-06-23T12:31:55.783Z",
+          "durationMs": 132
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:32:00.202Z",
+          "end": "2026-06-23T12:32:00.333Z",
+          "durationMs": 131
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-23T12:32:03.261Z",
+          "end": "2026-06-23T12:32:03.448Z",
+          "durationMs": 187
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:32:07.500Z",
+          "end": "2026-06-23T12:32:07.642Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T12:32:12.812Z",
+          "end": "2026-06-23T12:32:12.947Z",
+          "durationMs": 135
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T12:32:18.061Z",
+          "end": "2026-06-23T12:32:18.202Z",
+          "durationMs": 141
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:22.309Z",
+          "end": "2026-06-23T12:32:26.485Z",
+          "durationMs": 4176
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:30.731Z",
+          "end": "2026-06-23T12:32:34.736Z",
+          "durationMs": 4005
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:37.367Z",
+          "end": "2026-06-23T12:32:41.341Z",
+          "durationMs": 3974
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:43.742Z",
+          "end": "2026-06-23T12:32:47.704Z",
+          "durationMs": 3962
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:49.749Z",
+          "end": "2026-06-23T12:32:56.422Z",
+          "durationMs": 6673
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:32:56.555Z",
+          "end": "2026-06-23T12:33:01.209Z",
+          "durationMs": 4654
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:33:04.108Z",
+          "end": "2026-06-23T12:35:04.454Z",
+          "durationMs": 120346
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:35:06.706Z",
+          "end": "2026-06-23T12:35:40.845Z",
+          "durationMs": 34139
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:35:47.513Z",
+          "end": "2026-06-23T12:36:53.652Z",
+          "durationMs": 66139
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:37:04.988Z",
+          "end": "2026-06-23T12:37:20.264Z",
+          "durationMs": 15276
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:37:22.558Z",
+          "end": "2026-06-23T12:37:52.716Z",
+          "durationMs": 30158
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:37:59.508Z",
+          "end": "2026-06-23T12:38:06.841Z",
+          "durationMs": 7333
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:38:10.247Z",
+          "end": "2026-06-23T12:38:14.461Z",
+          "durationMs": 4214
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:38:21.098Z",
+          "end": "2026-06-23T12:38:26.055Z",
+          "durationMs": 4957
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:38:36.728Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:38:55.243Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:45:16.561Z",
+          "end": "2026-06-23T12:45:20.585Z",
+          "durationMs": 4024
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:48:36.390Z",
+          "end": "2026-06-23T12:48:36.569Z",
+          "durationMs": 179
+        },
+        {
+          "tool": "Edit",
+          "start": "2026-06-23T12:48:55.505Z",
+          "end": "2026-06-23T12:48:55.721Z",
+          "durationMs": 216
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:48:59.900Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:49:14.031Z",
+          "end": "2026-06-23T12:49:33.986Z",
+          "durationMs": 19955
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:49:36.491Z",
+          "end": "2026-06-23T12:49:42.918Z",
+          "durationMs": 6427
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:49:47.063Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:52:47.839Z",
+          "end": "2026-06-23T12:52:54.220Z",
+          "durationMs": 6381
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:52:56.642Z",
+          "end": "2026-06-23T12:53:01.000Z",
+          "durationMs": 4358
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:53:04.265Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:53:39.907Z",
+          "end": null,
+          "durationMs": null
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:54:05.280Z",
+          "end": "2026-06-23T12:54:20.810Z",
+          "durationMs": 15530
+        },
+        {
+          "tool": "TaskOutput",
+          "start": "2026-06-23T12:54:22.661Z",
+          "end": "2026-06-23T12:54:37.071Z",
+          "durationMs": 14410
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:55:24.663Z",
+          "end": "2026-06-23T12:55:24.811Z",
+          "durationMs": 148
+        },
+        {
+          "tool": "Read",
+          "start": "2026-06-23T12:55:39.610Z",
+          "end": "2026-06-23T12:55:39.772Z",
+          "durationMs": 162
+        },
+        {
+          "tool": "Write",
+          "start": "2026-06-23T12:55:59.404Z",
+          "end": "2026-06-23T12:55:59.573Z",
+          "durationMs": 169
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:56:05.972Z",
+          "end": "2026-06-23T12:56:13.647Z",
+          "durationMs": 7675
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:56:19.014Z",
+          "end": "2026-06-23T12:56:33.540Z",
+          "durationMs": 14526
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:56:40.136Z",
+          "end": "2026-06-23T12:56:44.402Z",
+          "durationMs": 4266
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-23T12:56:52.347Z",
+          "end": "2026-06-23T12:56:57.032Z",
+          "durationMs": 4685
+        }
+      ]
+    },
+    {
+      "step": "Explore",
+      "seq": 1,
+      "start": "2026-06-23T11:31:31.451Z",
+      "end": "2026-06-23T11:32:09.232Z",
+      "durationMs": 37781,
+      "success": true,
+      "inputTokens": 673,
+      "outputTokens": 2898,
+      "estInputTokens": 110,
+      "estOutputTokens": 2416,
+      "contextPct": null,
+      "cacheReadTokens": 49024,
+      "cacheCreateTokens": 0
+    },
+    {
+      "step": "browser-cdp",
+      "seq": 1,
+      "start": "2026-06-23T11:55:07.724Z",
+      "end": "2026-06-23T11:55:07.975Z",
+      "durationMs": 251,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 37,
+      "estOutputTokens": 11,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-23T11:55:07.771Z",
+          "end": "2026-06-23T11:55:07.932Z",
+          "durationMs": 161
+        }
+      ]
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-06-23T12:59:56.268Z",
+    "totalDurationMs": 38308,
+    "totalSteps": 4,
+    "completed": 3,
+    "running": 1,
+    "totalEstIn": 158,
+    "totalEstOut": 2438,
+    "estCost": 0.0021951239999999997,
+    "successRate": "3/3",
+    "peakContextPct": null,
+    "stepStats": {
+      "a-stock-data": {
+        "count": 1,
+        "totalMs": 276,
+        "min": 276,
+        "max": 276,
+        "fails": 0,
+        "estIn": 11,
+        "estOut": 11,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "Explore": {
+        "count": 1,
+        "totalMs": 37781,
+        "min": 37781,
+        "max": 37781,
+        "fails": 0,
+        "estIn": 110,
+        "estOut": 2416,
+        "cacheHit": 49024,
+        "cacheMiss": 0
+      },
+      "browser-cdp": {
+        "count": 1,
+        "totalMs": 251,
+        "min": 251,
+        "max": 251,
+        "fails": 0,
+        "estIn": 37,
+        "estOut": 11,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "_main": {
+        "count": 0,
+        "totalMs": 0,
+        "min": null,
+        "max": 0,
+        "fails": 0,
+        "estIn": 0,
+        "estOut": 0,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

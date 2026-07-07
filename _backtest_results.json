@@ -1,0 +1,254 @@
+[
+  {
+    "symbol": "300476.SZ",
+    "name": "胜宏科技",
+    "trade_date": "2026-06-15",
+    "elapsed_s": 553.6,
+    "signal": "BUY",
+    "direction": 1,
+    "confidence": 60,
+    "verdicts": {
+      "fundamentals_analyst": "中性",
+      "macro_analyst": "看多",
+      "market_analyst": "偏多",
+      "news_analyst": "偏多",
+      "smart_money_analyst": "中性",
+      "social_media_analyst": "偏多",
+      "volume_price_analyst": "偏空"
+    },
+    "confidences": {
+      "fundamentals_analyst": "中",
+      "macro_analyst": "高",
+      "market_analyst": "中",
+      "news_analyst": "中",
+      "smart_money_analyst": "低",
+      "social_media_analyst": "中",
+      "volume_price_analyst": "中"
+    },
+    "forward": {
+      "base_close": 344.5,
+      "base_date": "2026-06-15",
+      "ret_1d": 3.19,
+      "close_1d": 355.48,
+      "ret_3d": 7.11,
+      "close_3d": 369.0,
+      "ret_5d": -1.83,
+      "close_5d": 338.2,
+      "ret_10d": 0.56,
+      "close_10d": 346.43
+    },
+    "correct_1d": true,
+    "correct_3d": true,
+    "correct_5d": false,
+    "correct_10d": true
+  },
+  {
+    "symbol": "300476.SZ",
+    "name": "胜宏科技",
+    "trade_date": "2026-06-22",
+    "elapsed_s": 641.4,
+    "signal": "SELL",
+    "direction": -1,
+    "confidence": 68,
+    "verdicts": {
+      "fundamentals_analyst": "偏多",
+      "macro_analyst": "看多",
+      "market_analyst": "偏多",
+      "news_analyst": "看多",
+      "smart_money_analyst": "偏多",
+      "social_media_analyst": "偏多",
+      "volume_price_analyst": "看空"
+    },
+    "confidences": {
+      "fundamentals_analyst": "高",
+      "macro_analyst": "高",
+      "market_analyst": "高",
+      "news_analyst": "高",
+      "smart_money_analyst": "中",
+      "social_media_analyst": "中",
+      "volume_price_analyst": "高"
+    },
+    "forward": {
+      "base_close": 365.4,
+      "base_date": "2026-06-22",
+      "ret_1d": -7.44,
+      "close_1d": 338.2,
+      "ret_3d": -4.17,
+      "close_3d": 350.16,
+      "ret_5d": -13.69,
+      "close_5d": 315.37,
+      "ret_10d": null
+    },
+    "correct_1d": true,
+    "correct_3d": true,
+    "correct_5d": true,
+    "correct_10d": null
+  },
+  {
+    "symbol": "300476.SZ",
+    "name": "胜宏科技",
+    "trade_date": "2026-06-29",
+    "elapsed_s": 500.9,
+    "signal": "HOLD",
+    "direction": 0,
+    "confidence": 85,
+    "verdicts": {
+      "fundamentals_analyst": "偏空",
+      "macro_analyst": "看多",
+      "market_analyst": "偏空",
+      "news_analyst": "偏多",
+      "smart_money_analyst": "看空",
+      "social_media_analyst": "偏多",
+      "volume_price_analyst": "偏空"
+    },
+    "confidences": {
+      "fundamentals_analyst": "中",
+      "macro_analyst": "高",
+      "market_analyst": "中",
+      "news_analyst": "高",
+      "smart_money_analyst": "高",
+      "social_media_analyst": "高",
+      "volume_price_analyst": "中"
+    },
+    "forward": {
+      "base_close": 315.37,
+      "base_date": "2026-06-29",
+      "ret_1d": 9.85,
+      "close_1d": 346.43,
+      "ret_3d": -2.94,
+      "close_3d": 306.09,
+      "ret_5d": null,
+      "ret_10d": null
+    },
+    "correct_1d": null,
+    "correct_3d": null,
+    "correct_5d": null,
+    "correct_10d": null
+  },
+  {
+    "symbol": "300265.SZ",
+    "name": "通光线缆",
+    "trade_date": "2026-06-15",
+    "elapsed_s": 434.3,
+    "signal": "SELL",
+    "direction": -1,
+    "confidence": 85,
+    "verdicts": {
+      "fundamentals_analyst": "偏空",
+      "macro_analyst": "中性",
+      "market_analyst": "偏多",
+      "news_analyst": "偏多",
+      "smart_money_analyst": "偏空",
+      "social_media_analyst": "偏多",
+      "volume_price_analyst": "偏空"
+    },
+    "confidences": {
+      "fundamentals_analyst": "中",
+      "macro_analyst": "低",
+      "market_analyst": "低",
+      "news_analyst": "高",
+      "smart_money_analyst": "高",
+      "social_media_analyst": "中",
+      "volume_price_analyst": "低"
+    },
+    "forward": {
+      "base_close": 22.36,
+      "base_date": "2026-06-15",
+      "ret_1d": 2.91,
+      "close_1d": 23.01,
+      "ret_3d": 7.2,
+      "close_3d": 23.97,
+      "ret_5d": 9.17,
+      "close_5d": 24.41,
+      "ret_10d": -7.51,
+      "close_10d": 20.68
+    },
+    "correct_1d": false,
+    "correct_3d": false,
+    "correct_5d": false,
+    "correct_10d": true
+  },
+  {
+    "symbol": "300265.SZ",
+    "name": "通光线缆",
+    "trade_date": "2026-06-22",
+    "elapsed_s": 407.9,
+    "signal": "SELL",
+    "direction": -1,
+    "confidence": 72,
+    "verdicts": {
+      "fundamentals_analyst": "偏空",
+      "macro_analyst": "偏多",
+      "market_analyst": "偏多",
+      "news_analyst": "偏空",
+      "smart_money_analyst": "中性",
+      "social_media_analyst": "中性",
+      "volume_price_analyst": "中性"
+    },
+    "confidences": {
+      "fundamentals_analyst": "高",
+      "macro_analyst": "高",
+      "market_analyst": "中",
+      "news_analyst": "中",
+      "smart_money_analyst": "低",
+      "social_media_analyst": "低",
+      "volume_price_analyst": "中"
+    },
+    "forward": {
+      "base_close": 24.58,
+      "base_date": "2026-06-22",
+      "ret_1d": -0.69,
+      "close_1d": 24.41,
+      "ret_3d": -6.75,
+      "close_3d": 22.92,
+      "ret_5d": -16.27,
+      "close_5d": 20.58,
+      "ret_10d": null
+    },
+    "correct_1d": true,
+    "correct_3d": true,
+    "correct_5d": true,
+    "correct_10d": null
+  },
+  {
+    "symbol": "300265.SZ",
+    "name": "通光线缆",
+    "trade_date": "2026-06-29",
+    "elapsed_s": 404.8,
+    "signal": "SELL",
+    "direction": -1,
+    "confidence": 70,
+    "verdicts": {
+      "fundamentals_analyst": "偏空",
+      "macro_analyst": "中性",
+      "market_analyst": "偏空",
+      "news_analyst": "偏多",
+      "smart_money_analyst": "看空",
+      "social_media_analyst": "中性",
+      "volume_price_analyst": "偏多"
+    },
+    "confidences": {
+      "fundamentals_analyst": "低",
+      "macro_analyst": "中",
+      "market_analyst": "中",
+      "news_analyst": "中",
+      "smart_money_analyst": "高",
+      "social_media_analyst": "低",
+      "volume_price_analyst": "中"
+    },
+    "forward": {
+      "base_close": 20.58,
+      "base_date": "2026-06-29",
+      "ret_1d": 0.49,
+      "close_1d": 20.68,
+      "ret_3d": -15.79,
+      "close_3d": 17.33,
+      "ret_5d": null,
+      "ret_10d": null
+    },
+    "correct_1d": false,
+    "correct_3d": true,
+    "correct_5d": null,
+    "correct_10d": null
+  }
+]

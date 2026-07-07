@@ -1,0 +1,32 @@
+{
+  "resonance_score": 0.02,
+  "leading_boards": [
+    {
+      "name": "特斯拉概念",
+      "correlation": 0.15799373190373983,
+      "direction": "涨",
+      "strength": 0.5988976001132462
+    },
+    {
+      "name": "机器人概念",
+      "correlation": 0.1493936798492988,
+      "direction": "涨",
+      "strength": 0.7236340053942403
+    },
+    {
+      "name": "充电桩",
+      "correlation": 0.12198162270619102,
+      "direction": "涨",
+      "strength": 0.2782643174817978
+    }
+  ],
+  "board_trend_summary": "主导概念：特斯拉概念、机器人概念、充电桩。共振评分：0.02（跟涨）",
+  "divergence_alert": false,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [
+    "概念'人民币贬值受益'未出现在THS概念板块列表中，跳过"
+  ],
+  "computed_at": "2026-07-07"
+}

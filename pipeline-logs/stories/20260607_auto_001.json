@@ -1,0 +1,77 @@
+{
+  "storyId": "20260607_auto_001",
+  "title": "（自动）",
+  "sessionId": "b78e96f2-c43c-4c62-ae65-2cd444b81d16",
+  "startedAt": "2026-06-07T00:46:02.199Z",
+  "steps": [
+    {
+      "step": "Explore",
+      "seq": 1,
+      "start": "2026-06-07T00:46:02.213Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 203,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Glob",
+          "start": "2026-06-07T00:46:04.103Z",
+          "end": null,
+          "durationMs": null
+        }
+      ]
+    },
+    {
+      "step": "Explore",
+      "seq": 2,
+      "start": "2026-06-07T00:46:04.159Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 113,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Glob",
+          "start": "2026-06-07T00:46:04.289Z",
+          "end": "2026-06-07T00:46:04.431Z",
+          "durationMs": 142
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-07T00:46:04.676Z",
+          "end": "2026-06-07T00:46:04.886Z",
+          "durationMs": 210
+        },
+        {
+          "tool": "Grep",
+          "start": "2026-06-07T00:46:05.178Z",
+          "end": "2026-06-07T00:46:05.399Z",
+          "durationMs": 221
+        },
+        {
+          "tool": "Glob",
+          "start": "2026-06-07T00:46:05.545Z",
+          "end": "2026-06-07T00:46:05.865Z",
+          "durationMs": 320
+        }
+      ]
+    }
+  ],
+  "contextLog": []
+}6-06-07T00:46:05.865Z",
+          "end": null,
+          "durationMs": null
+        }
+      ]
+    }
+  ],
+  "contextLog": []
+}

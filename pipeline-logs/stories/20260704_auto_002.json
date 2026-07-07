@@ -1,0 +1,55 @@
+{
+  "storyId": "20260704_auto_002",
+  "title": "（自动）",
+  "sessionId": "34a08fc7-2ac9-44de-9e71-5f95cee31b7b",
+  "startedAt": "2026-07-04T03:24:20.974Z",
+  "steps": [
+    {
+      "step": "file-reader",
+      "seq": 1,
+      "start": "2026-07-04T03:24:20.976Z",
+      "end": "2026-07-04T03:24:21.239Z",
+      "durationMs": 263,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 17,
+      "estOutputTokens": 11,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-07-04T03:24:21.022Z",
+          "end": "2026-07-04T03:24:21.193Z",
+          "durationMs": 171
+        }
+      ]
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-07-04T03:24:28.608Z",
+    "totalDurationMs": 263,
+    "totalSteps": 1,
+    "completed": 1,
+    "running": 0,
+    "totalEstIn": 17,
+    "totalEstOut": 11,
+    "estCost": 0.00001627,
+    "successRate": "1/1",
+    "peakContextPct": null,
+    "stepStats": {
+      "file-reader": {
+        "count": 1,
+        "totalMs": 263,
+        "min": 263,
+        "max": 263,
+        "fails": 0,
+        "estIn": 17,
+        "estOut": 11,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

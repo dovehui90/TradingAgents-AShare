@@ -1,0 +1,13 @@
+{
+  "resonance_score": 0.0,
+  "leading_boards": [],
+  "board_trend_summary": "无主导概念板块，个股与各概念板块均无显著相关",
+  "divergence_alert": true,
+  "board_disagreement": false,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [
+    "概念'人民币贬值受益'未出现在THS概念板块列表中，跳过"
+  ],
+  "computed_at": "2026-07-07"
+}

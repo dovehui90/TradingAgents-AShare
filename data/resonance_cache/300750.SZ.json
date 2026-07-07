@@ -1,0 +1,42 @@
+{
+  "resonance_score": 0.06,
+  "leading_boards": [
+    {
+      "name": "钠离子电池",
+      "correlation": -0.2647770879175584,
+      "direction": "涨",
+      "strength": 0.1241358635270906
+    },
+    {
+      "name": "同花顺漂亮100",
+      "correlation": -0.25584954120930725,
+      "direction": "跌",
+      "strength": 0.26941841387903454
+    },
+    {
+      "name": "锂电池概念",
+      "correlation": -0.2518867931821974,
+      "direction": "涨",
+      "strength": 0.11299908880592958
+    },
+    {
+      "name": "宁德时代概念",
+      "correlation": -0.2365994398916562,
+      "direction": "涨",
+      "strength": 0.20260879401728937
+    },
+    {
+      "name": "动力电池回收",
+      "correlation": -0.22334597972051412,
+      "direction": "跌",
+      "strength": 0.2076736588729489
+    }
+  ],
+  "board_trend_summary": "主导概念：钠离子电池、同花顺漂亮100、锂电池概念。共振评分：0.06（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2026-07-07"
+}

@@ -1,0 +1,110 @@
+{
+  "storyId": "20260613_auto_001",
+  "title": "（自动）",
+  "sessionId": "5b206874-58e0-4f2f-8b57-b782bb3cb605",
+  "startedAt": "2026-06-12T16:31:21.636Z",
+  "steps": [
+    {
+      "step": "find-skills",
+      "seq": 1,
+      "start": "2026-06-12T16:31:21.643Z",
+      "end": "2026-06-12T16:31:21.871Z",
+      "durationMs": 228,
+      "success": true,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": 15,
+      "estOutputTokens": 11,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "Skill",
+          "start": "2026-06-12T16:31:21.683Z",
+          "end": "2026-06-12T16:31:21.830Z",
+          "durationMs": 147
+        }
+      ]
+    },
+    {
+      "step": "_main",
+      "start": "2026-06-12T16:31:24.651Z",
+      "end": null,
+      "durationMs": null,
+      "success": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "estInputTokens": null,
+      "estOutputTokens": null,
+      "contextPct": null,
+      "tools": [
+        {
+          "tool": "WebFetch",
+          "start": "2026-06-12T16:31:24.651Z",
+          "end": "2026-06-12T16:31:32.433Z",
+          "durationMs": 7782
+        },
+        {
+          "tool": "Bash",
+          "start": "2026-06-12T16:31:32.565Z",
+          "end": "2026-06-12T16:31:38.539Z",
+          "durationMs": 5974
+        },
+        {
+          "tool": "WebFetch",
+          "start": "2026-06-12T16:31:41.698Z",
+          "end": "2026-06-12T16:31:50.080Z",
+          "durationMs": 8382
+        },
+        {
+          "tool": "WebFetch",
+          "start": "2026-06-12T16:31:42.150Z",
+          "end": "2026-06-12T16:31:49.249Z",
+          "durationMs": 7099
+        },
+        {
+          "tool": "WebFetch",
+          "start": "2026-06-12T16:31:42.561Z",
+          "end": "2026-06-12T16:31:48.854Z",
+          "durationMs": 6293
+        }
+      ]
+    }
+  ],
+  "contextLog": [],
+  "summary": {
+    "completedAt": "2026-06-12T16:31:58.081Z",
+    "totalDurationMs": 228,
+    "totalSteps": 2,
+    "completed": 1,
+    "running": 1,
+    "totalEstIn": 15,
+    "totalEstOut": 11,
+    "estCost": 0.00001543,
+    "successRate": "1/1",
+    "peakContextPct": null,
+    "stepStats": {
+      "find-skills": {
+        "count": 1,
+        "totalMs": 228,
+        "min": 228,
+        "max": 228,
+        "fails": 0,
+        "estIn": 15,
+        "estOut": 11,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      },
+      "_main": {
+        "count": 0,
+        "totalMs": 0,
+        "min": null,
+        "max": 0,
+        "fails": 0,
+        "estIn": 0,
+        "estOut": 0,
+        "cacheHit": 0,
+        "cacheMiss": 0
+      }
+    }
+  }
+}

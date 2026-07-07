@@ -1,0 +1,42 @@
+{
+  "resonance_score": 0.06,
+  "leading_boards": [
+    {
+      "name": "汽车电子",
+      "correlation": 0.7013564441190128,
+      "direction": "跌",
+      "strength": 0.4816504805667532
+    },
+    {
+      "name": "特斯拉概念",
+      "correlation": 0.6972031215835466,
+      "direction": "涨",
+      "strength": 0.2696164836140702
+    },
+    {
+      "name": "汽车热管理",
+      "correlation": 0.6849166448449825,
+      "direction": "涨",
+      "strength": 0.4621767652545206
+    },
+    {
+      "name": "液冷服务器",
+      "correlation": 0.6810483229016113,
+      "direction": "跌",
+      "strength": 0.6870861672388351
+    },
+    {
+      "name": "新能源汽车",
+      "correlation": 0.6797860436461208,
+      "direction": "涨",
+      "strength": 0.30163937243226746
+    }
+  ],
+  "board_trend_summary": "主导概念：汽车电子、特斯拉概念、汽车热管理。共振评分：0.06（方向分裂）",
+  "divergence_alert": false,
+  "board_disagreement": true,
+  "is_flat": false,
+  "insufficient_data": false,
+  "warnings": [],
+  "computed_at": "2025-05-15"
+}
