@@ -6,6 +6,11 @@ import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisReport, AgentReportEvent, AgentSnapshotEvent, AgentStatusEvent, ReportChunkEvent } from '@/types'
 import AgentCollaboration from './AgentCollaboration'
 
+function isBoardSymbol(symbol: string): boolean {
+    const s = (symbol || '').toUpperCase()
+    return s.endsWith('.EM') || s.endsWith('.THS')
+}
+
 interface AnalysisConsoleProps {
     symbol: string
     onShowReport?: (section?: string) => void
@@ -303,7 +308,7 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
                 <button
                     type="button"
                     onClick={handleStartAnalysis}
-                    disabled={streaming || analysisRunState === 'running'}
+                    disabled={streaming || analysisRunState === 'running' || isBoardSymbol(symbol)}
                     className="inline-flex items-center gap-2 rounded-xl bg-purple-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-40 shrink-0"
                 >
                     <Play className="w-4 h-4" />
@@ -311,11 +316,15 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
                 </button>
             </div>
 
-            {!isActive && (
+            {!isActive && isBoardSymbol(symbol) ? (
+                <p className="text-xs text-amber-500">
+                    概念/行业板块暂不支持多Agent分析，仅可查看K线和指标。
+                </p>
+            ) : !isActive ? (
                 <p className="text-xs text-slate-400 dark:text-slate-500">
                     输入分析指令后点击按钮，系统将启动多Agent协作分析。直接回车也可触发。
                 </p>
-            )}
+            ) : null}
 
             {/* 分析中或已完成：进度条 + 可折叠流程图 */}
             {isActive && (

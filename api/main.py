@@ -901,6 +901,8 @@ class RadarPoint(BaseModel):
     radar_wave: Optional[float] = None
     radar_avg: Optional[float] = None
     radar_retail: Optional[float] = None
+    ths_zhuli: Optional[float] = None
+    ths_sanhu: Optional[float] = None
     radar_buy: bool = False
     radar_sell: bool = False
     radar_top: bool = False
@@ -3956,6 +3958,8 @@ def get_radar(
             radar_wave=round(float(row["radar_wave"]), 2) if pd.notna(row["radar_wave"]) else None,
             radar_avg=round(float(row["radar_avg"]), 2) if pd.notna(row["radar_avg"]) else None,
             radar_retail=round(float(row["radar_retail"]), 2) if pd.notna(row.get("radar_retail")) else None,
+            ths_zhuli=round(float(row["ths_zhuli"]), 2) if "ths_zhuli" in row.index and pd.notna(row["ths_zhuli"]) else None,
+            ths_sanhu=round(float(row["ths_sanhu"]), 2) if "ths_sanhu" in row.index and pd.notna(row["ths_sanhu"]) else None,
             radar_buy=bool(row.get("radar_buy", False)),
             radar_sell=bool(row.get("radar_sell", False)),
             radar_top=bool(row.get("radar_top", False)),
@@ -5339,6 +5343,8 @@ async def analyze(
     request: AnalyzeRequest,
     current_user: UserDB = Depends(_require_api_user),
 ) -> AnalyzeResponse:
+    if _is_board_symbol(request.symbol):
+        raise HTTPException(status_code=400, detail="概念/行业板块暂不支持多Agent分析")
     explicit_context = _extract_request_user_context(request)
 
     def _load_user_context() -> Dict[str, Any]:
@@ -5426,8 +5432,8 @@ async def analyze_batch(
     code_to_name = _get_reverse_stock_map()
     batch_id = uuid4().hex
 
-    # Normalize symbols and deduplicate within the batch
-    raw_symbols = [s.strip() for s in request.symbols if s.strip()]
+    # Normalize symbols and deduplicate within the batch, filtering out board symbols
+    raw_symbols = [s.strip() for s in request.symbols if s.strip() and not _is_board_symbol(s)]
     normalized_map: Dict[str, str] = {}  # normalized -> raw
     for raw in raw_symbols:
         norm = _normalize_symbol(raw)

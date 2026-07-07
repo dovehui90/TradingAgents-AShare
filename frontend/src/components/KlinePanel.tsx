@@ -87,11 +87,6 @@ const INDEX_PRESETS = [
     { symbol: '000688.SH', label: '科创50' },
 ] as const
 
-function isBoardSymbol(symbol: string): boolean {
-    const s = symbol.toUpperCase()
-    return s.endsWith('.EM') || s.endsWith('.THS')
-}
-
 export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyncNow }: KlinePanelProps) {
     const currentAnalysisSymbol = useAnalysisStore((state) => state.currentSymbol)
     const klinePeriod = useAnalysisStore((state) => state.klinePeriod)

@@ -1294,6 +1294,12 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
         (avg > 1)
     )
 
+    # ── 轨道二：同花顺主力雷达画线轨 ──
+    # 公式：(close - HHV(high, 25)) * 1.6 → EMA4(主力线) → EMA6(散户线)
+    raw_ths = (c - max_val) * 1.6
+    ths_zhuli = _ema_np(raw_ths, 4)   # 主力线（蓝）
+    ths_sanhu = _ema_np(ths_zhuli, 6)  # 散户线（红）
+
     # 组装结果
     result = df.copy()
     result['radar_wave'] = wave
@@ -1303,6 +1309,8 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
     result['radar_sell'] = radar_sell
     result['radar_top'] = radar_top
     result['radar_down'] = radar_down
+    result['ths_zhuli'] = ths_zhuli
+    result['ths_sanhu'] = ths_sanhu
 
     return result
 

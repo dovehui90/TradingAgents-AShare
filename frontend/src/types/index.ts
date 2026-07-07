@@ -379,6 +379,8 @@ export interface RadarPoint {
     radar_wave?: number | null
     radar_avg?: number | null
     radar_retail?: number | null
+    ths_zhuli?: number | null
+    ths_sanhu?: number | null
     radar_buy?: boolean
     radar_sell?: boolean
     radar_top?: boolean

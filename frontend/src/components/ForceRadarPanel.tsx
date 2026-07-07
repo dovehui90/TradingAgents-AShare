@@ -42,7 +42,7 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
     const chartRef = useRef<IChartApi | null>(null)
     const mainSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
     const retailSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
-    const midLineRef = useRef<ISeriesApi<'Line'> | null>(null)
+    const zeroLineRef = useRef<ISeriesApi<'Line'> | null>(null)
     const markersRef = useRef<any>(null)
     const cacheRef = useRef<RadarPoint[]>([])
     const cachePeriodRef = useRef<KlinePeriod>('daily')
@@ -107,19 +107,19 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
             },
         })
 
-        // 主力线（蓝）= radar_wave
+        // 主力线（蓝）= ths_zhuli
         const mainSeries = chart.addSeries(LineSeries, {
             color: '#3b82f6', lineWidth: 2, lineStyle: LineStyle.Solid,
             priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: true,
         })
-        // 散户线（红）= radar_avg（占位）
+        // 散户线（红）= ths_sanhu
         const retailSeries = chart.addSeries(LineSeries, {
             color: '#ef4444', lineWidth: 1, lineStyle: LineStyle.Solid,
             priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: true,
         })
-        // 中位线 y=2
-        const midLine = chart.addSeries(LineSeries, {
-            color: isDark ? '#475569' : '#94a3b8', lineWidth: 1, lineStyle: LineStyle.Dashed,
+        // 0轴线（灰色虚线）
+        const zeroLine = chart.addSeries(LineSeries, {
+            color: isDark ? '#64748b' : '#94a3b8', lineWidth: 1, lineStyle: LineStyle.Dashed,
             priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         })
 
@@ -132,13 +132,13 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
             for (const p of cacheRef.current) {
                 const t = toChartTime(p.date, klinePeriod)
                 if (!t) continue
-                if (p.radar_wave != null) mainData.push({ time: t, value: p.radar_wave })
-                if (p.radar_retail != null) retailData.push({ time: t, value: p.radar_retail })
+                if (p.ths_zhuli != null) mainData.push({ time: t, value: p.ths_zhuli })
+                if (p.ths_sanhu != null) retailData.push({ time: t, value: p.ths_sanhu })
             }
             mainSeries.setData(mainData)
             retailSeries.setData(retailData)
-            if (mainData.length > 0) {
-                midLine.setData(mainData.map(d => ({ time: d.time, value: 2 })))
+            if (mainData.length > 0 && zeroLineRef.current) {
+                zeroLineRef.current.setData([{ time: mainData[0].time, value: 0 }, { time: mainData[mainData.length - 1].time, value: 0 }])
             }
             const signalMarkers = cacheRef.current
                 .filter(p => p.radar_buy || p.radar_sell || p.radar_top || p.radar_down)
@@ -158,7 +158,7 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
 
         mainSeriesRef.current = mainSeries
         retailSeriesRef.current = retailSeries
-        midLineRef.current = midLine
+        zeroLineRef.current = zeroLine
         chartRef.current = chart
         onChartReady?.(chart)
 
@@ -183,7 +183,7 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
             chartRef.current = null
             mainSeriesRef.current = null
             retailSeriesRef.current = null
-            midLineRef.current = null
+            zeroLineRef.current = null
         }
     }, [isDark, klinePeriod])
 
@@ -206,13 +206,13 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
                 for (const p of resp.points) {
                     const time = toChartTime(p.date, klinePeriod)
                     if (!time) continue
-                    if (p.radar_wave != null) mainData.push({ time, value: p.radar_wave })
-                    if (p.radar_avg != null) retailData.push({ time, value: p.radar_avg })
+                    if (p.ths_zhuli != null) mainData.push({ time, value: p.ths_zhuli })
+                    if (p.ths_sanhu != null) retailData.push({ time, value: p.ths_sanhu })
                 }
                 mainSeriesRef.current?.setData(mainData)
                 retailSeriesRef.current?.setData(retailData)
-                if (midLineRef.current && mainData.length > 0) {
-                    midLineRef.current.setData(mainData.map(d => ({ time: d.time, value: 2 })))
+                if (mainData.length > 0 && zeroLineRef.current) {
+                    zeroLineRef.current.setData([{ time: mainData[0].time, value: 0 }, { time: mainData[mainData.length - 1].time, value: 0 }])
                 }
 
                 const signalMarkers = resp.points
@@ -242,19 +242,19 @@ export default function ForceRadarPanel({ symbol, onChartReady, onSyncNow }: For
         <div className="card">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">主力雷达</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">自研主力雷达</span>
                 </div>
                 {lastPoint && (
                     <div className="flex items-center gap-3 text-xs">
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-0.5 bg-blue-500" />
                             <span className="text-slate-500 dark:text-slate-400">主力</span>
-                            <span className="text-blue-500 font-medium">{hoverData?.main?.toFixed(2) ?? lastPoint.radar_wave?.toFixed(2) ?? '--'}</span>
+                            <span className="text-blue-500 font-medium">{hoverData?.main?.toFixed(2) ?? lastPoint.ths_zhuli?.toFixed(2) ?? '--'}</span>
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-0.5 bg-red-500" />
                             <span className="text-slate-500 dark:text-slate-400">散户</span>
-                            <span className="text-red-500 font-medium">{hoverData?.retail?.toFixed(2) ?? lastPoint.radar_avg?.toFixed(2) ?? '--'}</span>
+                            <span className="text-red-500 font-medium">{hoverData?.retail?.toFixed(2) ?? lastPoint.ths_sanhu?.toFixed(2) ?? '--'}</span>
                         </span>
                         {lastPoint.radar_buy && <span className="text-red-500 font-bold">底</span>}
                         {lastPoint.radar_sell && <span className="text-amber-500 font-bold">升</span>}
