@@ -4000,9 +4000,7 @@ class BoardConstituentsResponse(BaseModel):
 
 
 _board_constituents_cache: Dict[str, tuple] = {}   # symbol -> (timestamp, data)
-_BOARD_CONS_TTL = 300  # 5 min
-_mcap_cache: Dict[str, float] = {}
-_mcap_cache_time: float = 0
+_BOARD_CONS_TTL = 86400 * 10  # 10 days for stock list (rarely changes)
 
 # THS request throttle (prevent IP ban)
 _THS_LAST_CALL = 0.0
@@ -4055,7 +4053,7 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
         all_rows = []
         page = 1
         while True:
-            url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
+            url = f"https://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
             r = _ths_get(url)
             soup = BeautifulSoup(r.text, "html.parser")
             table = soup.find("table", class_=re.compile("m-table"))
@@ -4148,91 +4146,89 @@ def get_board_constituents(
 
     s = symbol.strip().upper()
 
-    # Check cache
+    # 1. Get stock list (cached 10 days — board membership rarely changes)
     now = time.time()
     cached = _board_constituents_cache.get(s)
     if cached and now - cached[0] < _BOARD_CONS_TTL:
-        stocks_data, board_name = cached[1]
+        stock_list, board_name = cached[1]
     else:
         board_name, cons_df = _fetch_board_constituents(s)
-
-        # Supplement market cap from EastMoney (cached separately, 5 min TTL)
-        global _mcap_cache, _mcap_cache_time
-        mcap_lookup: dict = _mcap_cache
-        try:
-            now = time.time()
-            if not _mcap_cache or now - _mcap_cache_time > 300:
-                import requests as _req
-                r = _req.get(
-                    "https://push2.eastmoney.com/api/qt/clist/get",
-                    params={
-                        "pn": "1", "pz": "4000", "po": "1", "np": "1",
-                        "ut": "bd1d9ddb04089700cf9c27f6f7426281",
-                        "fltt": "2", "invt": "2",
-                        "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
-                        "fields": "f12,f20",
-                    },
-                    headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
-                    proxies={"http": None, "https": None},
-                    timeout=8,
-                )
-                data = r.json()
-                new_cache = {}
-                for item in data.get("data", {}).get("diff", []):
-                    code = str(item.get("f12", ""))
-                    mc = item.get("f20")
-                    if code and mc is not None and mc != "-":
-                        try:
-                            new_cache[code] = round(float(mc) / 1e8, 1)
-                        except (ValueError, TypeError):
-                            pass
-                _mcap_cache = new_cache
-                _mcap_cache_time = now
-                mcap_lookup = new_cache
-        except Exception as e:
-            _log(f"[BoardCons] market cap fetch failed: {e}")
-            mcap_lookup = {}
-
-        stocks_data = []
+        stock_list = []
         for _, row in cons_df.iterrows():
             code = str(row.get("代码", ""))[:6]
             name = str(row.get("名称", "")).strip()
-            if not code or not code.isdigit():
-                continue
-            def _to_float(v):
-                if v is None or (isinstance(v, float) and pd.isna(v)):
-                    return None
-                try:
-                    return float(v)
-                except (ValueError, TypeError):
-                    return None
-            price = _to_float(row.get("最新价"))
-            chg = _to_float(row.get("涨跌幅"))
-            mcap_raw = row.get("流通市值")
-            mcap = None
-            if mcap_raw is not None and not (isinstance(mcap_raw, float) and pd.isna(mcap_raw)):
-                try:
-                    mcap = round(float(mcap_raw) / 1e8, 1)
-                except (ValueError, TypeError):
-                    pass
-            if mcap is None:
-                mcap = mcap_lookup.get(code)
-            stocks_data.append({
-                "code": code,
-                "name": name,
-                "symbol": _normalize_symbol(code),
-                "price": price,
-                "change_pct": chg,
-                "market_cap": mcap,
-            })
+            if code and code.isdigit():
+                stock_list.append({"code": code, "name": name, "symbol": _normalize_symbol(code)})
+        _board_constituents_cache[s] = (now, (stock_list, board_name))
 
-        stocks_data.sort(key=lambda x: x.get("change_pct") or -999, reverse=True)
-        _board_constituents_cache[s] = (now, (stocks_data, board_name))
-        # Cleanup old entries
-        if len(_board_constituents_cache) > 50:
-            expired = [k for k, (t, _) in _board_constituents_cache.items() if now - t >= _BOARD_CONS_TTL]
-            for k in expired:
-                _board_constituents_cache.pop(k, None)
+    if not stock_list:
+        return BoardConstituentsResponse(symbol=s, name=board_name or s, stocks=[])
+
+    # 2. Fetch quotes via Tushare (lightweight, no proxy issues)
+    try:
+        import tushare as ts
+        ts.set_token(os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
+        pro = ts.pro_api()
+        trade_date = cn_today_str().replace("-", "")
+        codes = [sl["code"] for sl in stock_list]
+        all_daily = []
+        all_basic = []
+        for i in range(0, len(codes), 100):
+            batch = codes[i:i+100]
+            ts_codes = ",".join([f"{c}.SH" if c.startswith(("5","6","9")) else f"{c}.SZ" for c in batch])
+            # Price + change%
+            d = pro.daily(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,close,pct_chg")
+            if d is not None and not d.empty:
+                all_daily.append(d)
+            # Market cap
+            b = pro.daily_basic(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,circ_mv")
+            if b is not None and not b.empty:
+                all_basic.append(b)
+        quotes = {}
+        if all_daily:
+            df_p = pd.concat(all_daily, ignore_index=True)
+            df_m = pd.concat(all_basic, ignore_index=True) if all_basic else pd.DataFrame()
+            for _, row in df_p.iterrows():
+                code = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
+                mcap_row = df_m[df_m["ts_code"] == row["ts_code"]] if not df_m.empty else pd.DataFrame()
+                mcap = None
+                if not mcap_row.empty:
+                    mv = mcap_row.iloc[0].get("circ_mv")
+                    if pd.notna(mv):
+                        try:
+                            mcap = round(float(mv) / 1e4, 0)  # 万元→亿元
+                        except (ValueError, TypeError):
+                            pass
+                quotes[code] = {
+                    "price": row.get("close"),
+                    "chg": row.get("pct_chg"),
+                    "mcap": mcap,
+                }
+    except Exception as e:
+        _log(f"[BoardCons] Tushare quote fetch failed: {e}")
+        quotes = {}
+
+    # 3. Combine and sort
+    stocks_data = []
+    for sl in stock_list:
+        q = quotes.get(sl["code"], {})
+        price = q.get("price")
+        chg = q.get("chg")
+        mcap = None
+        if q.get("mcap") is not None and q["mcap"] != "-":
+            try:
+                mcap = round(float(q["mcap"]) / 1e8, 1)
+            except (ValueError, TypeError):
+                pass
+        stocks_data.append({
+            "code": sl["code"],
+            "name": sl["name"],
+            "symbol": sl["symbol"],
+            "price": float(price) if price is not None and price != "-" else None,
+            "change_pct": float(chg) if chg is not None and chg != "-" else None,
+            "market_cap": mcap,
+        })
+    stocks_data.sort(key=lambda x: x.get("change_pct") or -999, reverse=True)
 
     # Get watchlist symbols for current user
     watchlist_symbols: set = set()
