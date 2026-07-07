@@ -251,7 +251,7 @@ export default function Analysis() {
                                 }
                             }
                         }}
-                        placeholder="搜索股票代码或名称，切换K线视图"
+                        placeholder="搜索股票/板块代码或名称，切换K线视图"
                         className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-10 text-sm text-slate-700 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500"
                     />
                     {symbolSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400" />}
@@ -275,6 +275,13 @@ export default function Analysis() {
                             >
                                 <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{r.name}</span>
                                 <span className="text-xs text-slate-400">{r.symbol}</span>
+                                {r.type && r.type !== 'stock' && (
+                                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                        r.type === '概念' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' :
+                                        r.type === '行业' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                                        'bg-slate-100 text-slate-500'
+                                    }`}>{r.type}</span>
+                                )}
                             </button>
                         ))}
                     </div>

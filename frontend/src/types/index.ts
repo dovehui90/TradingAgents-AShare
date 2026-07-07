@@ -718,6 +718,7 @@ export interface ScheduledBatchTriggerResponse {
 export interface StockSearchResult {
     symbol: string
     name: string
+    type?: string  // "stock" | "etf" | "行业" | "概念"
 }
 
 export interface ImportedPortfolioPosition {

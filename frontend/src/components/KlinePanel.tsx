@@ -15,7 +15,7 @@ import {
     createChart,
     createSeriesMarkers,
 } from 'lightweight-charts'
-import { Activity, CandlestickChart, Search, Star } from 'lucide-react'
+import { Activity, Bookmark, CandlestickChart, Search, Star, X } from 'lucide-react'
 import { api } from '@/services/api'
 import type { KlineCandle, NiuxiongPoint, GSPoint, SupportResistancePoint, TdPoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
 import { useAnalysisStore } from '@/stores/analysisStore'
@@ -87,6 +87,11 @@ const INDEX_PRESETS = [
     { symbol: '000688.SH', label: '科创50' },
 ] as const
 
+function isBoardSymbol(symbol: string): boolean {
+    const s = symbol.toUpperCase()
+    return s.endsWith('.EM') || s.endsWith('.THS')
+}
+
 export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyncNow }: KlinePanelProps) {
     const currentAnalysisSymbol = useAnalysisStore((state) => state.currentSymbol)
     const klinePeriod = useAnalysisStore((state) => state.klinePeriod)
@@ -121,6 +126,28 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const [darkPoolPreloaded, setDarkPoolPreloaded] = useState(false)
     const [watchlistItemId, setWatchlistItemId] = useState<string | null>(null)
     const [watchlistLoading, setWatchlistLoading] = useState(false)
+    const [favorites, setFavorites] = useState<Array<{ symbol: string; name: string }>>(() => {
+        try {
+            const saved = localStorage.getItem('kline_favorites')
+            return saved ? JSON.parse(saved) : []
+        } catch { return [] }
+    })
+
+    const persistFavorites = (items: Array<{ symbol: string; name: string }>) => {
+        setFavorites(items)
+        try { localStorage.setItem('kline_favorites', JSON.stringify(items)) } catch { /* noop */ }
+    }
+
+    const isFavorited = favorites.some(f => f.symbol === symbol)
+
+    const toggleFavorite = () => {
+        if (isFavorited) {
+            persistFavorites(favorites.filter(f => f.symbol !== symbol))
+        } else {
+            const name = stockName || getDisplayName(symbol)
+            persistFavorites([...favorites, { symbol, name }])
+        }
+    }
 
     // 自选状态：symbol 变化时查询是否已在自选中
     useEffect(() => {
@@ -749,6 +776,17 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                             )}
                         </button>
                         <button
+                            onClick={toggleFavorite}
+                            className={`p-1 rounded-md transition-colors ${
+                                isFavorited
+                                    ? 'text-blue-500 bg-blue-100 dark:bg-blue-500/15 hover:text-blue-600'
+                                    : 'text-slate-400 hover:text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-500/15'
+                            }`}
+                            title={isFavorited ? '取消收藏' : '收藏当前视图'}
+                        >
+                            <Bookmark className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                        </button>
+                        <button
                             onClick={() => setDarkPoolOpen(true)}
                             className={`p-1 rounded-md transition-colors ${
                                 darkPoolPreloaded
@@ -808,6 +846,27 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                         >
                             {item.label}
                         </button>
+                    ))}
+                    {favorites.map((fav) => (
+                        <div key={fav.symbol} className="flex items-center gap-0.5">
+                            <button
+                                onClick={() => onSymbolChange?.(fav.symbol)}
+                                className={`text-xs px-2 py-1 rounded-l border transition-colors truncate max-w-[120px] ${fav.symbol === symbol
+                                        ? 'border-blue-500 text-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500'
+                                    }`}
+                                title={fav.name}
+                            >
+                                {fav.name}
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); persistFavorites(favorites.filter(f => f.symbol !== fav.symbol)) }}
+                                className="text-xs px-1 py-1 rounded-r border border-l-0 border-slate-200 dark:border-slate-600 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                title="移除收藏"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
                     ))}
                     <button
                         onClick={() => {

@@ -516,6 +516,99 @@ def _get_reverse_stock_map_cached_only() -> Dict[str, str]:
     return dict(_cn_stock_reverse_map)
 
 
+# ── Board (concept / industry) name → symbol cache ─────────────────────────
+_board_map: Optional[Dict[str, Tuple[str, str]]] = None  # name -> (symbol, type)
+_board_reverse_map: Optional[Dict[str, Tuple[str, str]]] = None  # symbol -> (name, type)
+_board_map_lock = Lock()
+_board_map_loaded_at: float = 0
+
+
+def _load_board_maps() -> Dict[str, Tuple[str, str]]:
+    """Lazy-load concept + industry board name→(symbol, type) mapping (7-day TTL).
+
+    Returns a dict of {chinese_name: (symbol, "行业"|"概念")}.
+    Also populates _board_reverse_map: {symbol: (chinese_name, "行业"|"概念")}.
+    """
+    global _board_map, _board_reverse_map, _board_map_loaded_at
+    import time as _time
+    now = _time.time()
+    if _board_map is not None:
+        ttl = _STOCK_MAP_FAIL_TTL if (not _board_map) else _STOCK_MAP_TTL
+        if (now - _board_map_loaded_at) <= ttl:
+            return _board_map
+    with _board_map_lock:
+        if _board_map is not None:
+            ttl = _STOCK_MAP_FAIL_TTL if (not _board_map) else _STOCK_MAP_TTL
+            if (now - _board_map_loaded_at) <= ttl:
+                return _board_map
+        result: Dict[str, Tuple[str, str]] = {}
+        reverse: Dict[str, Tuple[str, str]] = {}
+
+        # 1. 同花顺概念板块
+        try:
+            import akshare as ak
+            df = ak.stock_board_concept_name_ths()
+            for _, row in df.iterrows():
+                name = str(row["name"]).strip()
+                code = str(row["code"]).strip()
+                if name and code:
+                    symbol = f"{code}.THS"
+                    result[name] = (symbol, "概念")
+                    reverse[symbol] = (name, "概念")
+            _log(f"[BoardMap] THS concepts: {len(reverse)}")
+        except Exception as e:
+            _log(f"[BoardMap] THS concept load failed: {e}")
+
+        # 2. 东财行业板块（后台线程加载，不阻塞首次请求）
+        def _load_em_boards():
+            try:
+                import requests as _requests
+                r = _requests.get(
+                    "https://push2.eastmoney.com/api/qt/clist/get",
+                    params={
+                        "pn": "1", "pz": "500", "po": "1", "np": "1",
+                        "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                        "fltt": "2", "invt": "2",
+                        "fid": "f3", "fs": "m:90+t:2+f:!50",
+                        "fields": "f12,f14",
+                    },
+                    headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+                    proxies={"http": None, "https": None},
+                    timeout=10,
+                )
+                data = r.json()
+                items = data.get("data", {}).get("diff", [])
+                for item in items:
+                    name = str(item.get("f14", "")).strip()
+                    code = str(item.get("f12", "")).strip()
+                    if name and code:
+                        symbol = f"{code}.EM"
+                        if name not in result:
+                            result[name] = (symbol, "行业")
+                            reverse[symbol] = (name, "行业")
+                _log(f"[BoardMap] EM industries: {len(items)}, total boards: {len(result)}")
+            except Exception as e:
+                _log(f"[BoardMap] EM industry load failed: {e}")
+
+        import threading
+        t = threading.Thread(target=_load_em_boards, daemon=True)
+        t.start()
+
+        _board_map = result
+        _board_reverse_map = reverse
+        _board_map_loaded_at = now
+        _log(f"[BoardMap] Total boards loaded: {len(result)}")
+    return _board_map
+
+
+def _get_board_reverse_map() -> Dict[str, Tuple[str, str]]:
+    """Return symbol→(name, type) mapping for boards."""
+    _load_board_maps()
+    if _board_reverse_map is None:
+        return {}
+    return dict(_board_reverse_map)
+
+
 def _search_cn_stock_by_name(query: str) -> Optional[str]:
     """Look up A-share stock code by company name (exact then partial match)."""
     query = query.strip()
@@ -2835,15 +2928,19 @@ def _normalize_kline_df(df: pd.DataFrame) -> pd.DataFrame:
         "date": "Date",
         "Date": "Date",
         "开盘": "Open",
+        "开盘价": "Open",
         "open": "Open",
         "Open": "Open",
         "最高": "High",
+        "最高价": "High",
         "high": "High",
         "High": "High",
         "最低": "Low",
+        "最低价": "Low",
         "low": "Low",
         "Low": "Low",
         "收盘": "Close",
+        "收盘价": "Close",
         "close": "Close",
         "Close": "Close",
         "成交量": "Volume",
@@ -3224,6 +3321,137 @@ _RESOLVABLE_SYMBOL_RE = re.compile(
 )
 
 
+def _is_board_symbol(symbol: str) -> bool:
+    """Check if symbol is a board (industry .EM or concept .THS)."""
+    s = symbol.strip().upper()
+    return s.endswith(".EM") or s.endswith(".THS")
+
+
+_board_kline_cache: Dict[str, tuple] = {}
+_BOARD_KLINE_CACHE_TTL = 60  # seconds
+
+
+def _fetch_em_board_kline(board_code: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    """Fetch EastMoney industry board K-line via push2his.
+
+    Args:
+        board_code: BK code without .EM suffix (e.g. "BK1036")
+        start_date: YYYY-MM-DD
+        end_date: YYYY-MM-DD
+    """
+    import requests as _requests
+
+    yyyymmdd_start = start_date.replace("-", "")
+    yyyymmdd_end = end_date.replace("-", "")
+
+    r = _requests.get(
+        "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+        params={
+            "secid": f"90.{board_code}",
+            "fields1": "f1,f2,f3,f4,f5,f6",
+            "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+            "klt": "101",
+            "fqt": "1",
+            "beg": yyyymmdd_start,
+            "end": yyyymmdd_end,
+            "lmt": "2000",
+        },
+        headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+        proxies={"http": None, "https": None},
+        timeout=15,
+    )
+    data = r.json()
+
+    if not data or not data.get("data") or not data["data"].get("klines"):
+        return []
+
+    klines = data["data"]["klines"]
+    candles: List[Dict[str, Any]] = []
+    prev_close = None
+    for line in klines:
+        parts = line.split(",")
+        if len(parts) < 7:
+            continue
+        date_str = f"{parts[0][:4]}-{parts[0][4:6]}-{parts[0][6:8]}"
+        if date_str < start_date or date_str > end_date:
+            continue
+        close = float(parts[2])
+        change = close - prev_close if prev_close is not None else None
+        change_pct = round(change / prev_close * 100, 2) if prev_close not in (None, 0) and change is not None else None
+        candles.append({
+            "date": date_str,
+            "open": float(parts[1]),
+            "high": float(parts[3]),
+            "low": float(parts[4]),
+            "close": close,
+            "volume": float(parts[5]) if len(parts) > 5 else None,
+            "amount": float(parts[6]) if len(parts) > 6 and parts[6] else None,
+            "change": change,
+            "change_percent": change_pct,
+            "turnover_rate": float(parts[10]) if len(parts) > 10 and parts[10] else None,
+        })
+        prev_close = close
+    return candles
+
+
+def _fetch_ths_board_kline(ths_code: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    """Fetch THS concept board index K-line via akshare.
+
+    Args:
+        ths_code: THS internal code without .THS suffix (e.g. "308614")
+        start_date: YYYY-MM-DD
+        end_date: YYYY-MM-DD
+    """
+    board_reverse = _get_board_reverse_map()
+    ths_symbol = f"{ths_code}.THS"
+    board_info = board_reverse.get(ths_symbol)
+    if not board_info:
+        _log(f"[kline] THS board not found in map: {ths_code}")
+        return []
+    board_name = board_info[0]
+
+    import akshare as ak
+    yyyymmdd_start = start_date.replace("-", "")
+    yyyymmdd_end = end_date.replace("-", "")
+    raw_df = ak.stock_board_concept_index_ths(
+        symbol=board_name,
+        start_date=yyyymmdd_start,
+        end_date=yyyymmdd_end,
+    )
+    df = _normalize_kline_df(raw_df)
+    if df.empty:
+        return []
+
+    df = df[(df["Date"] >= pd.to_datetime(start_date)) & (df["Date"] <= pd.to_datetime(end_date))]
+    if df.empty:
+        return []
+
+    candles: List[Dict[str, Any]] = []
+    prev_close = None
+    for _, row in df.iterrows():
+        close = float(row["Close"])
+        change = float(row["Change"]) if "Change" in df.columns and pd.notna(row.get("Change")) else (close - prev_close if prev_close is not None else None)
+        change_pct = (
+            float(row["ChangePercent"])
+            if "ChangePercent" in df.columns and pd.notna(row.get("ChangePercent"))
+            else (round(change / prev_close * 100, 2) if prev_close not in (None, 0) and change is not None else None)
+        )
+        candles.append({
+            "date": row["Date"].strftime("%Y-%m-%d"),
+            "open": float(row["Open"]),
+            "high": float(row["High"]),
+            "low": float(row["Low"]),
+            "close": close,
+            "volume": float(row["Volume"]) if "Volume" in df.columns and pd.notna(row.get("Volume")) else None,
+            "amount": float(row["Amount"]) if "Amount" in df.columns and pd.notna(row.get("Amount")) else None,
+            "change": change,
+            "change_percent": change_pct,
+            "turnover_rate": float(row["TurnoverRate"]) if "TurnoverRate" in df.columns and pd.notna(row.get("TurnoverRate")) else None,
+        })
+        prev_close = close
+    return candles
+
+
 @app.get("/v1/market/kline", response_model=KlineResponse)
 def get_kline(
     symbol: str,
@@ -3240,7 +3468,35 @@ def get_kline(
     else:
         start = (datetime.strptime(end, "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
 
-    if _is_cn_index_symbol(symbol):
+    if _is_board_symbol(symbol):
+        # Board K-line: route by suffix
+        symbol_upper = symbol.strip().upper()
+        code_part = symbol_upper.rsplit(".", 1)[0]
+        board_reverse = _get_board_reverse_map()
+        board_info = board_reverse.get(symbol_upper)
+        board_name = board_info[0] if board_info else code_part
+
+        # Cache check
+        cache_key = f"{symbol_upper}:{start}:{end}:{period}"
+        now = time.time()
+        cache_ttl = 5 if end == cn_today_str() else _BOARD_KLINE_CACHE_TTL
+        cached = _board_kline_cache.get(cache_key)
+        if cached and now - cached[0] < cache_ttl:
+            candles = cached[1]
+        else:
+            daily_candles: List[Dict[str, Any]] = []
+            if symbol_upper.endswith(".EM"):
+                daily_candles = _fetch_em_board_kline(code_part, start, end)
+            elif symbol_upper.endswith(".THS"):
+                daily_candles = _fetch_ths_board_kline(code_part, start, end)
+            candles = _aggregate_candles(daily_candles, period)
+            _board_kline_cache[cache_key] = (now, candles)
+            # Evict old entries
+            if len(_board_kline_cache) > 100:
+                expired = [k for k, (t, _) in _board_kline_cache.items() if now - t >= _BOARD_KLINE_CACHE_TTL]
+                for k in expired:
+                    _board_kline_cache.pop(k, None)
+    elif _is_cn_index_symbol(symbol):
         candles = _fetch_index_kline(symbol, start, end, period=period)
     else:
         # Normalize symbol (convert "阳光电源" -> "300274.SZ")
@@ -3332,12 +3588,18 @@ def get_kline(
         raise HTTPException(status_code=404, detail="no kline data")
     # 获取股票中文名称
     stock_name = None
-    try:
-        from tradingagents.indicators import fetch_realtime_quote
-        quote = fetch_realtime_quote(symbol)
-        stock_name = quote.get("name")
-    except Exception:
-        pass
+    if _is_board_symbol(symbol):
+        board_rev = _get_board_reverse_map()
+        board_info = board_rev.get(symbol.strip().upper())
+        if board_info:
+            stock_name = board_info[0]
+    if not stock_name:
+        try:
+            from tradingagents.indicators import fetch_realtime_quote
+            quote = fetch_realtime_quote(symbol)
+            stock_name = quote.get("name")
+        except Exception:
+            pass
     # 记录K线查询日志（仅记录用户从搜索框主动查询的K线，跳过分析页/自选页自动加载）
     referer = request.headers.get("Referer", "")
     if "/analysis" not in referer and "/portfolio" not in referer and "/reports" not in referer:
@@ -3373,6 +3635,49 @@ def get_kline(
     )
 
 
+_board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
+
+def _get_board_kline_df(symbol: str, days: int) -> pd.DataFrame:
+    """Get board K-line data as a DataFrame for indicator calculation.
+    Results are cached briefly to avoid redundant akshare calls from parallel indicator requests.
+    """
+    s = symbol.strip().upper()
+    end = cn_today_str()
+    start = (datetime.strptime(end, "%Y-%m-%d") - timedelta(days=days + 60)).strftime("%Y-%m-%d")
+
+    # Brief cache (30s) to share data across parallel indicator fetches
+    cache_key = f"{s}:{start}:{end}"
+    now = time.time()
+    cached = _board_kline_df_cache.get(cache_key)
+    if cached and now - cached[0] < 30:
+        return cached[1].copy()
+
+    if s.endswith(".THS"):
+        code = s.rsplit(".", 1)[0]
+        candles = _fetch_ths_board_kline(code, start, end)
+    elif s.endswith(".EM"):
+        code = s.rsplit(".", 1)[0]
+        candles = _fetch_em_board_kline(code, start, end)
+    else:
+        return pd.DataFrame()
+
+    if not candles:
+        return pd.DataFrame()
+    df = pd.DataFrame(candles)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.set_index("date").sort_index()
+    df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close",
+                             "volume": "Volume", "amount": "Amount"})
+    df.columns = [c.lower() for c in df.columns]
+    _board_kline_df_cache[cache_key] = (now, df)
+    # Cleanup old entries
+    if len(_board_kline_df_cache) > 50:
+        expired = [k for k, (t, _) in _board_kline_df_cache.items() if now - t >= 30]
+        for k in expired:
+            _board_kline_df_cache.pop(k, None)
+    return df.copy()
+
+
 @app.get("/v1/market/niuxiong", response_model=NiuxiongResponse)
 def get_niuxiong(
     symbol: str,
@@ -3390,7 +3695,14 @@ def get_niuxiong(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -3475,7 +3787,14 @@ def get_gs_strategy(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -3571,7 +3890,14 @@ def get_radar(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -3668,7 +3994,14 @@ def get_position(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -3746,7 +4079,14 @@ def get_volume_wash(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -4070,7 +4410,14 @@ def get_bollinger_deviation(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -4151,7 +4498,14 @@ def get_trend_strength(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -4227,7 +4581,14 @@ def get_td_sequential(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -4304,7 +4665,14 @@ def get_support_resistance(
         days = _indicator_days_map.get(period, 250)
 
     try:
-        df = fetch_realtime_data(symbol, days=days, period=period)
+        if _is_board_symbol(symbol):
+            df = _get_board_kline_df(symbol, days)
+            if df.empty:
+                raise HTTPException(status_code=404, detail=f"未获取到 {symbol} 的板块K线数据")
+        else:
+            df = fetch_realtime_data(symbol, days=days, period=period)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"数据获取失败: {e}")
 
@@ -6746,26 +7114,47 @@ def search_stocks(
     q: str = Query("", min_length=1, max_length=20),
     current_user: UserDB = Depends(_require_api_user),
 ):
-    """Search stocks by code prefix or name substring."""
+    """Search stocks by code prefix or name substring, plus concept/industry boards."""
     q = q.strip()
     if not q:
         return {"results": []}
 
     name_to_code = _load_cn_stock_map()
     code_to_name = _get_reverse_stock_map()
-    results = []
+    board_map = _load_board_maps()
+    board_reverse = _get_board_reverse_map()
+    results: list[dict] = []
     q_upper = q.upper()
 
+    # 1. Stocks by code prefix (max 10 to leave room for boards)
     for code, name in code_to_name.items():
         if code.upper().startswith(q_upper) or code.split(".")[0].startswith(q):
-            results.append({"symbol": code, "name": name})
-            if len(results) >= 20:
+            results.append({"symbol": code, "name": name, "type": "stock"})
+            if len(results) >= 10:
                 break
 
+    # 2. Boards by code prefix (BKXXXX for .EM, numeric for .THS)
+    if len(results) < 20:
+        for symbol, (name, btype) in board_reverse.items():
+            code_part = symbol.rsplit(".", 1)[0].upper()
+            if code_part.startswith(q_upper) and not any(r["symbol"] == symbol for r in results):
+                results.append({"symbol": symbol, "name": name, "type": btype})
+                if len(results) >= 20:
+                    break
+
+    # 3. Boards by name substring (boards before stock names)
+    if len(results) < 20:
+        for name, (symbol, btype) in board_map.items():
+            if q in name and not any(r["symbol"] == symbol for r in results):
+                results.append({"symbol": symbol, "name": name, "type": btype})
+                if len(results) >= 20:
+                    break
+
+    # 4. Stocks by name substring
     if len(results) < 20:
         for name, code in name_to_code.items():
             if q in name and not any(r["symbol"] == code for r in results):
-                results.append({"symbol": code, "name": name})
+                results.append({"symbol": code, "name": name, "type": "stock"})
                 if len(results) >= 20:
                     break
 
