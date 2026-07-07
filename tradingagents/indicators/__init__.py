@@ -38,6 +38,10 @@ from .support_resistance import (
     calculate_support_resistance,
     get_support_resistance_signal,
 )
+from .td_sequential import (
+    calculate_td_sequential,
+    get_td_sequential_signal,
+)
 
 __all__ = [
     'calculate_niuxiong_line',
@@ -68,4 +72,6 @@ __all__ = [
     'get_trend_strength_signal',
     'calculate_support_resistance',
     'get_support_resistance_signal',
+    'calculate_td_sequential',
+    'get_td_sequential_signal',
 ]

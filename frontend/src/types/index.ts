@@ -471,6 +471,20 @@ export interface TrendStrengthResponse {
     signal?: Record<string, any> | null
 }
 
+export interface TdPoint {
+    date: string
+    close: number
+    buy_count: number
+    sell_count: number
+}
+
+export interface TdResponse {
+    symbol: string
+    name?: string | null
+    points: TdPoint[]
+    signal?: Record<string, any> | null
+}
+
 export interface SupportResistancePoint {
     date: string
     close: number

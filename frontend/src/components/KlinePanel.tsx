@@ -17,7 +17,7 @@ import {
 } from 'lightweight-charts'
 import { Activity, CandlestickChart, Search, Star } from 'lucide-react'
 import { api } from '@/services/api'
-import type { KlineCandle, NiuxiongPoint, GSPoint, SupportResistancePoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
+import type { KlineCandle, NiuxiongPoint, GSPoint, SupportResistancePoint, TdPoint, IndicatorMode, KlinePeriod, WatchlistItem } from '@/types'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import DarkPoolDrawer from './DarkPoolDrawer'
 
@@ -109,6 +109,8 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const [gsData, setGsData] = useState<GSPoint[]>([])
     const showGsLinesRef = useRef(false)
     const [srData, setSrData] = useState<SupportResistancePoint[]>([])
+    const [tdData, setTdData] = useState<TdPoint[]>([])
+    const tdMarkerContainerRef = useRef<HTMLDivElement | null>(null)
     const [showSr, setShowSr] = useState(false)
     const showSrRef = useRef(false)
     const srSeriesRefs = useRef<Record<string, ISeriesApi<'Line'>>>({})
@@ -270,6 +272,39 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         chartRef.current?.timeScale().fitContent()
     }
 
+    const renderTdMarkers = (points: TdPoint[]) => {
+        const container = tdMarkerContainerRef.current
+        const chart = chartRef.current
+        if (!container || !chart) { if (container) container.innerHTML = ''; return }
+        container.innerHTML = ''
+        const chartWidth = container.clientWidth
+        for (const p of points) {
+            if (p.buy_count === 0 && p.sell_count === 0) continue
+            const time = toChartTime(p.date, klinePeriod)
+            if (!time) continue
+            const x = chart.timeScale().timeToCoordinate(time)
+            if (x == null || x < -20 || x > chartWidth + 20) continue
+            // Get y position from candlestick series
+            const candleSeries = seriesRef.current
+            if (!candleSeries) continue
+            const yHigh = candleSeries.priceToCoordinate(p.close * 1.02)
+            const yLow = candleSeries.priceToCoordinate(p.close * 0.98)
+            if (yHigh == null || yLow == null) continue
+            if (p.sell_count > 0) {
+                const div = document.createElement('div')
+                div.textContent = String(p.sell_count)
+                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yHigh - 14}px;font-size:${p.sell_count === 9 ? '9px' : '8px'};font-weight:bold;color:${p.sell_count === 9 ? '#fff' : '#ef4444'};background:${p.sell_count === 9 ? '#ef4444' : 'transparent'};border-radius:50%;width:${p.sell_count === 9 ? '14px' : '11px'};height:${p.sell_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
+                container.appendChild(div)
+            }
+            if (p.buy_count > 0) {
+                const div = document.createElement('div')
+                div.textContent = String(p.buy_count)
+                div.style.cssText = `position:absolute;left:${x - 5}px;top:${yLow + 2}px;font-size:${p.buy_count === 9 ? '9px' : '8px'};font-weight:bold;color:${p.buy_count === 9 ? '#fff' : '#22c55e'};background:${p.buy_count === 9 ? '#22c55e' : 'transparent'};border-radius:50%;width:${p.buy_count === 9 ? '14px' : '11px'};height:${p.buy_count === 9 ? '14px' : '11px'};display:flex;align-items:center;justify-content:center;pointer-events:none;`
+                container.appendChild(div)
+            }
+        }
+    }
+
     const updateSrSeries = (points: SupportResistancePoint[]) => {
         const srMap = srSeriesRefs.current
         if (!srMap.sr_support) return
@@ -387,8 +422,10 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             }
         }
         renderSrMarkers()
-        chart.timeScale().subscribeVisibleLogicalRangeChange(() => renderSrMarkers())
-        chart.subscribeCrosshairMove(() => renderSrMarkers())
+        chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+            renderSrMarkers()
+            if (showSrRef.current && tdData.length) renderTdMarkers(tdData)
+        })
     }
 
     // Listen for theme changes
@@ -590,11 +627,12 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             setLoading(true)
             setError(null)
             try {
-                const [klineResp, niuxiongResp, gsResp, srResp] = await Promise.all([
+                const [klineResp, niuxiongResp, gsResp, srResp, tdResp] = await Promise.all([
                     api.getKline(symbol, range.start, range.end, klinePeriod, ac.signal),
                     api.getNiuxiong(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
                     api.getGsStrategy(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
                     api.getSupportResistance(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
+                    api.getTdSequential(symbol, range.start, range.end, klinePeriod, ac.signal).catch(() => null),
                 ])
                 const data: CandlestickData[] = klineResp.candles.flatMap((c: KlineCandle) => {
                     const time = toChartTime((c.date || '').slice(0, 10), klinePeriod)
@@ -634,13 +672,24 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                 }
 
                 // Update Support/Resistance overlay
-                console.log('[SR] srResp received:', !!srResp, 'points:', srResp?.points?.length)
                 if (srResp?.points) {
                     setSrData(srResp.points)
                     if (showSrRef.current) updateSrSeries(srResp.points)
                 }
 
+                // Update TD Sequential overlay
+                if (tdResp?.points) {
+                    setTdData(tdResp.points)
+                }
+
                 chartRef.current?.timeScale().fitContent()
+                // 等待图表完成渲染后再画标记，避免坐标偏移
+                requestAnimationFrame(() => {
+                    if (showSrRef.current) {
+                        if (srResp?.points) updateSrSeries(srResp.points)
+                        if (tdResp?.points) renderTdMarkers(tdResp.points)
+                    }
+                })
                 // K线数据加载完后触发同步到雷达
                 setTimeout(() => onSyncNow?.(), 200)
                 if (!data.length) {
@@ -787,8 +836,9 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                             const next = !showSrRef.current
                             showSrRef.current = next
                             setShowSr(next)
-                            console.log('[SR] button clicked, next:', next, 'srData.length:', srData.length)
                             if (srData.length) updateSrSeries(srData)
+                            if (next && tdData.length) renderTdMarkers(tdData)
+                            else tdMarkerContainerRef.current && (tdMarkerContainerRef.current.innerHTML = '')
                         }}
                         className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
                             ? 'border-red-500 text-red-500 bg-red-50 dark:bg-red-500/10'
@@ -803,6 +853,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             <div className="relative flex-1 min-h-0 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
                 <div ref={containerRef} className="absolute inset-0" />
                 <div ref={srMarkerContainerRef} className="absolute inset-0 pointer-events-none z-10" />
+                <div ref={tdMarkerContainerRef} className="absolute inset-0 pointer-events-none z-10" />
                 {indicatorMode !== 'off' && (() => {
                     const showNx = indicatorMode === 'niuxiong' || indicatorMode === 'combined'
                     const showGs = indicatorMode === 'gs' || indicatorMode === 'niuxiong' || indicatorMode === 'combined'
