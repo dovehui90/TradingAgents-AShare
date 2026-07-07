@@ -4029,55 +4029,34 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     btype = info[1]
 
     if btype == "概念":
-        # Scrape THS concept detail page — HTTP pagination with delay
-        from bs4 import BeautifulSoup
+        # Primary: EastMoney API (full list). Fallback: THS scrape (10 stocks)
         import akshare as ak
         try:
-            code_map = ak.stock_board_concept_name_ths()
-            ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://q.10jqka.com.cn/"}
-            all_rows = []
-            for page in range(1, 10):
-                if page > 1:
-                    _time.sleep(0.8)
-                url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
-                r = _requests.get(url, headers=headers, proxies={"http": None, "https": None}, timeout=10)
-                if r.status_code != 200 or "Nginx forbidden" in r.text:
-                    _log(f"[BoardCons] THS page {page}: status={r.status_code} len={len(r.text)}")
-                    break
+            df = ak.stock_board_concept_cons_em(symbol=board_name)
+            if df is not None and not df.empty:
+                _log(f"[BoardCons] EM concept OK: {len(df)} stocks")
+        except Exception:
+            df = pd.DataFrame()
+        if df is None or df.empty:
+            _log(f"[BoardCons] EM concept failed, trying THS")
+            from bs4 import BeautifulSoup
+            try:
+                code_map = ak.stock_board_concept_name_ths()
+                ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
+                url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/"
+                r = _requests.get(url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://q.10jqka.com.cn/"}, proxies={"http": None, "https": None}, timeout=10)
                 soup = BeautifulSoup(r.text, "html.parser")
                 table = soup.find("table", class_=re.compile("m-table"))
-                if not table:
-                    break
-                trs = table.find_all("tr")[1:]
-                if not trs:
-                    break
-                for tr in trs:
-                    tds = tr.find_all("td")
-                    if len(tds) < 4:
-                        continue
-                    all_rows.append({
-                        "代码": tds[1].get_text(strip=True),
-                        "名称": tds[2].get_text(strip=True),
-                        "最新价": tds[3].get_text(strip=True),
-                        "涨跌幅": tds[4].get_text(strip=True),
-                    })
-                page_info = soup.find(class_="page_info")
-                if page_info:
-                    parts = page_info.text.strip().split("/")
-                    if len(parts) == 2 and int(parts[0]) >= int(parts[1]):
-                        break
-            _log(f"[BoardCons] THS scraped: {len(all_rows)} stocks across pages")
-            df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
-        except Exception as e:
-            import traceback
-            _log(f"[BoardCons] THS scrape FAILED: {type(e).__name__}: {e}\n{traceback.format_exc()}")
-            try:
-                import akshare as ak2
-                df = ak2.stock_board_concept_cons_em(symbol=board_name)
-                _log(f"[BoardCons] EM fallback OK: {len(df)} stocks")
+                rows = []
+                if table:
+                    for tr in table.find_all("tr")[1:]:
+                        tds = tr.find_all("td")
+                        if len(tds) >= 4:
+                            rows.append({"代码": tds[1].get_text(strip=True), "名称": tds[2].get_text(strip=True), "最新价": tds[3].get_text(strip=True), "涨跌幅": tds[4].get_text(strip=True)})
+                _log(f"[BoardCons] THS fallback: {len(rows)} stocks")
+                df = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
             except Exception as e2:
-                _log(f"[BoardCons] EM fallback FAILED: {type(e2).__name__}: {e2}")
+                _log(f"[BoardCons] All sources failed: {e2}")
                 df = pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
     else:
         # EastMoney industry board: use push2 API
