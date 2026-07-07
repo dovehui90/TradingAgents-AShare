@@ -4175,12 +4175,20 @@ def get_board_constituents(
 
     # 2. (Tushare fallback removed — THS scrape and EM API already provide prices)
 
-    # 3. Sort by change% descending
+    # 3. Deduplicate, sort by change% descending
+    seen = set()
+    unique_stocks = []
+    for sl in stock_list:
+        if sl["code"] in seen:
+            continue
+        seen.add(sl["code"])
+        unique_stocks.append(sl)
+
     def _to_num(v):
         try: return float(v) if v is not None and v not in ("-", "") else None
         except: return None
     stocks_data = []
-    for sl in stock_list:
+    for sl in unique_stocks:
         mcap = sl.get("mcap")
         if mcap is not None:
             try: mcap = round(float(mcap) / 1e8, 1)
