@@ -4029,11 +4029,34 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     btype = info[1]
 
     if btype == "概念":
-        # Use Playwright headless browser to scrape THS concept page (full list with JS pagination)
-        from api.services.ths_scraper import scrape_ths_constituents
-        stocks = scrape_ths_constituents(board_name)
-        _log(f"[BoardCons] THS Playwright: {len(stocks)} stocks")
-        df = pd.DataFrame(stocks) if stocks else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
+        import akshare as ak
+        df = pd.DataFrame()
+        try:
+            df = ak.stock_board_concept_cons_em(symbol=board_name)
+            _log(f"[BoardCons] EM concept: {len(df)} stocks")
+        except Exception:
+            pass
+        if df is None or df.empty:
+            _log(f"[BoardCons] EM failed, fallback to THS")
+            from bs4 import BeautifulSoup
+            try:
+                code_map = ak.stock_board_concept_name_ths()
+                ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
+                url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/"
+                r = _requests.get(url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://q.10jqka.com.cn/"}, proxies={"http": None, "https": None}, timeout=10)
+                soup = BeautifulSoup(r.text, "html.parser")
+                table = soup.find("table", class_=re.compile("m-table"))
+                rows = []
+                if table:
+                    for tr in table.find_all("tr")[1:]:
+                        tds = tr.find_all("td")
+                        if len(tds) >= 4:
+                            rows.append({"代码": tds[1].get_text(strip=True), "名称": tds[2].get_text(strip=True), "最新价": tds[3].get_text(strip=True), "涨跌幅": tds[4].get_text(strip=True)})
+                _log(f"[BoardCons] THS fallback: {len(rows)} stocks")
+                df = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
+            except Exception as e:
+                _log(f"[BoardCons] THS fallback failed: {e}")
+                df = pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
     else:
         # EastMoney industry board: use push2 API
         r = _requests.get(

@@ -19,7 +19,7 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
     seen = set()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=True, executable_path="/usr/bin/chromium-browser")
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 800})
 
