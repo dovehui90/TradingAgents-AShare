@@ -4068,13 +4068,14 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
             _log(f"[BoardCons] THS scraped: {len(all_rows)} stocks across pages")
             df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
         except Exception as e:
-            _log(f"[BoardCons] THS scrape failed: {type(e).__name__}: {e} — falling back to EM")
+            import traceback
+            _log(f"[BoardCons] THS scrape FAILED: {type(e).__name__}: {e}\n{traceback.format_exc()}")
             try:
                 import akshare as ak2
                 df = ak2.stock_board_concept_cons_em(symbol=board_name)
                 _log(f"[BoardCons] EM fallback OK: {len(df)} stocks")
             except Exception as e2:
-                _log(f"[BoardCons] EM fallback also failed: {e2}")
+                _log(f"[BoardCons] EM fallback FAILED: {type(e2).__name__}: {e2}")
                 df = pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
     else:
         # EastMoney industry board: use push2 API
