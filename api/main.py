@@ -4173,61 +4173,24 @@ def get_board_constituents(
     if not stock_list:
         return BoardConstituentsResponse(symbol=s, name=board_name or s, stocks=[])
 
-    # 2. Fill missing quotes with Tushare (prices already present for EM boards)
-    try:
-        import tushare as ts
-        ts.set_token(os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
-        pro = ts.pro_api()
-        trade_date = cn_today_str().replace("-", "")
-        missing = [sl for sl in stock_list if not sl.get("price") or not sl.get("mcap")]
-        if missing:
-            codes = [sl["code"] for sl in missing]
-            for i in range(0, len(codes), 100):
-                batch = codes[i:i+100]
-                ts_codes = ",".join([f"{c}.SH" if c.startswith(("5","6","9")) else f"{c}.SZ" for c in batch])
-                d = pro.daily(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,close,pct_chg")
-                b = pro.daily_basic(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,circ_mv")
-                if d is not None and not d.empty:
-                    for _, row in d.iterrows():
-                        c = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
-                        for sl in stock_list:
-                            if sl["code"] == c:
-                                if not sl.get("price"):
-                                    sl["price"] = row.get("close")
-                                if not sl.get("chg"):
-                                    sl["chg"] = row.get("pct_chg")
-                if b is not None and not b.empty:
-                    for _, row in b.iterrows():
-                        c = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
-                        mv = row.get("circ_mv")
-                        if pd.notna(mv):
-                            for sl in stock_list:
-                                if sl["code"] == c and not sl.get("mcap"):
-                                    try:
-                                        sl["mcap"] = round(float(mv) / 1e4, 0)
-                                    except (ValueError, TypeError):
-                                        pass
-    except Exception as e:
-        _log(f"[BoardCons] Tushare fallback failed: {e}")
+    # 2. (Tushare fallback removed — THS scrape and EM API already provide prices)
 
-    # 3. Combine and sort
+    # 3. Sort by change% descending
+    def _to_num(v):
+        try: return float(v) if v is not None and v not in ("-", "") else None
+        except: return None
     stocks_data = []
     for sl in stock_list:
-        q = quotes.get(sl["code"], {})
-        price = q.get("price")
-        chg = q.get("chg")
-        mcap = None
-        if q.get("mcap") is not None and q["mcap"] != "-":
-            try:
-                mcap = round(float(q["mcap"]) / 1e8, 1)
-            except (ValueError, TypeError):
-                pass
+        mcap = sl.get("mcap")
+        if mcap is not None:
+            try: mcap = round(float(mcap) / 1e8, 1)
+            except: mcap = None
         stocks_data.append({
             "code": sl["code"],
             "name": sl["name"],
             "symbol": sl["symbol"],
-            "price": float(price) if price is not None and price != "-" else None,
-            "change_pct": float(chg) if chg is not None and chg != "-" else None,
+            "price": _to_num(sl.get("price")),
+            "change_pct": _to_num(sl.get("chg")),
             "market_cap": mcap,
         })
     stocks_data.sort(key=lambda x: x.get("change_pct") or -999, reverse=True)
