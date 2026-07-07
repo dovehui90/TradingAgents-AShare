@@ -4012,6 +4012,13 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
 
     s = board_symbol.strip().upper()
     _load_board_maps()
+    # Make sure EM boards are loaded (not just background thread)
+    if s.endswith(".EM"):
+        import threading, time as _t2
+        for _ in range(30):  # wait up to 3 seconds
+            if _get_board_reverse_map().get(s):
+                break
+            _t2.sleep(0.1)
     board_rev = _get_board_reverse_map()
     info = board_rev.get(s)
     if not info:
@@ -4061,8 +4068,14 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
             _log(f"[BoardCons] THS scraped: {len(all_rows)} stocks across pages")
             df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
         except Exception as e:
-            _log(f"[BoardCons] THS scrape failed: {type(e).__name__}: {e}")
-            raise HTTPException(502, f"同花顺成分股获取失败: {e}")
+            _log(f"[BoardCons] THS scrape failed: {type(e).__name__}: {e} — falling back to EM")
+            try:
+                import akshare as ak2
+                df = ak2.stock_board_concept_cons_em(symbol=board_name)
+                _log(f"[BoardCons] EM fallback OK: {len(df)} stocks")
+            except Exception as e2:
+                _log(f"[BoardCons] EM fallback also failed: {e2}")
+                df = pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
     else:
         # EastMoney industry board: use push2 API
         r = _requests.get(
