@@ -6,6 +6,7 @@ import AnalysisConsole from '@/components/AnalysisConsole'
 import DebateDrawer from '@/components/DebateDrawer'
 import ReportViewer from '@/components/ReportViewer'
 import KlinePanel from '@/components/KlinePanel'
+import BoardConstituents from '@/components/BoardConstituents'
 import RadarPanel from '@/components/RadarPanel'
 import PositionPanel from '@/components/PositionPanel'
 import VolumeWashPanel from '@/components/VolumeWashPanel'
@@ -300,6 +301,7 @@ export default function Analysis() {
                 />
             </div>
 
+            <BoardConstituents symbol={activeSymbol} onSymbolChange={(s) => { setActiveSymbol(s); setCurrentSymbol(s) }} />
             <RadarPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('radar', c)} onSyncNow={syncNow} />
 
             <TrendStrengthPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('trendStrength', c)} onSyncNow={syncNow} />

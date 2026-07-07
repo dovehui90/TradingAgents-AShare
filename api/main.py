@@ -3981,6 +3981,285 @@ def get_radar(
     )
 
 
+# ── Board Constituents ──────────────────────────────────────────────────────
+
+class ConstituentStock(BaseModel):
+    code: str
+    name: str
+    symbol: str
+    price: Optional[float] = None
+    change_pct: Optional[float] = None
+    market_cap: Optional[float] = None
+    in_watchlist: bool = False
+
+
+class BoardConstituentsResponse(BaseModel):
+    symbol: str
+    name: str
+    stocks: List[ConstituentStock]
+
+
+_board_constituents_cache: Dict[str, tuple] = {}   # symbol -> (timestamp, data)
+_BOARD_CONS_TTL = 300  # 5 min
+_mcap_cache: Dict[str, float] = {}
+_mcap_cache_time: float = 0
+
+# THS request throttle (prevent IP ban)
+_THS_LAST_CALL = 0.0
+_THS_MIN_INTERVAL = 0.2  # seconds
+
+
+def _ths_get(url: str, timeout: int = 10):
+    """Throttled THS HTTP request with standard browser headers."""
+    global _THS_LAST_CALL
+    import time as _time, random as _random, requests as _requests
+    wait = _THS_MIN_INTERVAL - (_time.time() - _THS_LAST_CALL)
+    if wait > 0:
+        _time.sleep(wait + _random.uniform(0.1, 0.4))
+    try:
+        return _requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
+                "Referer": "https://q.10jqka.com.cn/",
+            },
+            proxies={"http": None, "https": None},
+            timeout=timeout,
+        )
+    finally:
+        _THS_LAST_CALL = _time.time()
+
+
+def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
+    """Fetch constituent stocks for a board.
+    - .THS (同花顺概念): scrape THS detail page
+    - .EM (东财行业): use EastMoney push2 API
+    Returns (board_name, DataFrame with columns: 代码, 名称, 最新价, 涨跌幅, 流通市值).
+    """
+    import requests as _requests
+
+    s = board_symbol.strip().upper()
+    board_rev = _get_board_reverse_map()
+    info = board_rev.get(s)
+    if not info:
+        raise HTTPException(404, f"未找到板块: {board_symbol}")
+    board_name = info[0]
+    btype = info[1]
+
+    if btype == "概念":
+        # Scrape THS concept detail page for constituent stocks (all pages)
+        from bs4 import BeautifulSoup
+        import akshare as ak
+        code_map = ak.stock_board_concept_name_ths()
+        ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
+        all_rows = []
+        page = 1
+        while True:
+            url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
+            r = _ths_get(url)
+            soup = BeautifulSoup(r.text, "html.parser")
+            table = soup.find("table", class_=re.compile("m-table"))
+            if not table:
+                break
+            trs = table.find_all("tr")[1:]
+            if not trs:
+                break
+            for tr in trs:
+                tds = tr.find_all("td")
+                if len(tds) < 4:
+                    continue
+                all_rows.append({
+                    "代码": tds[1].get_text(strip=True),
+                    "名称": tds[2].get_text(strip=True),
+                    "最新价": tds[3].get_text(strip=True),
+                    "涨跌幅": tds[4].get_text(strip=True),
+                })
+            # Check if there's a next page
+            page_info = soup.find(class_="page_info")
+            if page_info:
+                parts = page_info.text.strip().split("/")
+                if len(parts) == 2 and int(parts[0]) >= int(parts[1]):
+                    break
+            else:
+                break
+            page += 1
+        df = pd.DataFrame(all_rows)
+    else:
+        # EastMoney industry board: use push2 API
+        r = _requests.get(
+            "https://push2.eastmoney.com/api/qt/clist/get",
+            params={
+                "pn": "1", "pz": "1", "po": "0", "np": "1",
+                "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                "fltt": "2", "invt": "2",
+                "fid": "f3", "fs": "m:90+t:2+f:!50",
+                "fields": "f12",
+                "f14f": board_name,
+            },
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+            proxies={"http": None, "https": None},
+            timeout=10,
+        )
+        data = r.json()
+        items = data.get("data", {}).get("diff", [])
+        if not items:
+            raise HTTPException(404, f"未找到行业板块: {board_name}")
+        board_code = items[0].get("f12", "")
+        r = _requests.get(
+            "https://push2.eastmoney.com/api/qt/clist/get",
+            params={
+                "pn": "1", "pz": "200", "po": "1", "np": "1",
+                "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                "fltt": "2", "invt": "2",
+                "fid": "f3",
+                "fs": f"b:{board_code} f:!50",
+                "fields": "f2,f3,f12,f14,f20",
+            },
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+            proxies={"http": None, "https": None},
+            timeout=10,
+        )
+        data = r.json()
+        items = data.get("data", {}).get("diff", [])
+        rows = []
+        for item in items:
+            rows.append({
+                "代码": str(item.get("f12", "")),
+                "名称": str(item.get("f14", "")),
+                "最新价": item.get("f2"),
+                "涨跌幅": item.get("f3"),
+                "流通市值": item.get("f20"),
+            })
+        df = pd.DataFrame(rows)
+
+    return board_name, df
+
+
+@app.get("/v1/market/board-constituents", response_model=BoardConstituentsResponse)
+def get_board_constituents(
+    symbol: str = Query("", min_length=1),
+    limit: int = Query(200, ge=1, le=200),
+    current_user: UserDB = Depends(_require_api_user),
+    db: Session = Depends(get_db),
+):
+    """Get constituent stocks for a concept/industry board with live quotes."""
+    if not _is_board_symbol(symbol):
+        raise HTTPException(400, "该接口仅支持概念/行业板块")
+
+    s = symbol.strip().upper()
+
+    # Check cache
+    now = time.time()
+    cached = _board_constituents_cache.get(s)
+    if cached and now - cached[0] < _BOARD_CONS_TTL:
+        stocks_data, board_name = cached[1]
+    else:
+        board_name, cons_df = _fetch_board_constituents(s)
+
+        # Supplement market cap from EastMoney (cached separately, 5 min TTL)
+        global _mcap_cache, _mcap_cache_time
+        mcap_lookup: dict = _mcap_cache
+        try:
+            now = time.time()
+            if not _mcap_cache or now - _mcap_cache_time > 300:
+                import requests as _req
+                r = _req.get(
+                    "https://push2.eastmoney.com/api/qt/clist/get",
+                    params={
+                        "pn": "1", "pz": "4000", "po": "1", "np": "1",
+                        "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                        "fltt": "2", "invt": "2",
+                        "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+                        "fields": "f12,f20",
+                    },
+                    headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+                    proxies={"http": None, "https": None},
+                    timeout=8,
+                )
+                data = r.json()
+                new_cache = {}
+                for item in data.get("data", {}).get("diff", []):
+                    code = str(item.get("f12", ""))
+                    mc = item.get("f20")
+                    if code and mc is not None and mc != "-":
+                        try:
+                            new_cache[code] = round(float(mc) / 1e8, 1)
+                        except (ValueError, TypeError):
+                            pass
+                _mcap_cache = new_cache
+                _mcap_cache_time = now
+                mcap_lookup = new_cache
+        except Exception as e:
+            _log(f"[BoardCons] market cap fetch failed: {e}")
+            mcap_lookup = {}
+
+        stocks_data = []
+        for _, row in cons_df.iterrows():
+            code = str(row.get("代码", ""))[:6]
+            name = str(row.get("名称", "")).strip()
+            if not code or not code.isdigit():
+                continue
+            def _to_float(v):
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    return None
+                try:
+                    return float(v)
+                except (ValueError, TypeError):
+                    return None
+            price = _to_float(row.get("最新价"))
+            chg = _to_float(row.get("涨跌幅"))
+            mcap_raw = row.get("流通市值")
+            mcap = None
+            if mcap_raw is not None and not (isinstance(mcap_raw, float) and pd.isna(mcap_raw)):
+                try:
+                    mcap = round(float(mcap_raw) / 1e8, 1)
+                except (ValueError, TypeError):
+                    pass
+            if mcap is None:
+                mcap = mcap_lookup.get(code)
+            stocks_data.append({
+                "code": code,
+                "name": name,
+                "symbol": _normalize_symbol(code),
+                "price": price,
+                "change_pct": chg,
+                "market_cap": mcap,
+            })
+
+        stocks_data.sort(key=lambda x: x.get("change_pct") or -999, reverse=True)
+        _board_constituents_cache[s] = (now, (stocks_data, board_name))
+        # Cleanup old entries
+        if len(_board_constituents_cache) > 50:
+            expired = [k for k, (t, _) in _board_constituents_cache.items() if now - t >= _BOARD_CONS_TTL]
+            for k in expired:
+                _board_constituents_cache.pop(k, None)
+
+    # Get watchlist symbols for current user
+    watchlist_symbols: set = set()
+    try:
+        items = db.query(WatchlistItemDB).filter(
+            WatchlistItemDB.user_id == current_user.id
+        ).all()
+        for item in items:
+            watchlist_symbols.add(item.symbol)
+    except Exception:
+        pass
+
+    stocks = []
+    for sd in stocks_data[:limit]:
+        stocks.append(ConstituentStock(
+            code=sd["code"],
+            name=sd["name"],
+            symbol=sd["symbol"],
+            price=sd["price"],
+            change_pct=sd["change_pct"],
+            market_cap=sd["market_cap"],
+            in_watchlist=sd["symbol"] in watchlist_symbols,
+        ))
+
+    return BoardConstituentsResponse(symbol=s, name=board_name, stocks=stocks)
+
+
 @app.get("/v1/market/position", response_model=PositionResponse)
 def get_position(
     symbol: str,

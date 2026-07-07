@@ -394,6 +394,22 @@ export interface RadarResponse {
     signal?: Record<string, any> | null
 }
 
+export interface ConstituentStock {
+    code: string
+    name: string
+    symbol: string
+    price?: number | null
+    change_pct?: number | null
+    market_cap?: number | null
+    in_watchlist: boolean
+}
+
+export interface BoardConstituentsResponse {
+    symbol: string
+    name: string
+    stocks: ConstituentStock[]
+}
+
 export interface PositionPoint {
     date: string
     close: number
