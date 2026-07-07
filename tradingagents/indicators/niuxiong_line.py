@@ -1239,6 +1239,10 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
     # 平均线: 波动线的3日EMA
     avg = _ema_np(wave, 3)
 
+    # 散户线: 反向归一 + 11日EMA平滑
+    raw_retail = 4 - raw_wave
+    retail = _ema_np(raw_retail, 11)
+
     # 状态判断
     info = np.zeros(n, dtype=int)
     info[1:] = (avg[1:] >= avg[:-1]).astype(int)
@@ -1294,6 +1298,7 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     result['radar_wave'] = wave
     result['radar_avg'] = avg
+    result['radar_retail'] = retail
     result['radar_buy'] = radar_buy
     result['radar_sell'] = radar_sell
     result['radar_top'] = radar_top

@@ -807,6 +807,7 @@ class RadarPoint(BaseModel):
     close: float
     radar_wave: Optional[float] = None
     radar_avg: Optional[float] = None
+    radar_retail: Optional[float] = None
     radar_buy: bool = False
     radar_sell: bool = False
     radar_top: bool = False
@@ -3596,6 +3597,7 @@ def get_radar(
             close=float(row["close"]),
             radar_wave=round(float(row["radar_wave"]), 2) if pd.notna(row["radar_wave"]) else None,
             radar_avg=round(float(row["radar_avg"]), 2) if pd.notna(row["radar_avg"]) else None,
+            radar_retail=round(float(row["radar_retail"]), 2) if pd.notna(row.get("radar_retail")) else None,
             radar_buy=bool(row.get("radar_buy", False)),
             radar_sell=bool(row.get("radar_sell", False)),
             radar_top=bool(row.get("radar_top", False)),
