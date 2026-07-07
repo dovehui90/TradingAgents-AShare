@@ -4002,39 +4002,13 @@ class BoardConstituentsResponse(BaseModel):
 _board_constituents_cache: Dict[str, tuple] = {}   # symbol -> (timestamp, data)
 _BOARD_CONS_TTL = 86400 * 10  # 10 days for stock list (rarely changes)
 
-# THS request throttle (prevent IP ban)
-_THS_LAST_CALL = 0.0
-_THS_MIN_INTERVAL = 0.2  # seconds
-
-
-def _ths_get(url: str, timeout: int = 10):
-    """Throttled THS HTTP request with standard browser headers."""
-    global _THS_LAST_CALL
-    import time as _time, random as _random, requests as _requests
-    wait = _THS_MIN_INTERVAL - (_time.time() - _THS_LAST_CALL)
-    if wait > 0:
-        _time.sleep(wait + _random.uniform(0.1, 0.4))
-    try:
-        return _requests.get(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
-                "Referer": "https://q.10jqka.com.cn/",
-            },
-            proxies={"http": None, "https": None},
-            timeout=timeout,
-        )
-    finally:
-        _THS_LAST_CALL = _time.time()
-
-
 def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     """Fetch constituent stocks for a board.
-    - .THS (同花顺概念): scrape THS detail page
+    - .THS (同花顺概念): scrape THS detail page with HTTP pagination
     - .EM (东财行业): use EastMoney push2 API
     Returns (board_name, DataFrame with columns: 代码, 名称, 最新价, 涨跌幅, 流通市值).
     """
-    import requests as _requests
+    import requests as _requests, time as _time
 
     s = board_symbol.strip().upper()
     board_rev = _get_board_reverse_map()
@@ -4045,16 +4019,20 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     btype = info[1]
 
     if btype == "概念":
-        # Scrape THS concept detail page for constituent stocks (all pages)
+        # Scrape THS concept detail page — HTTP pagination works with delay
         from bs4 import BeautifulSoup
         import akshare as ak
         code_map = ak.stock_board_concept_name_ths()
         ths_code = code_map[code_map["name"] == board_name]["code"].values[0]
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://q.10jqka.com.cn/"}
         all_rows = []
-        page = 1
-        while True:
-            url = f"https://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
-            r = _ths_get(url)
+        for page in range(1, 10):  # max 10 pages (safety limit)
+            if page > 1:
+                _time.sleep(0.6)  # delay to avoid IP block
+            url = f"http://q.10jqka.com.cn/gn/detail/code/{ths_code}/?pn={page}"
+            r = _requests.get(url, headers=headers, proxies={"http": None, "https": None}, timeout=8)
+            if "Nginx forbidden" in r.text or "404" in r.text[:200]:
+                break
             soup = BeautifulSoup(r.text, "html.parser")
             table = soup.find("table", class_=re.compile("m-table"))
             if not table:
@@ -4072,16 +4050,12 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
                     "最新价": tds[3].get_text(strip=True),
                     "涨跌幅": tds[4].get_text(strip=True),
                 })
-            # Check if there's a next page
             page_info = soup.find(class_="page_info")
             if page_info:
                 parts = page_info.text.strip().split("/")
                 if len(parts) == 2 and int(parts[0]) >= int(parts[1]):
                     break
-            else:
-                break
-            page += 1
-        df = pd.DataFrame(all_rows)
+        df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(columns=["代码","名称","最新价","涨跌幅"])
     else:
         # EastMoney industry board: use push2 API
         r = _requests.get(
@@ -4153,60 +4127,67 @@ def get_board_constituents(
         stock_list, board_name = cached[1]
     else:
         board_name, cons_df = _fetch_board_constituents(s)
+        def _to_num(v):
+            try: return float(v) if v is not None and v != "-" else None
+            except: return None
         stock_list = []
         for _, row in cons_df.iterrows():
             code = str(row.get("代码", ""))[:6]
             name = str(row.get("名称", "")).strip()
             if code and code.isdigit():
-                stock_list.append({"code": code, "name": name, "symbol": _normalize_symbol(code)})
+                mcap_raw = row.get("流通市值")
+                mcap = None
+                if mcap_raw is not None and mcap_raw != "-":
+                    try: mcap = round(float(mcap_raw) / 1e8, 1)
+                    except: pass
+                stock_list.append({
+                    "code": code, "name": name,
+                    "symbol": _normalize_symbol(code),
+                    "price": _to_num(row.get("最新价")),
+                    "chg": _to_num(row.get("涨跌幅")),
+                    "mcap": mcap,
+                })
         _board_constituents_cache[s] = (now, (stock_list, board_name))
 
     if not stock_list:
         return BoardConstituentsResponse(symbol=s, name=board_name or s, stocks=[])
 
-    # 2. Fetch quotes via Tushare (lightweight, no proxy issues)
+    # 2. Fill missing quotes with Tushare (prices already present for EM boards)
     try:
         import tushare as ts
         ts.set_token(os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
         pro = ts.pro_api()
         trade_date = cn_today_str().replace("-", "")
-        codes = [sl["code"] for sl in stock_list]
-        all_daily = []
-        all_basic = []
-        for i in range(0, len(codes), 100):
-            batch = codes[i:i+100]
-            ts_codes = ",".join([f"{c}.SH" if c.startswith(("5","6","9")) else f"{c}.SZ" for c in batch])
-            # Price + change%
-            d = pro.daily(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,close,pct_chg")
-            if d is not None and not d.empty:
-                all_daily.append(d)
-            # Market cap
-            b = pro.daily_basic(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,circ_mv")
-            if b is not None and not b.empty:
-                all_basic.append(b)
-        quotes = {}
-        if all_daily:
-            df_p = pd.concat(all_daily, ignore_index=True)
-            df_m = pd.concat(all_basic, ignore_index=True) if all_basic else pd.DataFrame()
-            for _, row in df_p.iterrows():
-                code = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
-                mcap_row = df_m[df_m["ts_code"] == row["ts_code"]] if not df_m.empty else pd.DataFrame()
-                mcap = None
-                if not mcap_row.empty:
-                    mv = mcap_row.iloc[0].get("circ_mv")
-                    if pd.notna(mv):
-                        try:
-                            mcap = round(float(mv) / 1e4, 0)  # 万元→亿元
-                        except (ValueError, TypeError):
-                            pass
-                quotes[code] = {
-                    "price": row.get("close"),
-                    "chg": row.get("pct_chg"),
-                    "mcap": mcap,
-                }
+        missing = [sl for sl in stock_list if not sl.get("price") or not sl.get("mcap")]
+        if missing:
+            codes = [sl["code"] for sl in missing]
+            for i in range(0, len(codes), 100):
+                batch = codes[i:i+100]
+                ts_codes = ",".join([f"{c}.SH" if c.startswith(("5","6","9")) else f"{c}.SZ" for c in batch])
+                d = pro.daily(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,close,pct_chg")
+                b = pro.daily_basic(ts_code=ts_codes, trade_date=trade_date, fields="ts_code,circ_mv")
+                if d is not None and not d.empty:
+                    for _, row in d.iterrows():
+                        c = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
+                        for sl in stock_list:
+                            if sl["code"] == c:
+                                if not sl.get("price"):
+                                    sl["price"] = row.get("close")
+                                if not sl.get("chg"):
+                                    sl["chg"] = row.get("pct_chg")
+                if b is not None and not b.empty:
+                    for _, row in b.iterrows():
+                        c = str(row["ts_code"]).split(".")[0] if pd.notna(row["ts_code"]) else ""
+                        mv = row.get("circ_mv")
+                        if pd.notna(mv):
+                            for sl in stock_list:
+                                if sl["code"] == c and not sl.get("mcap"):
+                                    try:
+                                        sl["mcap"] = round(float(mv) / 1e4, 0)
+                                    except (ValueError, TypeError):
+                                        pass
     except Exception as e:
-        _log(f"[BoardCons] Tushare quote fetch failed: {e}")
-        quotes = {}
+        _log(f"[BoardCons] Tushare fallback failed: {e}")
 
     # 3. Combine and sort
     stocks_data = []
