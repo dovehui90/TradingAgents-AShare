@@ -35,37 +35,35 @@ def scrape_ths_constituents(board_name: str) -> list[dict]:
             if len(parts) == 2:
                 total_pages = int(parts[1])
 
-        for pn in range(1, total_pages + 1):
-            if pn > 1:
-                # Click the page number link
-                try:
-                    page_link = page.query_selector(f".m-pager a:text-is('{pn}')")
-                    if page_link:
-                        page_link.click()
-                        page.wait_for_timeout(800)  # wait for table update
-                except Exception:
-                    break
-
+        for _ in range(total_pages):
             # Extract rows from current table
             table = page.query_selector("table.m-table")
             if not table:
                 break
             rows = table.query_selector_all("tr")
-            for row in rows[1:]:  # skip header
+            new_found = 0
+            for row in rows[1:]:
                 cells = row.query_selector_all("td")
                 if len(cells) >= 4:
                     code = cells[1].inner_text().strip()
                     if code not in seen and code.isdigit():
                         seen.add(code)
+                        new_found += 1
                         all_stocks.append({
                             "代码": code,
                             "名称": cells[2].inner_text().strip(),
                             "最新价": cells[3].inner_text().strip(),
                             "涨跌幅": cells[4].inner_text().strip(),
                         })
-
-            if pn >= total_pages:
+            if new_found == 0:
                 break
+
+            # Click "下一页" to go to next page
+            next_btn = page.query_selector("text=下一页")
+            if not next_btn:
+                break
+            next_btn.click()
+            page.wait_for_timeout(600)
 
         browser.close()
 
