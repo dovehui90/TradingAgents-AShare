@@ -35,8 +35,10 @@ const parseDecision = (decisionText?: string): { action: 'buy' | 'sell' | 'hold'
 
 function extractEntryRange(text: string | undefined): string | undefined {
     if (!text) return undefined
-    const m = text.match(/\*{0,4}(?:入场|建仓|买入|卖出)区间\*{0,4}\s*[：:]\s*[¥$]?\s*([\d.]+)\s*(?:元)?\s*[–\-—至~]\s*[¥$]?\s*([\d.]+)\s*(?:元)?/)
-        ?? text.match(/\*{0,4}(?:入场|建仓|买入|卖出)区间\*{0,4}[：:\s]*[¥$]?\s*([\d.]+)\s*(?:元)?\s*[–\-—至~]\s*[¥$]?\s*([\d.]+)\s*(?:元)?/)
+    // 允许区间标签和数字之间穿插自然语言修饰（如"建议在"、"约"等），用 [^\d\n]{0,30} 跳过
+    const re = /\*{0,4}(?:入场|建仓|买入|卖出)区间\*{0,4}[：:\s]*[^\d\n]{0,30}?([\d.]+)\s*(?:元)?\s*[–\-—至~]\s*[¥$]?\s*([\d.]+)/
+    const m = text.match(re)
+        ?? text.match(/\*{0,4}(?:入场|建仓|买入|卖出)区间\*{0,4}[：:\s]*([\d.]+)\s*(?:元)?\s*[–\-—至~]\s*[¥$]?\s*([\d.]+)\s*(?:元)?/)
     if (m) return `${m[1]} - ${m[2]}`
     return undefined
 }

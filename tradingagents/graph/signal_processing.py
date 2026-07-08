@@ -10,6 +10,14 @@ from tradingagents.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
 
+# 否定语境模式：匹配"不建议买入"/"避免建仓"等表述，防止关键词子串误判
+_NEGATION_PATTERN = re.compile(
+    r'(?:不(?:建议|推荐|考虑|宜|应|该|能|可|再|会|支持|赞成|同意|适合|妨|必|得|要|允许|主张|鼓励|看|倾向)'
+    r'|避免|切勿|切忌|暂不|难以|无法|放弃|远离|警惕|谨慎)'
+    r'.{0,30}?'
+    r'(?:买入|卖出|建仓|增持|减持|做多|做空|清仓|入场|加仓|补仓|追高|抄底|持股|持仓|参与)+',
+)
+
 
 class SignalProcessor:
     """Processes trading signals to extract actionable decisions."""
@@ -109,6 +117,8 @@ def _extract_decision_keyword(text: str) -> str | None:
 
     def classify(snippet: str) -> str | None:
         snippet_upper = snippet.upper()
+        # 先清除否定语境中的交易动作，防止"不建议买入"被误匹配为BUY
+        cleaned = _NEGATION_PATTERN.sub(' __NEGATED__ ', snippet_upper)
         sell_keywords = [
             "SELL",
             "卖出",
@@ -138,11 +148,11 @@ def _extract_decision_keyword(text: str) -> str | None:
             "中性",
         ]
 
-        if any(k in snippet_upper for k in buy_keywords):
+        if any(k in cleaned for k in buy_keywords):
             return "BUY"
-        if any(k in snippet_upper for k in sell_keywords):
+        if any(k in cleaned for k in sell_keywords):
             return "SELL"
-        if any(k in snippet_upper for k in hold_keywords):
+        if any(k in cleaned for k in hold_keywords):
             return "HOLD"
         return None
 
