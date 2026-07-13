@@ -1,0 +1,37 @@
+{
+  "version": "2.0",
+  "evolutions": [],
+  "hard_filters": {
+    "ma60_slope_min": 0,
+    "volume_ratio_min": 0.9,
+    "ret_5d_min": 0,
+    "rsi_max": 70
+  },
+  "signal_weights": {
+    "signal_1": 1.0,
+    "signal_2": 0.8,
+    "signal_3": 1.0,
+    "signal_4": 0.6,
+    "signal_5": 0.4
+  },
+  "entry_rules": {
+    "optimal_signal_range": [3, 4],
+    "max_signals": 6,
+    "overheat_ma5_threshold": 0.06,
+    "overheat_signal_threshold": 6
+  },
+  "score_thresholds": {
+    "追涨": 60,
+    "低吸": 45,
+    "抄底": 55
+  },
+  "pattern_mapping": {
+    "抄底": ["V型反转", "圆弧底", "复合筑底", "加速下跌"],
+    "追涨": ["加速上涨", "关键突破"],
+    "低吸": ["单边上涨", "震荡上行", "上涨中继", "旗形整理", "箱体震荡", "宽幅震荡"],
+    "观望": ["单边下跌", "震荡下行", "下跌中继", "窄幅震荡", "发散三角", "脉冲走势"],
+    "减仓": ["圆弧顶", "高位见顶"]
+  },
+  "signal6_bullish": ["低位放量大阳线", "低位旭日东升", "杯柄突破回踩", "缩量止跌"],
+  "signal6_bearish": ["高位放量大阴线", "高位黄昏之星", "高位弃婴", "高位三只乌鸦"]
+}
