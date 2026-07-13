@@ -23,6 +23,9 @@ USER = "root"
 PASSWORD = "Qq121918="
 REMOTE_DIR = "/opt/tradingagents"
 BACKEND_DIRS = ["api", "tradingagents", "scheduler"]
+BACKEND_PORT = 8088
+KILL_TERM_TIMEOUT = 10   # SIGTERM 后等待秒数
+KILL_FORCE_TIMEOUT = 5   # 再次等待后仍存活才 SIGKILL
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(PROJECT_DIR, ".deploy_state.json")
@@ -133,21 +136,168 @@ def server_reset_code(ssh_client):
 
 
 def kill_backend(ssh_client):
-    """停止后端服务"""
+    """停止后端服务 — 三级强制清理 + 端口验证
+
+    Phase 1: pkill SIGTERM → 等 10s → 检查
+    Phase 2: 仍存活 → 再等 5s → 检查
+    Phase 3: 仍存活 → pkill -9 SIGKILL → 验证端口释放
+    """
     print("  停止后端...")
-    ssh_client.exec_command("pkill -9 -f 'uvicorn api.main' 2>/dev/null")
-    time.sleep(2)
+
+    kill_script = f'''#!/bin/bash
+set -e
+PORT={BACKEND_PORT}
+TERM_TIMEOUT={KILL_TERM_TIMEOUT}
+FORCE_TIMEOUT={KILL_FORCE_TIMEOUT}
+
+# ---- 查找占用端口的 PID ----
+PIDS=$(ss -tlnp 2>/dev/null | grep ":$PORT " | grep -oP 'pid=\\K[0-9]+' | sort -u)
+if [ -z "$PIDS" ]; then
+    PIDS=$(pgrep -f 'uvicorn api.main' 2>/dev/null || true)
+fi
+
+if [ -z "$PIDS" ]; then
+    echo "PORT_FREE"
+    exit 0
+fi
+
+echo "FOUND_PIDS $PIDS"
+
+# ---- Phase 1: SIGTERM ----
+for pid in $PIDS; do
+    kill -TERM "$pid" 2>/dev/null || true
+done
+
+# 等待并检测
+for i in $(seq 1 $TERM_TIMEOUT); do
+    sleep 1
+    ALIVE=""
+    for pid in $PIDS; do
+        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
+    done
+    if [ -z "$ALIVE" ]; then
+        echo "TERM_OK"
+        break
+    fi
+    PIDS="$ALIVE"
+done
+
+# ---- Phase 2: 额外等待（进程可能在 flush 数据） ----
+if [ -n "$PIDS" ]; then
+    echo "WAITING $PIDS"
+    sleep $FORCE_TIMEOUT
+    ALIVE=""
+    for pid in $PIDS; do
+        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
+    done
+    if [ -z "$ALIVE" ]; then
+        echo "WAIT_OK"
+        PIDS=""
+    else
+        PIDS="$ALIVE"
+    fi
+fi
+
+# ---- Phase 3: SIGKILL 兜底 ----
+if [ -n "$PIDS" ]; then
+    echo "FORCE_KILL $PIDS"
+    for pid in $PIDS; do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+    sleep 2
+    ALIVE=""
+    for pid in $PIDS; do
+        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
+    done
+    if [ -n "$ALIVE" ]; then
+        echo "STUCK $ALIVE"
+        exit 1
+    fi
+    echo "FORCE_OK"
+fi
+
+# ---- 验证端口已释放 ----
+for i in $(seq 1 6); do
+    IN_USE=$(ss -tlnp 2>/dev/null | grep ":$PORT " | wc -l)
+    if [ "$IN_USE" -eq 0 ]; then
+        echo "PORT_FREE"
+        exit 0
+    fi
+    sleep 0.5
+done
+echo "PORT_STUCK"
+exit 1
+'''
+
+    stdin, stdout, stderr = ssh_client.exec_command(kill_script)
+    out = stdout.read().decode().strip()
+    err = stderr.read().decode().strip()
+
+    for line in out.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if "FOUND_PIDS" in line:
+            print(f"    发现进程: {line.replace('FOUND_PIDS ', '')}")
+        elif "TERM_OK" in line:
+            print("    [OK] SIGTERM 优雅关闭成功")
+        elif "WAITING" in line:
+            print(f"    等待进程flush: {line.replace('WAITING ', '')}")
+        elif "WAIT_OK" in line:
+            print("    [OK] 进程在等待后退出")
+        elif "FORCE_KILL" in line:
+            print(f"    [WARN] 强制终止: {line.replace('FORCE_KILL ', '')}")
+        elif "FORCE_OK" in line:
+            print("    [OK] 强制终止完成")
+        elif "PORT_FREE" in line:
+            print(f"    [OK] 端口 {BACKEND_PORT} 已释放")
+        elif "STUCK" in line:
+            pids = line.replace("STUCK ", "")
+            print(f"    [FAIL] 进程无法终止! PID: {pids}")
+            print(f"    请手动登录服务器执行: kill -9 {pids}")
+        elif "PORT_STUCK" in line:
+            print(f"    [FAIL] 端口 {BACKEND_PORT} 仍被占用，进程清理失败!")
+
+    if err:
+        print(f"    [WARN] stderr: {err}")
+
+    if "STUCK" in out or "PORT_STUCK" in out:
+        print("  [ABORT] 端口清理失败，取消部署以保护数据安全")
+        sys.exit(1)
+
+    if "PORT_FREE" in out:
+        return True
 
 
 def start_backend(ssh_client):
-    """启动后端服务"""
+    """启动后端服务（启动前验证端口已释放）"""
+    # 启动前再次确认端口空闲
+    stdin, stdout, stderr = ssh_client.exec_command(
+        f"ss -tlnp 2>/dev/null | grep ':{BACKEND_PORT} ' | wc -l"
+    )
+    in_use = stdout.read().decode().strip()
+    if in_use != "0":
+        print(f"  [FAIL] 端口 {BACKEND_PORT} 仍被占用，无法启动后端")
+        sys.exit(1)
+
     print("  启动后端...")
     ssh_client.exec_command(
         f"cd {REMOTE_DIR} && "
         f"nohup /usr/local/bin/python3.10 -m uvicorn api.main:app "
-        f"--host 0.0.0.0 --port 8088 --log-level warning "
+        f"--host 0.0.0.0 --port {BACKEND_PORT} --log-level warning "
         f"> logs/backend.log 2>&1 &"
     )
+    time.sleep(1)
+
+    # 验证进程已启动
+    stdin, stdout, stderr = ssh_client.exec_command(
+        f"pgrep -f 'uvicorn api.main' | wc -l"
+    )
+    count = stdout.read().decode().strip()
+    if count == "0":
+        print("  [FAIL] 后端进程启动失败，检查 logs/backend.log")
+        sys.exit(1)
+    print(f"  [OK] 后端进程已启动 (PID数: {count})")
 
 
 def setup_nginx(ssh_client):
@@ -169,6 +319,9 @@ def setup_nginx(ssh_client):
         proxy_pass http://127.0.0.1:8088;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 60s;
     }
 
     location /healthz {

@@ -27,15 +27,179 @@ def _find_swing_points(df, window=5):
     return is_swing_low, is_swing_high
 
 
-def _build_swing_support(n, lows, is_swing_low):
-    """Swing point 确认法 — 支撑位（有惯性，不会跟着新低立刻下移）"""
+def _build_swing_support(n, lows, is_swing_low, lookback=250):
+    """
+    动态支撑位计算
+
+    支持多时间框架：
+    - lookback=20: 短线支撑
+    - lookback=60: 中线支撑
+    - lookback=250: 长线支撑（1年）
+    """
     support = np.full(n, np.nan)
-    current = np.nan
+
     for i in range(n):
-        if is_swing_low[i]:
-            current = lows[i]
-        support[i] = current
+        start_idx = max(0, i - lookback)
+        recent_lows = lows[start_idx:i + 1]
+        if len(recent_lows) > 0:
+            support[i] = np.min(recent_lows)
+
     return support
+
+
+def find_high_volume_levels(df, lookback=60):
+    """
+    基于高量柱的支撑压力位（PDF定义）
+
+    PDF规则4：以当天高量实体低点为支撑位
+    PDF规则5：以过往高量实体高低点为压力位
+
+    Args:
+        df: 包含 open, high, low, close, volume 列的 DataFrame
+        lookback: 回看天数
+
+    Returns:
+        dict: {'support': 支撑位列表, 'resistance': 压力位列表}
+    """
+    if len(df) < 4:
+        return {'support': [], 'resistance': []}
+
+    volume = df['volume'].values
+    opens = df['open'].values
+    closes = df['close'].values
+    highs = df['high'].values
+    lows = df['low'].values
+
+    support_levels = []
+    resistance_levels = []
+
+    # 找出高量柱（当天量 > 前3天量）
+    for i in range(3, len(df)):
+        if volume[i] > max(volume[i-3:i]):
+            # 高量柱出现
+            body_low = min(opens[i], closes[i])  # 实体低点
+            body_high = max(opens[i], closes[i])  # 实体高点
+
+            # 支撑位：高量实体低点
+            support_levels.append({
+                'date': df.index[i],
+                'level': body_low,
+                'type': 'high_volume_support'
+            })
+
+            # 压力位：高量实体高点
+            resistance_levels.append({
+                'date': df.index[i],
+                'level': body_high,
+                'type': 'high_volume_resistance'
+            })
+
+    return {'support': support_levels, 'resistance': resistance_levels}
+
+
+def get_high_volume_support_resistance(high_vol_levels, current_price):
+    """
+    根据高量柱获取当前的支撑压力位
+
+    规则：
+    - 支撑位：当前价格下方最近的高量实体低点
+    - 压力位：当前价格上方最近的高量实体高点
+    """
+    support = None
+    resistance = None
+
+    # 找支撑位：当前价格下方最近的高量实体低点
+    below_supports = [s for s in high_vol_levels['support'] if s['level'] < current_price]
+    if below_supports:
+        support = max(below_supports, key=lambda x: x['level'])['level']
+
+    # 找压力位：当前价格上方最近的高量实体高点
+    above_resistances = [r for r in high_vol_levels['resistance'] if r['level'] > current_price]
+    if above_resistances:
+        resistance = min(above_resistances, key=lambda x: x['level'])['level']
+
+    return {'support': support, 'resistance': resistance}
+
+
+def find_gaps(df):
+    """
+    识别缺口（Gap）
+
+    缺口类型：
+    - 向上跳空缺口：今天最低价 > 昨天最高价（缺口区域成为支撑）
+    - 向下跳空缺口：今天最高价 < 昨天最低价（缺口区域成为压力）
+
+    Args:
+        df: 包含 open, high, low, close 列的 DataFrame
+
+    Returns:
+        list: 缺口列表，每个元素为 (日期, 缺口类型, 缺口上沿, 缺口下沿)
+    """
+    gaps = []
+    highs = df['high'].values
+    lows = df['low'].values
+    dates = df.index
+
+    for i in range(1, len(df)):
+        prev_high = highs[i-1]
+        prev_low = lows[i-1]
+        curr_low = lows[i]
+        curr_high = highs[i]
+
+        # 向上跳空缺口：今天最低价 > 昨天最高价
+        if curr_low > prev_high:
+            gaps.append({
+                'date': dates[i],
+                'type': 'up_gap',
+                'upper': curr_low,  # 缺口上沿（支撑位）
+                'lower': prev_high,  # 缺口下沿
+            })
+
+        # 向下跳空缺口：今天最高价 < 昨天最低价
+        if curr_high < prev_low:
+            gaps.append({
+                'date': dates[i],
+                'type': 'down_gap',
+                'upper': prev_low,  # 缺口上沿（压力位）
+                'lower': curr_high,  # 缺口下沿
+            })
+
+    return gaps
+
+
+def get_gap_levels(gaps, current_price):
+    """
+    根据缺口获取支撑压力位
+
+    规则：
+    - 向上跳空缺口：缺口区域成为支撑
+    - 向下跳空缺口：缺口区域成为压力
+
+    Args:
+        gaps: 缺口列表
+        current_price: 当前价格
+
+    Returns:
+        dict: {'support': 支撑位, 'resistance': 压力位}
+    """
+    support_levels = []
+    resistance_levels = []
+
+    for gap in gaps:
+        if gap['type'] == 'up_gap':
+            # 向上跳空缺口：缺口区域成为支撑
+            if gap['lower'] < current_price:
+                support_levels.append(gap['lower'])
+        elif gap['type'] == 'down_gap':
+            # 向下跳空缺口：缺口区域成为压力
+            if gap['upper'] > current_price:
+                resistance_levels.append(gap['upper'])
+
+    # 取最近的支撑和压力
+    support = max(support_levels) if support_levels else None
+    resistance = min(resistance_levels) if resistance_levels else None
+
+    return {'support': support, 'resistance': resistance}
 
 
 def calculate_support_resistance(
@@ -99,15 +263,84 @@ def calculate_support_resistance(
             support[i] = cur_s
 
     else:  # hybrid（默认）
-        # 支撑位和压力位都用 swing 确认法（惯性强，不随新低/新高轻易移动）
-        is_low, is_high = _find_swing_points(result, swing_window)
-        support = _build_swing_support(n, lows, is_low)
+        # 三合一：Swing确认法 + 高量柱法 + 缺口法
+        # 使用1年（250个交易日）数据计算
+        lookback = min(250, n)
+
+        # 1. Swing确认法
+        swing_window = 5
+        is_low, is_high = _find_swing_points(df, swing_window)
+        swing_lows = [(i, lows[i]) for i in range(n) if is_low[i]]
+        swing_highs = [(i, highs[i]) for i in range(n) if is_high[i]]
+
+        # 2. 高量柱法（PDF定义）
+        high_vol_levels = find_high_volume_levels(df, lookback)
+
+        support = np.full(n, np.nan)
         resistance = np.full(n, np.nan)
-        cur = np.nan
+
         for i in range(n):
-            if is_high[i]:
-                cur = highs[i]
-            resistance[i] = cur
+            current_price = lows[i]
+
+            # ======== Swing支撑压力位 ========
+            valid_swing_lows = [(idx, val) for idx, val in swing_lows if idx <= i]
+            valid_swing_highs = [(idx, val) for idx, val in swing_highs if idx <= i]
+
+            swing_support = None
+            swing_resistance = None
+
+            if valid_swing_lows:
+                # 找当前价格下方最近的swing low
+                below_supports = [(idx, val) for idx, val in valid_swing_lows if val <= current_price]
+                if below_supports:
+                    swing_support = below_supports[-1][1]
+                else:
+                    # 如果没有低于当前价的swing low，使用最近的swing low
+                    swing_support = valid_swing_lows[-1][1]
+
+            if valid_swing_highs:
+                # 找当前价格上方最近的swing high
+                above_resistances = [(idx, val) for idx, val in valid_swing_highs if val >= current_price]
+                if above_resistances:
+                    swing_resistance = above_resistances[0][1]
+                else:
+                    # 如果没有高于当前价的swing high，使用最近的swing high
+                    swing_resistance = valid_swing_highs[-1][1]
+
+            # ======== 高量柱支撑压力位（PDF定义）========
+            hv_levels = get_high_volume_support_resistance(high_vol_levels, current_price)
+            hv_support = hv_levels['support']
+            hv_resistance = hv_levels['resistance']
+
+            # ======== 综合支撑压力位 ========
+            # 支撑位：取更高的值（更接近当前价的支撑）
+            support_candidates = [s for s in [swing_support, hv_support] if s is not None]
+            if support_candidates:
+                support[i] = max(support_candidates)
+
+            # 压力位：取更低的值（更接近当前价的压力）
+            resistance_candidates = [r for r in [swing_resistance, hv_resistance] if r is not None]
+            if resistance_candidates:
+                resistance[i] = min(resistance_candidates)
+
+    result["support"] = support
+    result["resistance"] = resistance
+
+    # ======== 缺口分析（补充支撑压力位）========
+    gaps = find_gaps(result)
+    for i in range(n):
+        current_price = result["close"].iloc[i]
+        gap_levels = get_gap_levels(gaps, current_price)
+
+        # 如果缺口支撑位更高，更新支撑位
+        if gap_levels['support'] is not None:
+            if pd.isna(support[i]) or gap_levels['support'] > support[i]:
+                support[i] = gap_levels['support']
+
+        # 如果缺口压力位更低，更新压力位
+        if gap_levels['resistance'] is not None:
+            if pd.isna(resistance[i]) or gap_levels['resistance'] < resistance[i]:
+                resistance[i] = gap_levels['resistance']
 
     result["support"] = support
     result["resistance"] = resistance
