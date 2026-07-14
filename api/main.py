@@ -4032,28 +4032,6 @@ def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
     return True
 
 
-@app.post("/v1/screener/warmup")
-def screener_warmup(
-    db: Session = Depends(get_db),
-    admin: UserDB = Depends(_require_admin),
-):
-    """预热选股器缓存（管理员调用）。"""
-    from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
-
-    stock_map = _get_reverse_stock_map_cached_only()
-    all_symbols = []
-    for sym in stock_map:
-        cp = sym.split(".")[0]
-        if len(cp) == 6 and cp.isdigit() and cp.startswith(("0", "3", "6")) and not cp.startswith("688"):
-            name = stock_map.get(sym, "")
-            if "ST" not in name.upper():
-                all_symbols.append(_normalize_symbol(sym))
-
-    before = cached_symbol_count()
-    updated = build_screener_cache(all_symbols[:500], max_workers=8)
-    return {"before": before, "updated": updated, "total_candidates": len(all_symbols)}
-
-
 @app.post("/v1/market/screener", response_model=ScreenerResponse)
 def stock_screener(
     f: ScreenerFilter,
@@ -4182,13 +4160,14 @@ def stock_screener(
             except Exception:
                 pass
 
-    # ── Populate concepts: fetch a few concept boards for reverse index ──
-    concept_map: dict[str, list[str]] = {}
-    _load_board_maps()
-    # Fetch top THS concept boards (concepts are loaded synchronously)
-    concept_names = [name for name, (_, btype) in _board_map.items() if btype == "概念"]
-    for bname in concept_names[:3]:  # warm top 3 concept boards
-        info = _board_map.get(bname)
+    # ── Populate concepts from screener cache ──
+    from tradingagents.screener.cache import load_concept_map, save_concept_map
+    concept_map = load_concept_map()
+    if not concept_map:
+        _load_board_maps()
+        concept_names = [name for name, (_, btype) in _board_map.items() if btype == "概念"]
+        for bname in concept_names[:8]:
+            info = _board_map.get(bname)
         if info:
             try:
                 _, bdf = _fetch_board_constituents(info[0])
@@ -4204,6 +4183,7 @@ def stock_screener(
                                 concept_map[sym].append(bname)
             except Exception:
                 pass
+        save_concept_map(concept_map)
 
     for r in precomputed:
         concepts = concept_map.get(r["symbol"], [])

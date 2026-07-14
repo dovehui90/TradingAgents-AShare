@@ -91,3 +91,39 @@ def build_screener_cache(symbols: list[str], max_workers: int = 8):
 
 def cached_symbol_count() -> int:
     return len(list(CACHE_DIR.glob("*.parquet")))
+
+
+# ── Concept reverse index ──
+
+_CONCEPT_MAP_PATH = CACHE_DIR / "concept_map.json"
+_CONCEPT_CACHE: Optional[dict] = None
+
+
+def load_concept_map() -> dict[str, list[str]]:
+    """Load stock→concepts mapping from cache, or return empty."""
+    global _CONCEPT_CACHE
+    if _CONCEPT_CACHE is not None:
+        return _CONCEPT_CACHE
+
+    path = _CONCEPT_MAP_PATH
+    if path.exists():
+        try:
+            import json
+            age = time.time() - path.stat().st_mtime
+            if age < 7 * 86400:  # 1 week TTL
+                with open(path) as f:
+                    _CONCEPT_CACHE = json.load(f)
+                return _CONCEPT_CACHE
+        except Exception:
+            pass
+    return {}
+
+
+def save_concept_map(concept_map: dict[str, list[str]]):
+    """Persist concept reverse index."""
+    import json
+    global _CONCEPT_CACHE
+    _CONCEPT_CACHE = concept_map
+    with open(_CONCEPT_MAP_PATH, "w") as f:
+        json.dump(concept_map, f, ensure_ascii=False)
+    logger.info(f"Concept map saved: {len(concept_map)} stocks")
