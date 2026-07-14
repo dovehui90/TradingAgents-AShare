@@ -57,11 +57,14 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                     符合 {totalFiltered} 只 / 候选 {totalCandidates} 只，耗时 {elapsedMs >= 1000 ? `${(elapsedMs / 1000).toFixed(1)}s` : `${elapsedMs}ms`}
                 </span>
-                {dataDate && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                        数据更新：{dataDate.replace(/-/g, '年').replace(/(\d{2})$/, '月$1日').replace(/0(\d)/g, '$1')}
-                    </span>
-                )}
+                {dataDate && (() => {
+                    const [y, m, d] = dataDate.split('-')
+                    return (
+                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                            数据更新：{y}年{parseInt(m)}月{parseInt(d)}日
+                        </span>
+                    )
+                })()}
             </div>
             <div className="card overflow-hidden p-0">
                 <div className="overflow-x-auto">

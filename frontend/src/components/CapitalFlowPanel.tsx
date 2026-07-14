@@ -7,7 +7,6 @@ import {
     LineData,
     LineSeries,
     Time,
-    UTCTimestamp,
     createChart,
 } from 'lightweight-charts'
 import { TrendingUp } from 'lucide-react'
@@ -84,7 +83,7 @@ export default function CapitalFlowPanel({ symbol }: { symbol: string }) {
         for (const name of names) {
             sr[name] = chart.addSeries(LineSeries, {
                 color: LINE_COLORS[name] || '#888',
-                lineWidth: LINE_WIDTHS[name] || 1,
+                lineWidth: (LINE_WIDTHS[name] || 1) as 1 | 2,
                 priceLineVisible: false,
                 lastValueVisible: true,
             })
