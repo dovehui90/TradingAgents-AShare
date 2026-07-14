@@ -3657,34 +3657,17 @@ def get_capital_flow(
     today = cn_today_str()
     start = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=max(days + 50, 250))).strftime("%Y-%m-%d")
 
-    if _is_cn_index_symbol(symbol):
-        candles = _fetch_index_kline(symbol, start, today, period="daily")
-    else:
-        symbol = _normalize_symbol(symbol)
-        days_needed = max(250, (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(start, "%Y-%m-%d")).days + 30)
-        candles = []
+    candles = _fetch_index_kline(symbol, start, today) if _is_cn_index_symbol(symbol) else []
+    if not _is_cn_index_symbol(symbol):
+        code = symbol.replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
         try:
-            from tradingagents.indicators import fetch_realtime_data
-            df = fetch_realtime_data(symbol, days=days_needed, period="daily")
+            import akshare as ak
+            raw = ak.stock_zh_a_hist(symbol=code, period="daily",
+                                     start_date=start.replace("-", ""),
+                                     end_date=today.replace("-", ""), adjust="qfq")
+            df = _normalize_kline_df(raw)
             if not df.empty:
-                prev_close = None
-                for idx, row in df.iterrows():
-                    close = float(row["close"])
-                    candle = {
-                        "date": idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)[:10],
-                        "open": float(row["open"]),
-                        "high": float(row["high"]),
-                        "low": float(row["low"]),
-                        "close": close,
-                        "volume": int(row["volume"]) if pd.notna(row.get("volume")) else None,
-                        "turnover_rate": round(float(row["turnover_rate"]), 2) if "turnover_rate" in row.index and pd.notna(row.get("turnover_rate")) else None,
-                    }
-                    if prev_close is not None:
-                        candle["change"] = round(close - prev_close, 2)
-                        candle["change_percent"] = round((close - prev_close) / prev_close * 100, 2)
-                    candles.append(candle)
-                    prev_close = close
-                candles = [c for c in candles if start <= c["date"] <= today]
+                candles = _df_to_candles(df)
         except Exception:
             pass
         if not candles:
@@ -3697,47 +3680,39 @@ def get_capital_flow(
     df = pd.DataFrame(candles)
     df = df.set_index("date")
 
-    # Determine & normalize turnover column
+    # Determine turnover column
     turnover_col = "turnover_rate" if "turnover_rate" in df.columns and df["turnover_rate"].notna().any() else None
     if turnover_col is None:
+        # Calculate from volume / capital if needed
         for col in ["turn", "换手率"]:
             if col in df.columns:
-                df = df.rename(columns={col: "turnover_rate"})
+                df.rename(columns={col: "turnover_rate"}, inplace=True)
                 turnover_col = "turnover_rate"
                 break
     if turnover_col is None:
         raise HTTPException(status_code=400, detail="数据源不含换手率字段，无法计算")
 
-    # Normalize: ensure turnover_rate is in percentage (e.g. 0.5 = 0.5%)
-    # If values look like decimals (< 0.01 max), multiply by 100
-    max_val = df[turnover_col].max()
-    if max_val and max_val < 0.01:
-        df[turnover_col] = df[turnover_col] * 100
-
     result = calculate_capital_flow(df, turnover_col=turnover_col)
     latest = result.iloc[-1]
     signal = get_capital_flow_signal(latest)
 
-    # Build response with direction info
+    # Build response
     lines = []
-    period_map = {"capital_main": (4, "主力"), "capital_hot": (9, "游资"),
-                  "capital_large": (17, "大户"), "capital_retail": (34, "散户"),
-                  "capital_attention": (180, "关注线")}
-    for col, (period, name) in period_map.items():
+    for col, name in [("capital_main", "主力"), ("capital_hot", "游资"),
+                       ("capital_large", "大户"), ("capital_retail", "散户"),
+                       ("capital_attention", "关注线")]:
         vals = result[col].dropna()
-        if len(vals) < 2:
-            continue
-        latest_val = float(vals.iloc[-1])
-        prev_val = float(vals.iloc[-2])
-        direction = "up" if latest_val > prev_val else "down" if latest_val < prev_val else "flat"
-        lines.append({
-            "name": name, "period": period, "direction": direction,
-            "latest": round(latest_val, 4),
-            "history": [round(float(v), 4) if not np.isnan(v) else None for v in result[col].tail(days).tolist()],
-            "dates": [str(d) for d in result.index.tolist()[-days:]],
-        })
+        if len(vals) > 0:
+            lines.append({
+                "name": name,
+                "period": [4, 9, 17, 34, 180][["capital_main", "capital_hot", "capital_large",
+                                                "capital_retail", "capital_attention"].index(col)],
+                "latest": round(float(vals.iloc[-1]), 4),
+                "history": [round(float(v), 4) if not np.isnan(v) else None for v in result[col].tail(days).tolist()],
+                "dates": result.index.tolist()[-days:],
+            })
 
-    # Resolve stock name
+    # Resolve stock name from cache
     stock_name = symbol
     try:
         smap = _get_reverse_stock_map_cached_only()
