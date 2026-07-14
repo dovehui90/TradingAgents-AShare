@@ -205,7 +205,8 @@ def fetch_realtime_data(symbol: str, days: int = 120, period: str = "daily") -> 
                     "最高": "high", "最低": "low", "成交量": "volume",
                     "成交额": "amount", "换手率": "turnover_rate",
                     "涨跌幅": "pct_chg", "涨跌额": "change",
-                    "turnover": "turnover_rate"}
+                    "turnover": "turnover_rate",
+                    "turn": "turnover_rate", "TurnoverRate": "turnover_rate"}
         df = df.rename(columns=col_map)
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date").sort_index()
