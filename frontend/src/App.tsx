@@ -76,16 +76,16 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/analysis" element={<Analysis />} />
+                  <Route path="/screener" element={<RequireAdmin><Screener /></RequireAdmin>} />
+                  <Route path="/briefing" element={<RequireAdmin><Briefing /></RequireAdmin>} />
                   {!isMobile && (
                     <>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/tracking-board" element={<TrackingBoard />} />
-                      <Route path="/screener" element={<RequireAdmin><Screener /></RequireAdmin>} />
                       <Route path="/accuracy" element={<Accuracy />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/portfolio" element={<Portfolio />} />
                       <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
-                      <Route path="/briefing" element={<RequireAdmin><Briefing /></RequireAdmin>} />
                       <Route path="/admin" element={<Admin />} />
                     </>
                   )}

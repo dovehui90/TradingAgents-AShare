@@ -1366,6 +1366,7 @@ export interface ScreenerResultItem {
     bull_status: string | null
     trend_status: string | null
     radar_wave: number | null
+    concepts: string | null
 }
 
 export interface ScreenerResponse {
@@ -1373,4 +1374,5 @@ export interface ScreenerResponse {
     total_candidates: number
     total_filtered: number
     elapsed_ms: number
+    data_date: string | null
 }

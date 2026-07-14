@@ -31,9 +31,10 @@ interface Props {
     totalCandidates: number
     totalFiltered: number
     elapsedMs: number
+    dataDate: string | null
 }
 
-export default function ScreenerTable({ results, totalCandidates, totalFiltered, elapsedMs }: Props) {
+export default function ScreenerTable({ results, totalCandidates, totalFiltered, elapsedMs, dataDate }: Props) {
     const navigate = useNavigate()
 
     const fmtMcap = (v: number | null) => {
@@ -52,8 +53,15 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
 
     return (
         <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                符合 {totalFiltered} 只 / 候选 {totalCandidates} 只，耗时 {elapsedMs >= 1000 ? `${(elapsedMs / 1000).toFixed(1)}s` : `${elapsedMs}ms`}
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                    符合 {totalFiltered} 只 / 候选 {totalCandidates} 只，耗时 {elapsedMs >= 1000 ? `${(elapsedMs / 1000).toFixed(1)}s` : `${elapsedMs}ms`}
+                </span>
+                {dataDate && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                        数据更新：{dataDate.replace(/-/g, '年').replace(/(\d{2})$/, '月$1日').replace(/0(\d)/g, '$1')}
+                    </span>
+                )}
             </div>
             <div className="card overflow-hidden p-0">
                 <div className="overflow-x-auto">
@@ -62,6 +70,7 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                             <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">代码</th>
                                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">名称</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">概念板块</th>
                                 <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">价格</th>
                                 <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">涨跌</th>
                                 <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">流通市值</th>
@@ -81,6 +90,7 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                                     onClick={() => navigate(`/analysis?symbol=${r.symbol}`)}>
                                     <td className="px-3 py-2 font-mono text-xs">{r.symbol.split('.')[0]}</td>
                                     <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
+                                    <td className="px-3 py-2 text-xs text-slate-500 max-w-[120px] truncate" title={r.concepts ?? undefined}>{r.concepts || '-'}</td>
                                     <td className="px-3 py-2 text-right font-mono">{r.price?.toFixed(2) ?? '-'}</td>
                                     <td className={`px-3 py-2 text-right font-mono ${r.change_pct != null ? (r.change_pct > 0 ? 'text-red-500' : r.change_pct < 0 ? 'text-green-500' : '') : ''}`}>
                                         {r.change_pct != null ? `${r.change_pct > 0 ? '+' : ''}${r.change_pct.toFixed(2)}%` : '-'}

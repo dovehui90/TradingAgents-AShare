@@ -1045,6 +1045,7 @@ class ScreenerResultItem(BaseModel):
     bull_status: Optional[str] = None
     trend_status: Optional[str] = None
     radar_wave: Optional[float] = None
+    concepts: Optional[str] = None                    # 概念/行业，逗号分隔
 
 
 class ScreenerResponse(BaseModel):
@@ -1052,6 +1053,7 @@ class ScreenerResponse(BaseModel):
     total_candidates: int
     total_filtered: int
     elapsed_ms: int
+    data_date: Optional[str] = None
 
 
 # TD Sequential Models (神奇九转)
@@ -3846,8 +3848,6 @@ _board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
 def _compute_screener_signals(code: str) -> Optional[dict]:
     """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow)."""
     import numpy as _np
-    import pandas as _pd
-    from pathlib import Path as _Path
     from tradingagents.indicators.niuxiong_line import (
         calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
     )
@@ -3855,44 +3855,18 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
     from tradingagents.indicators.position_index import calculate_position_index
 
     symbol = _normalize_symbol(code)
-    code_part = symbol.split(".")[0]
-    suffix = symbol.split(".")[1].upper()
 
-    df = None
-    # 1. Try pipeline parquet cache (fast, local disk)
+    # Use fetch_realtime_data (same source as K-line chart)
     try:
-        parquet_path = _Path("data/yang_yin_cache/daily_k") / f"{code_part}_{suffix}.parquet"
-        if parquet_path.exists():
-            raw = _pd.read_parquet(str(parquet_path))
-            if not raw.empty and "close" in raw.columns:
-                raw = raw.rename(columns={
-                    "trade_date": "date", "vol": "volume",
-                    "pre_close": "prev_close",
-                })
-                if "date" in raw.columns:
-                    raw["date"] = _pd.to_datetime(raw["date"])
-                    raw = raw.set_index("date").sort_index()
-                for col in ["open", "high", "low", "close"]:
-                    if col not in raw.columns:
-                        raw = None
-                        break
-                if raw is not None:
-                    df = raw.tail(250).copy()
+        from tradingagents.indicators import fetch_realtime_data
+        df = fetch_realtime_data(symbol, days=250, period="daily")
     except Exception:
-        pass
-
-    # 2. Fallback: fetch_realtime_data API
-    if df is None or df.empty:
-        try:
-            from tradingagents.indicators import fetch_realtime_data
-            df = fetch_realtime_data(symbol, days=250, period="daily")
-        except Exception:
-            return None
+        return None
 
     if df is None or df.empty:
         return None
 
-    # Extract price & change from parquet data
+    # Extract price & change from data
     close_vals = df["close"].values
     price_val = float(close_vals[-1]) if len(close_vals) > 0 else None
     change_pct = None
@@ -4060,7 +4034,15 @@ def stock_screener(
     db: Session = Depends(get_db),
 ):
     """多维选股筛选器。先按市值取全量股票预计算所有指标，返回全量结果供前端动态筛选。"""
+    from tradingagents.dataflows.trade_calendar import previous_cn_trading_day
+
     t0 = time.monotonic()
+    # Auto-adjust date to nearest trading day
+    if f.date:
+        f.date = previous_cn_trading_day(f.date)
+    else:
+        f.date = cn_today_str()
+
     stock_map = _get_reverse_stock_map_cached_only()
 
     # ── Phase 1: Build candidate pool (A-shares only) ──
@@ -4166,6 +4148,33 @@ def stock_screener(
             except Exception:
                 pass
 
+    # ── Populate concepts: fetch a few concept boards for reverse index ──
+    concept_map: dict[str, list[str]] = {}
+    _load_board_maps()
+    # Fetch top THS concept boards (concepts are loaded synchronously)
+    concept_names = [name for name, (_, btype) in _board_map.items() if btype == "概念"]
+    for bname in concept_names[:3]:  # warm top 3 concept boards
+        info = _board_map.get(bname)
+        if info:
+            try:
+                _, bdf = _fetch_board_constituents(info[0])
+                if bdf is not None and not bdf.empty:
+                    code_col = "代码" if "代码" in bdf.columns else bdf.columns[0]
+                    for _, row in bdf.iterrows():
+                        cs = str(row[code_col]).replace(".0", "")
+                        if cs and len(cs) == 6 and cs.isdigit():
+                            sym = _normalize_symbol(cs)
+                            if sym not in concept_map:
+                                concept_map[sym] = []
+                            if bname not in concept_map[sym]:
+                                concept_map[sym].append(bname)
+            except Exception:
+                pass
+
+    for r in precomputed:
+        concepts = concept_map.get(r["symbol"], [])
+        r["concepts"] = ", ".join(concepts[:3]) if concepts else None
+
     elapsed_ms = int((time.monotonic() - t0) * 1000)
 
     return ScreenerResponse(
@@ -4173,6 +4182,7 @@ def stock_screener(
         total_candidates=total_candidates,
         total_filtered=len(precomputed),
         elapsed_ms=elapsed_ms,
+        data_date=f.date,
     )
 
 

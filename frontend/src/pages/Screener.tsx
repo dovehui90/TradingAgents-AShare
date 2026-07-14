@@ -32,6 +32,7 @@ export default function Screener() {
     const allResults = useScreenerStore(s => s.allResults)
     const serverCandidates = useScreenerStore(s => s.totalCandidates)
     const serverElapsed = useScreenerStore(s => s.elapsedMs)
+    const dataDate = useScreenerStore(s => s.dataDate)
     const setFilterStore = useScreenerStore(s => s.setFilter)
     const setResultsStore = useScreenerStore(s => s.setResults)
     const clearResultsStore = useScreenerStore(s => s.clearResults)
@@ -53,7 +54,7 @@ export default function Screener() {
                 req.market_cap_max = storeFilter.market_cap_max
             }
             const resp = await api.screener(req as ScreenerFilter)
-            setResultsStore(resp.results, resp.total_candidates, resp.elapsed_ms)
+            setResultsStore(resp.results, resp.total_candidates, resp.elapsed_ms, resp.data_date)
         } catch (e: any) {
             setError(e?.message || '筛选失败，请检查网络或筛选条件')
         } finally {
@@ -74,9 +75,9 @@ export default function Screener() {
                 <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-200">选股神器</h1>
             </div>
 
-            <div className="flex gap-4">
-                <div className="w-64 shrink-0">
-                    <div className="card sticky top-20 max-h-[calc(100vh-8rem)] overflow-y-auto">
+            <div className="flex flex-col lg:flex-row gap-4">
+                <div className="lg:w-64 shrink-0">
+                    <div className="card lg:sticky lg:top-20 max-h-none lg:max-h-[calc(100vh-8rem)] overflow-y-auto">
                         <ScreenerFilterPanel
                             filter={storeFilter}
                             onChange={setFilterStore}
@@ -114,6 +115,7 @@ export default function Screener() {
                             totalCandidates={serverCandidates}
                             totalFiltered={filteredResults.length}
                             elapsedMs={serverElapsed}
+                            dataDate={dataDate}
                         />
                     )}
                 </div>
