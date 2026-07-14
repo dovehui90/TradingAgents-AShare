@@ -3856,12 +3856,16 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
 
     symbol = _normalize_symbol(code)
 
-    # Use fetch_realtime_data (same source as K-line chart)
+    # Use screener cache (standalone, does not touch 大盘点金)
     try:
-        from tradingagents.indicators import fetch_realtime_data
-        df = fetch_realtime_data(symbol, days=250, period="daily")
+        from tradingagents.screener.cache import get_kline
+        df = get_kline(symbol, days=250)
     except Exception:
-        return None
+        try:
+            from tradingagents.indicators import fetch_realtime_data
+            df = fetch_realtime_data(symbol, days=250, period="daily")
+        except Exception:
+            return None
 
     if df is None or df.empty:
         return None
@@ -4028,6 +4032,28 @@ def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
     return True
 
 
+@app.post("/v1/screener/warmup")
+def screener_warmup(
+    db: Session = Depends(get_db),
+    admin: UserDB = Depends(_require_admin),
+):
+    """预热选股器缓存（管理员调用）。"""
+    from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
+
+    stock_map = _get_reverse_stock_map_cached_only()
+    all_symbols = []
+    for sym in stock_map:
+        cp = sym.split(".")[0]
+        if len(cp) == 6 and cp.isdigit() and cp.startswith(("0", "3", "6")) and not cp.startswith("688"):
+            name = stock_map.get(sym, "")
+            if "ST" not in name.upper():
+                all_symbols.append(_normalize_symbol(sym))
+
+    before = cached_symbol_count()
+    updated = build_screener_cache(all_symbols[:500], max_workers=8)
+    return {"before": before, "updated": updated, "total_candidates": len(all_symbols)}
+
+
 @app.post("/v1/market/screener", response_model=ScreenerResponse)
 def stock_screener(
     f: ScreenerFilter,
@@ -4120,6 +4146,14 @@ def stock_screener(
                                 break
         except Exception:
             pass
+
+    # ── Phase 3.5: Warm screener cache if cold ──
+    from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
+    if cached_symbol_count() < 100:
+        # First run: build cache for all candidates (background-sync, limit to 500)
+        cache_symbols = codes[:500]
+        logger.info(f"[screener] Cold cache, warming {len(cache_symbols)} stocks...")
+        build_screener_cache(cache_symbols, max_workers=8)
 
     # ── Phase 4: Parallel compute indicators (max 500 stocks) ──
     max_compute = min(len(codes), 500)
