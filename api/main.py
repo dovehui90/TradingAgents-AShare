@@ -3706,6 +3706,32 @@ def get_capital_flow(
                 turnover_col = "turnover_rate"
                 break
     if turnover_col is None:
+        # mootdx doesn't provide turnover rate, fall back to baostock
+        try:
+            import baostock as bs
+            bs_code = ("sz." if ".SZ" in symbol.upper() else "sh." if ".SH" in symbol.upper() else "sz.") + symbol.split(".")[0]
+            lg = bs.login()
+            if lg.error_code == "0":
+                rs = bs.query_history_k_data_plus(bs_code, "date,close,turn",
+                                                  start_date=start.replace("-", ""),
+                                                  end_date=today.replace("-", ""),
+                                                  frequency="d", adjustflag="2")
+                bs_data = []
+                while (rs.error_code == "0") & rs.next():
+                    bs_data.append(rs.get_row_data())
+                bs.logout()
+                if bs_data:
+                    bs_df = pd.DataFrame(bs_data, columns=["date", "close", "turn"])
+                    bs_df["turn"] = pd.to_numeric(bs_df["turn"], errors="coerce")
+                    bs_df = bs_df.set_index("date")
+                    # Merge with existing df
+                    df["turnover_rate"] = bs_df["turn"]
+                    df["turnover_rate"] = pd.to_numeric(df["turnover_rate"], errors="coerce")
+                    turnover_col = "turnover_rate"
+        except Exception:
+            pass
+
+    if turnover_col is None:
         raise HTTPException(status_code=400, detail="数据源不含换手率字段，无法计算")
 
     # Normalize: ensure turnover_rate is in percentage (e.g. 0.5 = 0.5%)
