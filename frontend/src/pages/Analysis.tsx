@@ -11,7 +11,6 @@ import RadarPanel from '@/components/RadarPanel'
 import PositionPanel from '@/components/PositionPanel'
 import VolumeWashPanel from '@/components/VolumeWashPanel'
 import TrendStrengthPanel from '@/components/TrendStrengthPanel'
-import ForceRadarPanel from '@/components/ForceRadarPanel'
 // import FundFlowPanel from '@/components/FundFlowPanel'
 // import BollingerDeviationPanel from '@/components/BollingerDeviationPanel'
 import DecisionCard from '@/components/DecisionCard'
@@ -208,7 +207,10 @@ export default function Analysis() {
     }
 
     useEffect(() => {
-        if (querySymbol) setActiveSymbol(querySymbol)
+        if (querySymbol) {
+            setActiveSymbol(querySymbol)
+            setCurrentSymbol(querySymbol)
+        }
     }, [querySymbol])
 
     useEffect(() => {
@@ -308,7 +310,6 @@ export default function Analysis() {
 
             <TrendStrengthPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('trendStrength', c)} onSyncNow={syncNow} />
 
-            <ForceRadarPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('forceRadar', c)} onSyncNow={syncNow} />
 
             <VolumeWashPanel symbol={activeSymbol} onChartReady={(c) => registerSubChart('volumeWash', c)} onSyncNow={syncNow} />
 

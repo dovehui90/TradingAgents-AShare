@@ -1220,13 +1220,9 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
         v = np.ones(len(c), dtype=np.float64)  # fallback: 全1，不影响信号判断
     n = len(c)
 
-    # 核心计算
-    min_val = np.full(n, np.nan)
-    max_val = np.full(n, np.nan)
-    for i in range(9, n):
-        min_val[i] = np.nanmin(l[i-9:i+1])
-    for i in range(24, n):
-        max_val[i] = np.nanmax(h[i-24:i+1])
+    # 核心计算（向量化 rolling window，无 Python 循环）
+    min_val = pd.Series(l).rolling(10, min_periods=1).min().values
+    max_val = pd.Series(h).rolling(25, min_periods=1).max().values
 
     # 避免除零
     range_val = max_val - min_val
@@ -1243,20 +1239,16 @@ def calculate_radar_indicator(df: pd.DataFrame) -> pd.DataFrame:
     raw_retail = 4 - raw_wave
     retail = _ema_np(raw_retail, 11)
 
-    # 状态判断
+    # 状态判断（向量化）
     info = np.zeros(n, dtype=int)
     info[1:] = (avg[1:] >= avg[:-1]).astype(int)
-    strong = np.zeros(n, dtype=int)
-    weak = np.zeros(n, dtype=int)
-    vol_up = np.zeros(n, dtype=int)
-    for i in range(19, n):
-        ci = float(c[i])
-        strong[i] = 1 if ci > float(np.nanmean(c[i-19:i+1])) and ci > float(np.nanmean(c[i-4:i+1])) else 0
-    for i in range(9, n):
-        ci = float(c[i])
-        weak[i] = 1 if ci < float(np.nanmean(c[i-9:i+1])) and ci < float(np.nanmean(c[i-4:i+1])) else 0
-    for i in range(4, n):
-        vol_up[i] = 1 if float(v[i]) > float(np.nanmean(v[i-4:i+1])) else 0
+    ma20 = pd.Series(c).rolling(20, min_periods=1).mean().values
+    ma5 = pd.Series(c).rolling(5, min_periods=1).mean().values
+    ma10 = pd.Series(c).rolling(10, min_periods=1).mean().values
+    ma5_vol = pd.Series(v).rolling(5, min_periods=1).mean().values
+    strong = ((c > ma20) & (c > ma5)).astype(int)
+    weak = ((c < ma10) & (c < ma5)).astype(int)
+    vol_up = (v > ma5_vol).astype(int)
 
     # 信号计算
     info_prev1 = np.zeros(n, dtype=int); info_prev1[1:] = info[:-1]

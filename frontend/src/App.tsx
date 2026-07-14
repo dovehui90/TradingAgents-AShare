@@ -14,6 +14,7 @@ import Sponsor from './pages/Sponsor'
 import Thanks from './pages/Thanks'
 import Admin from './pages/Admin'
 import Briefing from './pages/Briefing'
+import Screener from './pages/Screener'
 import { useAuthStore } from './stores/authStore'
 
 const ONLINE_HOST = 'app.510168.xyz'
@@ -79,6 +80,7 @@ function App() {
                     <>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/tracking-board" element={<TrackingBoard />} />
+                      <Route path="/screener" element={<Screener />} />
                       <Route path="/accuracy" element={<Accuracy />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/portfolio" element={<Portfolio />} />

@@ -394,6 +394,30 @@ export interface RadarResponse {
     signal?: Record<string, any> | null
 }
 
+// ─── 资金流指标 ──
+export interface CapitalFlowLine {
+    name: string
+    period: number
+    direction: 'up' | 'down' | 'flat'
+    latest: number
+    history: (number | null)[]
+    dates: string[]
+}
+
+export interface CapitalFlowSignal {
+    signal: string
+    strength: number
+    details: string[]
+}
+
+export interface CapitalFlowResponse {
+    symbol: string
+    name?: string | null
+    signal: CapitalFlowSignal
+    lines: CapitalFlowLine[]
+    turnover_rate: number | null
+}
+
 export interface ConstituentStock {
     code: string
     name: string
@@ -1309,4 +1333,44 @@ export interface StrategyDecisionResponse {
     final_action: string
     confidence: string
     summary: string
+}
+
+// ─── 选股神器 ──
+export interface ScreenerFilter {
+    date?: string
+    market_cap_min?: number | null
+    market_cap_max?: number | null
+    board_symbols?: string[]
+    position_zones?: string[]
+    gs_signal?: string
+    orbit_status?: string[]
+    decision_status?: string
+    bull_status?: string
+    trend_status?: string
+    radar_wave_min?: number | null
+    radar_wave_max?: number | null
+    candidate_limit?: number
+    result_limit?: number
+}
+
+export interface ScreenerResultItem {
+    symbol: string
+    name: string
+    price: number | null
+    change_pct: number | null
+    market_cap: number | null
+    position_zone: string | null
+    gs_status: string | null
+    orbit_status: string | null
+    decision_status: string | null
+    bull_status: string | null
+    trend_status: string | null
+    radar_wave: number | null
+}
+
+export interface ScreenerResponse {
+    results: ScreenerResultItem[]
+    total_candidates: number
+    total_filtered: number
+    elapsed_ms: number
 }

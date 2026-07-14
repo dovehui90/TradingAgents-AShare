@@ -1,4 +1,4 @@
-import type { AnalysisRequest, AnalysisResponse, BatchAnalyzeRequest, BatchAnalyzeResponse, BatchAnalyzeStatusResponse, Announcement, AuthUser, AuthVerifyResponse, JobStatus, AnalysisReport, KlineResponse, NiuxiongResponse, GSResponse, RadarResponse, PositionResponse, VolumeWashResponse, FundFlowResponse, BollingerDeviationResponse, TrendStrengthResponse, SupportResistanceResponse, TdResponse, DarkPoolAnalysisResponse, LatestAnnouncementResponse, PortfolioImportState, PortfolioOverviewResponse, PortfolioPositionInput, Report, ReportDetail, ReportListResponse, RuntimeConfig, RuntimeConfigUpdate, RuntimeConfigUpdateResponse, RuntimeWarmupRequest, RuntimeWarmupResponse, WatchlistItem, WatchlistBatchResponse, ConceptBoard, ScheduledAnalysis, ScheduledBatchTriggerResponse, StockSearchResult, TrackingBoardResponse, UserToken, UserTokenCreateRequest, WecomWarmupRequest, WecomWarmupResponse, FeedbackItem, FeedbackListResponse, FeedbackUnreadResponse, BriefingDetailResponse, BriefingListResponse, YangYinHistoryPoint, GoldFingerPoint, RedGreenBgPoint, StrategyDecisionResponse, BiasAnalysisResponse, BiasSnapshotResponse, BoardConstituentsResponse } from '@/types'
+import type { AnalysisRequest, AnalysisResponse, BatchAnalyzeRequest, BatchAnalyzeResponse, BatchAnalyzeStatusResponse, Announcement, AuthUser, AuthVerifyResponse, JobStatus, AnalysisReport, KlineResponse, NiuxiongResponse, GSResponse, RadarResponse, CapitalFlowResponse, PositionResponse, VolumeWashResponse, FundFlowResponse, BollingerDeviationResponse, TrendStrengthResponse, SupportResistanceResponse, TdResponse, DarkPoolAnalysisResponse, LatestAnnouncementResponse, PortfolioImportState, PortfolioOverviewResponse, PortfolioPositionInput, Report, ReportDetail, ReportListResponse, RuntimeConfig, RuntimeConfigUpdate, RuntimeConfigUpdateResponse, RuntimeWarmupRequest, RuntimeWarmupResponse, WatchlistItem, WatchlistBatchResponse, ConceptBoard, ScheduledAnalysis, ScheduledBatchTriggerResponse, StockSearchResult, TrackingBoardResponse, UserToken, UserTokenCreateRequest, WecomWarmupRequest, WecomWarmupResponse, FeedbackItem, FeedbackListResponse, FeedbackUnreadResponse, BriefingDetailResponse, BriefingListResponse, YangYinHistoryPoint, GoldFingerPoint, RedGreenBgPoint, StrategyDecisionResponse, BiasAnalysisResponse, BiasSnapshotResponse, BoardConstituentsResponse, ScreenerFilter, ScreenerResponse } from '@/types'
 
 export function getBaseUrl(): string {
     const envUrl = (import.meta.env.VITE_API_URL as string) || ''
@@ -122,8 +122,21 @@ class ApiService {
         return this.request<RadarResponse>(`/v1/market/radar?${params}`, { signal })
     }
 
+    async getCapitalFlow(symbol: string, days?: number, signal?: AbortSignal): Promise<CapitalFlowResponse> {
+        const params = new URLSearchParams({ symbol })
+        if (days) params.append('days', String(days))
+        return this.request<CapitalFlowResponse>(`/v1/capital-flow?${params}`, { signal })
+    }
+
     async getBoardConstituents(symbol: string): Promise<BoardConstituentsResponse> {
         return this.request<BoardConstituentsResponse>(`/v1/market/board-constituents?symbol=${encodeURIComponent(symbol)}`)
+    }
+
+    async screener(filter: ScreenerFilter): Promise<ScreenerResponse> {
+        return this.request<ScreenerResponse>('/v1/market/screener', {
+            method: 'POST',
+            body: JSON.stringify(filter),
+        })
     }
 
     async getPosition(symbol: string, startDate?: string, endDate?: string, period?: string, signal?: AbortSignal): Promise<PositionResponse> {

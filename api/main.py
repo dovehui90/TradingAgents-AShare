@@ -9,7 +9,7 @@ import traceback
 from contextlib import asynccontextmanager
 from io import StringIO
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from threading import Lock
@@ -1011,6 +1011,47 @@ class TrendStrengthResponse(BaseModel):
     name: Optional[str] = None
     points: List[TrendStrengthPoint]
     signal: Optional[Dict[str, Any]] = None
+
+
+# ─── Stock Screener ─────────────────────────────────────────────────────────
+
+class ScreenerFilter(BaseModel):
+    date: Optional[str] = None
+    market_cap_min: Optional[float] = None          # 亿
+    market_cap_max: Optional[float] = None          # 亿
+    board_symbols: Optional[List[str]] = None        # 概念板块代码列表
+    position_zones: Optional[List[str]] = None       # overbought/high/neutral/low/oversold
+    gs_signal: Optional[str] = None                  # G / S / G_zone / S_zone
+    orbit_status: Optional[List[str]] = None         # cross_up / above2 / cross_down / below2
+    decision_status: Optional[str] = None             # above / below
+    bull_status: Optional[str] = None                 # above / below
+    trend_status: Optional[str] = None                # to_red / to_green / red_hold / green_hold
+    radar_wave_min: Optional[float] = None
+    radar_wave_max: Optional[float] = None
+    candidate_limit: int = 300
+    result_limit: int = 100
+
+
+class ScreenerResultItem(BaseModel):
+    symbol: str
+    name: str
+    price: Optional[float] = None
+    change_pct: Optional[float] = None
+    market_cap: Optional[float] = None               # 亿
+    position_zone: Optional[str] = None
+    gs_status: Optional[str] = None
+    orbit_status: Optional[str] = None
+    decision_status: Optional[str] = None
+    bull_status: Optional[str] = None
+    trend_status: Optional[str] = None
+    radar_wave: Optional[float] = None
+
+
+class ScreenerResponse(BaseModel):
+    results: List[ScreenerResultItem]
+    total_candidates: int
+    total_filtered: int
+    elapsed_ms: int
 
 
 # TD Sequential Models (神奇九转)
@@ -3637,7 +3678,503 @@ def get_kline(
     )
 
 
+# ─── Capital Flow Indicator ──────────────────────────────────────────────
+
+@app.get("/v1/capital-flow", response_model=dict)
+def get_capital_flow(
+    symbol: str,
+    days: int = 180,
+):
+    """获取主力游资大户散户资金流动指标（换手率多周期MA）。"""
+    from tradingagents.indicators.capital_flow import calculate_capital_flow, get_capital_flow_signal
+
+    today = cn_today_str()
+    start = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=max(days + 50, 250))).strftime("%Y-%m-%d")
+    end = today
+
+    # 1. Fetch K-line data with turnover rate
+    symbol = _normalize_symbol(symbol)
+    if _is_cn_index_symbol(symbol):
+        candles = _fetch_index_kline(symbol, start, end, period="daily")
+        df = pd.DataFrame(candles).set_index("date") if candles else pd.DataFrame()
+    else:
+        # Primary: Tencent API (has OHLCV + turnover, works through proxy)
+        df = pd.DataFrame()
+        code = symbol.split(".")[0]
+        prefix = "sh" if symbol.upper().endswith(".SH") else "sz"
+        t_code = prefix + code
+        try:
+            import urllib.request as _ur, json as _json
+            t_url = (
+                f"https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get"
+                f"?param={t_code},day,{start},{end},640,qfq"
+            )
+            req = _ur.Request(t_url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"})
+            with _ur.urlopen(req, timeout=15) as resp:
+                text = resp.read().decode("utf-8")
+            # Tencent wraps JSON in a var; strip prefix
+            if text and "=" in text:
+                text = text.split("=", 1)[1]
+            t_data = _json.loads(text)
+            klines = t_data.get("data", {}).get(t_code, {}).get("qfqday", []) or \
+                     t_data.get("data", {}).get(t_code, {}).get("day", [])
+            if klines:
+                rows = []
+                for k in klines:
+                    if len(k) >= 8 and k[7] and k[7] != "":
+                        rows.append({
+                            "date": k[0], "open": float(k[1]), "close": float(k[2]),
+                            "high": float(k[3]), "low": float(k[4]), "volume": float(k[5]),
+                            "turnover_rate": float(k[7]),
+                        })
+                if rows:
+                    df = pd.DataFrame(rows).set_index("date")
+                    df = df[df.index >= start]
+        except Exception:
+            pass
+
+        # Fallback: route_to_vendor (no turnover) → merge turnover from EastMoney or baostock
+        if df.empty or "turnover_rate" not in df.columns:
+            raw = route_to_vendor("get_stock_data", symbol, start, end)
+            candles = _parse_stock_csv(raw)
+            if candles:
+                df = pd.DataFrame(candles).set_index("date")
+
+    if df.empty:
+        raise HTTPException(status_code=404, detail="无法获取K线数据")
+
+    # 2. Ensure turnover_rate exists
+    if "turnover_rate" not in df.columns or not df["turnover_rate"].notna().any():
+        code = symbol.split(".")[0]
+        _fetched = False
+        # Try EastMoney (works on server, may not locally)
+        try:
+            import requests as _r
+            em_code = ("1." if symbol.upper().endswith(".SH") else "0.") + code
+            em_url = (
+                "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+                f"?secid={em_code}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
+                f"&klt=101&fqt=1&beg={start.replace('-', '')}&end={end.replace('-', '')}&lmt=500"
+            )
+            r = _r.get(em_url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}, timeout=15)
+            klines = r.json().get("data", {}).get("klines") or []
+            rows = []
+            for line in klines:
+                p = line.split(",")
+                if len(p) >= 8 and p[7] and p[7] != "-":
+                    rows.append({"date": p[0], "turnover_rate": float(p[7])})
+            if rows:
+                em_df = pd.DataFrame(rows).set_index("date")
+                df["turnover_rate"] = em_df["turnover_rate"]
+                _fetched = df["turnover_rate"].notna().any()
+        except Exception:
+            pass
+        # Try baostock
+        if not _fetched:
+            try:
+                import baostock as bs
+                bs.logout()
+                prefix_bs = "sz." if ".SZ" in symbol.upper() else "sh." if ".SH" in symbol.upper() else "sz."
+                lg = bs.login()
+                if lg.error_code == "0":
+                    rs = bs.query_history_k_data_plus(
+                        prefix_bs + code, "date,turn",
+                        start_date=start.replace("-", ""), end_date=end.replace("-", ""),
+                        frequency="d", adjustflag="2")
+                    bs_rows = []
+                    while rs is not None and rs.error_code == "0" and rs.next():
+                        bs_rows.append(rs.get_row_data())
+                    bs.logout()
+                    if bs_rows:
+                        bs_df = pd.DataFrame(bs_rows, columns=["date", "turn"])
+                        bs_df["turn"] = pd.to_numeric(bs_df["turn"], errors="coerce")
+                        bs_df = bs_df.set_index("date")
+                        df["turnover_rate"] = bs_df["turn"]
+            except Exception:
+                pass
+
+    if "turnover_rate" not in df.columns or not df["turnover_rate"].notna().any():
+        raise HTTPException(status_code=400, detail="数据源不含换手率字段")
+
+    # 3. Normalize: decimal (<0.01 max) → percentage
+    max_val = df["turnover_rate"].max()
+    if max_val and max_val < 0.01:
+        df["turnover_rate"] = df["turnover_rate"] * 100
+
+    # 4. Calculate
+    result = calculate_capital_flow(df)
+    latest = result.iloc[-1]
+    signal = get_capital_flow_signal(latest)
+
+    # 5. Build response
+    period_map = {"capital_main": (4, "主力"), "capital_hot": (9, "游资"),
+                  "capital_large": (17, "大户"), "capital_retail": (34, "散户"),
+                  "capital_attention": (180, "关注线")}
+    lines = []
+    for col, (period, name) in period_map.items():
+        vals = result[col].dropna()
+        if len(vals) < 2:
+            continue
+        latest_val = float(vals.iloc[-1])
+        prev_val = float(vals.iloc[-2])
+        direction = "up" if latest_val > prev_val else "down" if latest_val < prev_val else "flat"
+        lines.append({
+            "name": name, "period": period, "direction": direction,
+            "latest": round(latest_val, 4),
+            "history": [round(float(v), 4) if not np.isnan(v) else None
+                        for v in result[col].tail(days).tolist()],
+            "dates": [str(d) for d in result.index.tolist()[-days:]],
+        })
+
+    # Resolve name
+    stock_name = symbol
+    try:
+        stock_name = _get_reverse_stock_map_cached_only().get(symbol.upper(), symbol)
+    except Exception:
+        pass
+    return {
+        "symbol": symbol, "name": stock_name,
+        "signal": signal, "lines": lines,
+        "turnover_rate": round(float(latest.get("turnover_rate", 0)), 4),
+    }
+
+
 _board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
+
+# ─── Stock Screener ───────────────────────────────────────────────────────────
+
+def _compute_screener_signals(code: str) -> Optional[dict]:
+    """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow)."""
+    import numpy as _np
+    import pandas as _pd
+    from pathlib import Path as _Path
+    from tradingagents.indicators.niuxiong_line import (
+        calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
+    )
+    from tradingagents.indicators.trend_strength import calculate_trend_strength
+    from tradingagents.indicators.position_index import calculate_position_index
+
+    symbol = _normalize_symbol(code)
+    code_part = symbol.split(".")[0]
+    suffix = symbol.split(".")[1].upper()
+
+    df = None
+    # 1. Try pipeline parquet cache (fast, local disk)
+    try:
+        parquet_path = _Path("data/yang_yin_cache/daily_k") / f"{code_part}_{suffix}.parquet"
+        if parquet_path.exists():
+            raw = _pd.read_parquet(str(parquet_path))
+            if not raw.empty and "close" in raw.columns:
+                raw = raw.rename(columns={
+                    "trade_date": "date", "vol": "volume",
+                    "pre_close": "prev_close",
+                })
+                if "date" in raw.columns:
+                    raw["date"] = _pd.to_datetime(raw["date"])
+                    raw = raw.set_index("date").sort_index()
+                for col in ["open", "high", "low", "close"]:
+                    if col not in raw.columns:
+                        raw = None
+                        break
+                if raw is not None:
+                    df = raw.tail(250).copy()
+    except Exception:
+        pass
+
+    # 2. Fallback: fetch_realtime_data API
+    if df is None or df.empty:
+        try:
+            from tradingagents.indicators import fetch_realtime_data
+            df = fetch_realtime_data(symbol, days=250, period="daily")
+        except Exception:
+            return None
+
+    if df is None or df.empty:
+        return None
+
+    # Extract price & change from parquet data
+    close_vals = df["close"].values
+    price_val = float(close_vals[-1]) if len(close_vals) > 0 else None
+    change_pct = None
+    if len(close_vals) >= 2 and close_vals[-2] != 0:
+        change_pct = round(float((close_vals[-1] - close_vals[-2]) / close_vals[-2] * 100), 2)
+
+    # Apply period mapping: daily/weekly/monthly needed for consistent column names
+    df = df.sort_index()
+
+    result = {"symbol": symbol, "name": "", "price": price_val, "change_pct": change_pct}
+
+    # ── Niuxiong (decision_line, bull_line, orbit_line) ──
+    try:
+        nx = calculate_niuxiong_line(df.copy())
+        if len(nx) >= 2:
+            cur = nx.iloc[-1]
+            prev = nx.iloc[-2]
+            close_val = float(cur["close"])
+            result["close"] = close_val
+            result["decision_line"] = float(cur.get("decision_line", _np.nan))
+            result["bull_line"] = float(cur.get("bull_line", _np.nan))
+            orbit = float(cur.get("orbit_line", _np.nan))
+            prev_orbit = float(prev.get("orbit_line", _np.nan))
+            result["orbit_line"] = orbit
+
+            # Decision status
+            dl = result["decision_line"]
+            if not _np.isnan(dl):
+                result["decision_status"] = "above" if close_val > dl else "below"
+
+            # Bull status
+            bl = result["bull_line"]
+            if not _np.isnan(bl):
+                result["bull_status"] = "above" if close_val > bl else "below"
+
+            # Orbit status (crossover + sustained)
+            if not _np.isnan(orbit):
+                prev_close = float(prev["close"])
+                if prev_close <= prev_orbit and close_val > orbit:
+                    result["orbit_status"] = "cross_up"
+                elif prev_close >= prev_orbit and close_val < orbit:
+                    result["orbit_status"] = "cross_down"
+                elif close_val > orbit:
+                    result["orbit_status"] = "above2"
+                elif close_val < orbit:
+                    result["orbit_status"] = "below2"
+    except Exception:
+        pass
+
+    # ── Position Index ──
+    try:
+        pos = calculate_position_index(df.copy())
+        if len(pos) >= 1:
+            zone = pos.iloc[-1].get("zone")
+            result["position_zone"] = str(zone) if zone else None
+    except Exception:
+        pass
+
+    # ── GS Strategy (G/S signals + zones) ──
+    try:
+        gs = calculate_gs_strategy(df.copy())
+        if len(gs) >= 1:
+            cur_gs = gs.iloc[-1]
+            gs_buy = bool(cur_gs.get("gs_buy", False))
+            gs_sell = bool(cur_gs.get("gs_sell", False))
+            if gs_buy:
+                result["gs_status"] = "G"
+            elif gs_sell:
+                result["gs_status"] = "S"
+            else:
+                # 扫描历史：找最近信号，判断当前处于哪个区间
+                found = None
+                for i in range(len(gs) - 2, max(len(gs) - 60, 0), -1):
+                    if bool(gs.iloc[i].get("gs_buy", False)):
+                        found = "G_zone"
+                        break
+                    elif bool(gs.iloc[i].get("gs_sell", False)):
+                        found = "S_zone"
+                        break
+                result["gs_status"] = found  # None if no signal in 60 days
+    except Exception:
+        pass
+
+    # ── Trend Strength ──
+    try:
+        ts = calculate_trend_strength(df.copy())
+        if len(ts) >= 2:
+            cur_ts = ts.iloc[-1]
+            prev_ts = ts.iloc[-2]
+            cur_zone = str(cur_ts.get("zone", ""))
+            prev_zone = str(prev_ts.get("zone", ""))
+            if cur_zone == "strong":
+                if prev_zone != "strong":
+                    result["trend_status"] = "to_red"
+                else:
+                    result["trend_status"] = "red_hold"
+            else:
+                if prev_zone == "strong":
+                    result["trend_status"] = "to_green"
+                else:
+                    result["trend_status"] = "green_hold"
+    except Exception:
+        pass
+
+    # ── Radar ──
+    try:
+        radar = calculate_radar_indicator(df.copy().reset_index(drop=True))
+        if len(radar) >= 1:
+            wave = float(radar.iloc[-1].get("radar_wave", _np.nan))
+            result["radar_wave"] = wave if not _np.isnan(wave) else None
+    except Exception:
+        pass
+
+    return result
+
+
+def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
+    """Check if a single stock result matches all non‑empty filter conditions."""
+    # Position zones (multi-select OR)
+    if f.position_zones:
+        pz = item.get("position_zone")
+        if pz not in f.position_zones:
+            return False
+
+    # GS signal
+    if f.gs_signal:
+        gs = item.get("gs_status", "")
+        if gs != f.gs_signal:
+            return False
+
+    # Orbit status (multi-select OR)
+    if f.orbit_status:
+        os_ = item.get("orbit_status", "")
+        if os_ not in f.orbit_status:
+            return False
+
+    # Decision line
+    if f.decision_status:
+        if item.get("decision_status") != f.decision_status:
+            return False
+
+    # Bull line
+    if f.bull_status:
+        if item.get("bull_status") != f.bull_status:
+            return False
+
+    # Trend
+    if f.trend_status:
+        if item.get("trend_status") != f.trend_status:
+            return False
+
+    # Radar wave range
+    rw = item.get("radar_wave")
+    if f.radar_wave_min is not None and (rw is None or rw < f.radar_wave_min):
+        return False
+    if f.radar_wave_max is not None and (rw is None or rw > f.radar_wave_max):
+        return False
+
+    return True
+
+
+@app.post("/v1/market/screener", response_model=ScreenerResponse)
+def stock_screener(
+    f: ScreenerFilter,
+    db: Session = Depends(get_db),
+):
+    """多维选股筛选器。先按市值取全量股票预计算所有指标，返回全量结果供前端动态筛选。"""
+    t0 = time.monotonic()
+    stock_map = _get_reverse_stock_map_cached_only()
+
+    # ── Phase 1: Build candidate pool (A-shares only) ──
+    codes: list[str] = []
+    for sym in stock_map:
+        code_part = sym.split(".")[0]
+        if len(code_part) != 6 or not code_part.isdigit():
+            continue
+        if not (code_part.startswith(("0", "3", "6"))):
+            continue
+        if code_part.startswith("688"):
+            continue
+        name = stock_map.get(sym, "")
+        if "ST" in name.upper():
+            continue
+        codes.append(_normalize_symbol(sym))
+
+    total_candidates = len(codes)
+
+    # ── Phase 2: Warm market cap cache ──
+    if not _mcap_cache:
+        try:
+            import tushare as _ts, os as _os
+            _ts.set_token(_os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
+            pro = _ts.pro_api()
+            # Try today first, then previous trading days
+            for date_try in [cn_today_str().replace("-",""),
+                            (datetime.strptime(cn_today_str(), "%Y-%m-%d") - timedelta(days=1)).strftime("%Y%m%d"),
+                            (datetime.strptime(cn_today_str(), "%Y-%m-%d") - timedelta(days=3)).strftime("%Y%m%d")]:
+                try:
+                    df = pro.daily_basic(trade_date=date_try, fields='ts_code,circ_mv')
+                    if df is not None and not df.empty:
+                        for _, row in df.iterrows():
+                            _mcap_cache[row['ts_code']] = float(row['circ_mv'])
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    # ── Phase 3: Market cap filter ──
+    if f.market_cap_min is not None or f.market_cap_max is not None:
+        filtered: list[str] = []
+        for sym in codes:
+            code6 = sym.split(".")[0]
+            mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
+            if mcap_wan is None:
+                filtered.append(sym)
+                continue
+            mcap_yi = mcap_wan / 10000
+            if f.market_cap_min is not None and mcap_yi < f.market_cap_min:
+                continue
+            if f.market_cap_max is not None and mcap_yi > f.market_cap_max:
+                continue
+            filtered.append(sym)
+        codes = filtered
+
+    # ── Phase 3: Spot data for price ──
+    spot_price: dict[str, tuple] = {}
+    if codes:
+        try:
+            import akshare as _ak2
+            spot_df = _ak2.stock_zh_a_spot_em()
+            if spot_df is not None and not spot_df.empty:
+                code_set = {s.split(".")[0] for s in codes}
+                for _, row in spot_df.iterrows():
+                    c = str(row.get("代码", ""))
+                    if c in code_set:
+                        for sym in codes:
+                            if sym.split(".")[0] == c:
+                                spot_price[sym] = (
+                                    float(row.get("最新价", 0)) if row.get("最新价") else None,
+                                    float(row.get("涨跌幅", 0)) if row.get("涨跌幅") else None,
+                                )
+                                break
+        except Exception:
+            pass
+
+    # ── Phase 4: Parallel compute indicators (max 500 stocks) ──
+    max_compute = min(len(codes), 500)
+    compute_codes = codes[:max_compute]
+    precomputed: list[dict] = []
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        future_map = {pool.submit(_compute_screener_signals, c): c for c in compute_codes}
+        for fut in as_completed(future_map):
+            try:
+                r = fut.result(timeout=30)
+                if r is None:
+                    continue
+                sym = r["symbol"]
+                r["name"] = stock_map.get(sym, sym)
+                # Prefer price/change from parquet data, fallback to spot API
+                if r.get("price") is None:
+                    sp = spot_price.get(sym)
+                    r["price"] = sp[0] if sp else None
+                if r.get("change_pct") is None:
+                    sp2 = spot_price.get(sym)
+                    r["change_pct"] = sp2[1] if sp2 else None
+                code6 = sym.split(".")[0]
+                mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
+                r["market_cap"] = round(mcap_wan / 10000, 2) if mcap_wan else None
+                precomputed.append(r)
+            except Exception:
+                pass
+
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+
+    return ScreenerResponse(
+        results=[ScreenerResultItem(**r) for r in precomputed],
+        total_candidates=total_candidates,
+        total_filtered=len(precomputed),
+        elapsed_ms=elapsed_ms,
+    )
+
 
 def _get_board_kline_df(symbol: str, days: int) -> pd.DataFrame:
     """Get board K-line data as a DataFrame for indicator calculation.
