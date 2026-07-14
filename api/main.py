@@ -3706,28 +3706,34 @@ def get_capital_flow(
                 turnover_col = "turnover_rate"
                 break
     if turnover_col is None:
-        # mootdx doesn't provide turnover rate, fall back to baostock
+        # mootdx/tencent don't provide turnover rate; rebuild via baostock
         try:
             import baostock as bs
-            bs_code = ("sz." if ".SZ" in symbol.upper() else "sh." if ".SH" in symbol.upper() else "sz.") + symbol.split(".")[0]
+            prefix = "sz." if ".SZ" in symbol.upper() else "sh." if ".SH" in symbol.upper() else "sz."
+            bs_code = prefix + symbol.split(".")[0]
             lg = bs.login()
             if lg.error_code == "0":
-                rs = bs.query_history_k_data_plus(bs_code, "date,close,turn",
-                                                  start_date=start.replace("-", ""),
-                                                  end_date=today.replace("-", ""),
-                                                  frequency="d", adjustflag="2")
-                bs_data = []
-                while (rs.error_code == "0") & rs.next():
-                    bs_data.append(rs.get_row_data())
+                bs_start = start.replace("-", "")
+                bs_end = today.replace("-", "")
+                rs = bs.query_history_k_data_plus(
+                    bs_code, "date,open,high,low,close,volume,amount,turn",
+                    start_date=bs_start, end_date=bs_end,
+                    frequency="d", adjustflag="2")
+                bs_rows = []
+                while rs is not None and rs.error_code == "0" and rs.next():
+                    bs_rows.append(rs.get_row_data())
                 bs.logout()
-                if bs_data:
-                    bs_df = pd.DataFrame(bs_data, columns=["date", "close", "turn"])
-                    bs_df["turn"] = pd.to_numeric(bs_df["turn"], errors="coerce")
-                    bs_df = bs_df.set_index("date")
-                    # Merge with existing df
-                    df["turnover_rate"] = bs_df["turn"]
-                    df["turnover_rate"] = pd.to_numeric(df["turnover_rate"], errors="coerce")
-                    turnover_col = "turnover_rate"
+                if bs_rows:
+                    cols = rs.fields if rs is not None else ["date","open","high","low","close","volume","amount","turn"]
+                    bs_df = pd.DataFrame(bs_rows, columns=cols)
+                    for c in ["open","high","low","close","volume","amount","turn"]:
+                        if c in bs_df.columns:
+                            bs_df[c] = pd.to_numeric(bs_df[c], errors="coerce")
+                    bs_df = bs_df.rename(columns={"turn": "turnover_rate"}).set_index("date")
+                    bs_df = bs_df[bs_df.index >= start]
+                    if not bs_df.empty and bs_df["turnover_rate"].notna().any():
+                        df = bs_df
+                        turnover_col = "turnover_rate"
         except Exception:
             pass
 
