@@ -2954,8 +2954,6 @@ def _normalize_kline_df(df: pd.DataFrame) -> pd.DataFrame:
         "涨跌幅": "ChangePercent",
         "涨跌额": "Change",
         "换手率": "TurnoverRate",
-        "turn": "TurnoverRate",
-        "TurnoverRate": "TurnoverRate",
     }
     out = df.rename(columns=col_map).copy()
     required = ["Date", "Open", "High", "Low", "Close"]
@@ -3637,96 +3635,6 @@ def get_kline(
         end_date=end,
         candles=candles,
     )
-
-
-# ─── Capital Flow Indicator ──────────────────────────────────────────────
-
-@app.get("/v1/capital-flow", response_model=dict)
-def get_capital_flow(
-    symbol: str,
-    days: int = 180,
-    request: Request = None,
-    db: Session = Depends(get_db),
-):
-    """获取主力游资大户散户资金流动指标。
-
-    返回换手率的多周期MA（4/9/17/34/180日），模拟不同类型资金的活跃度。
-    """
-    from tradingagents.indicators.capital_flow import calculate_capital_flow, get_capital_flow_signal
-
-    today = cn_today_str()
-    start = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=max(days + 50, 250))).strftime("%Y-%m-%d")
-
-    candles = _fetch_index_kline(symbol, start, today) if _is_cn_index_symbol(symbol) else []
-    if not _is_cn_index_symbol(symbol):
-        code = symbol.replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
-        try:
-            import akshare as ak
-            raw = ak.stock_zh_a_hist(symbol=code, period="daily",
-                                     start_date=start.replace("-", ""),
-                                     end_date=today.replace("-", ""), adjust="qfq")
-            df = _normalize_kline_df(raw)
-            if not df.empty:
-                candles = _df_to_candles(df)
-        except Exception:
-            pass
-        if not candles:
-            raw = route_to_vendor("get_stock_data", symbol, start, today)
-            candles = _parse_stock_csv(raw)
-
-    if not candles:
-        raise HTTPException(status_code=404, detail="无法获取数据")
-
-    df = pd.DataFrame(candles)
-    df = df.set_index("date")
-
-    # Determine turnover column
-    turnover_col = "turnover_rate" if "turnover_rate" in df.columns and df["turnover_rate"].notna().any() else None
-    if turnover_col is None:
-        # Calculate from volume / capital if needed
-        for col in ["turn", "换手率"]:
-            if col in df.columns:
-                df.rename(columns={col: "turnover_rate"}, inplace=True)
-                turnover_col = "turnover_rate"
-                break
-    if turnover_col is None:
-        raise HTTPException(status_code=400, detail="数据源不含换手率字段，无法计算")
-
-    result = calculate_capital_flow(df, turnover_col=turnover_col)
-    latest = result.iloc[-1]
-    signal = get_capital_flow_signal(latest)
-
-    # Build response
-    lines = []
-    for col, name in [("capital_main", "主力"), ("capital_hot", "游资"),
-                       ("capital_large", "大户"), ("capital_retail", "散户"),
-                       ("capital_attention", "关注线")]:
-        vals = result[col].dropna()
-        if len(vals) > 0:
-            lines.append({
-                "name": name,
-                "period": [4, 9, 17, 34, 180][["capital_main", "capital_hot", "capital_large",
-                                                "capital_retail", "capital_attention"].index(col)],
-                "latest": round(float(vals.iloc[-1]), 4),
-                "history": [round(float(v), 4) if not np.isnan(v) else None for v in result[col].tail(days).tolist()],
-                "dates": result.index.tolist()[-days:],
-            })
-
-    # Resolve stock name from cache
-    stock_name = symbol
-    try:
-        smap = _get_reverse_stock_map_cached_only()
-        stock_name = smap.get(symbol.upper(), symbol)
-    except Exception:
-        pass
-
-    return {
-        "symbol": symbol,
-        "name": stock_name,
-        "signal": signal,
-        "lines": lines,
-        "turnover_rate": round(float(latest.get("turnover_rate", 0)), 4) if not pd.isna(latest.get("turnover_rate", np.nan)) else None,
-    }
 
 
 _board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
