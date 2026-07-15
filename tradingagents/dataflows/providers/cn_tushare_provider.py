@@ -73,6 +73,25 @@ class CnTushareProvider(BaseMarketDataProvider):
 
     # ── 以下 8 个方法供 smart_money_analyst 使用 ──
 
+    def get_stock_data(self, symbol: str, start_date: str, end_date: str) -> str:
+        """获取个股日线数据，走 Tushare pro.daily 接口。"""
+        ts_code = _to_ts_code(symbol)
+        sd = start_date.replace("-", "")
+        ed = end_date.replace("-", "")
+        pro = _get_pro()
+        df = pro.daily(ts_code=ts_code, start_date=sd, end_date=ed)
+        if df is None or df.empty:
+            raise RuntimeError(f"Tushare: no daily data for {symbol} {start_date}~{end_date}")
+        df = df.sort_values("trade_date")
+        df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d")
+        # Convert to standard CSV format
+        df = df.rename(columns={
+            "trade_date": "Date", "open": "Open", "high": "High",
+            "low": "Low", "close": "Close", "vol": "Volume", "amount": "Amount",
+        })
+        keep = [c for c in ["Date", "Open", "High", "Low", "Close", "Volume", "Amount"] if c in df.columns]
+        return df[keep].to_csv(index=False)
+
     def get_individual_fund_flow(self, symbol: str) -> str:
         """个股近5日主力资金净流向，走 Tushare moneyflow 接口。"""
         from datetime import datetime, timedelta
