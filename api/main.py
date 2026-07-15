@@ -3855,17 +3855,16 @@ def _build_concept_cache():
     import logging, time as _time, re as _re, os as _os
     _log = logging.getLogger(__name__).info
 
+    old_no_proxy = _os.environ.get('NO_PROXY', '')
+    old_no_proxy_lower = _os.environ.get('no_proxy', '')
+    _os.environ['NO_PROXY'] = '*'
+    _os.environ['no_proxy'] = '*'
     try:
         concept_map = load_concept_map()
         if concept_map:
             return  # already built
 
         import requests as _requests
-
-        old_no_proxy = _os.environ.get('NO_PROXY', '')
-        old_no_proxy_lower = _os.environ.get('no_proxy', '')
-        _os.environ['NO_PROXY'] = '*'
-        _os.environ['no_proxy'] = '*'
 
         # A-share stock code prefixes (excludes ETFs like 159/510-518/560-589/588)
         _AS_PREFIX = {'600','601','603','605','000','001','002','003','300','301','688'}
