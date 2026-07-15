@@ -74,8 +74,43 @@ class CnTushareProvider(BaseMarketDataProvider):
     # ── 以下 8 个方法供 smart_money_analyst 使用 ──
 
     def get_individual_fund_flow(self, symbol: str) -> str:
-        """个股资金流向 — 优先走 akshare（返回小单/中单/大单/超大单分项，120日数据）。"""
-        raise NotImplementedError("cn_tushare: use cn_akshare for richer fund flow breakdown")
+        """个股近5日主力资金净流向，走 Tushare moneyflow 接口。"""
+        from datetime import datetime, timedelta
+        ts_code = _to_ts_code(symbol)
+        end = datetime.now().strftime("%Y%m%d")
+        start = (datetime.now() - timedelta(days=10)).strftime("%Y%m%d")
+        pro = _get_pro()
+        df = pro.moneyflow(ts_code=ts_code, start_date=start, end_date=end)
+        if df is None or df.empty:
+            return f"{symbol} 近期主力资金流向数据暂不可用。"
+        df = df.tail(5).copy()
+        df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+        # 选取关键列并重命名
+        cols = {"trade_date": "日期", "buy_sm_amount": "小单买入(万)", "sell_sm_amount": "小单卖出(万)",
+                "buy_md_amount": "中单买入(万)", "sell_md_amount": "中单卖出(万)",
+                "buy_lg_amount": "大单买入(万)", "sell_lg_amount": "大单卖出(万)",
+                "buy_elg_amount": "超大单买入(万)", "sell_elg_amount": "超大单卖出(万)",
+                "net_mf_amount": "净流入(万)"}
+        keep = [c for c in cols if c in df.columns]
+        df = df[keep].rename(columns={c: cols[c] for c in keep})
+        return f"{symbol} 近5日主力资金净流向（Tushare）：\n{df.to_string(index=False)}"
+
+    def get_individual_fund_flow_120d(self, symbol: str) -> str:
+        """个股120日中长期资金趋势，走 Tushare moneyflow 接口。"""
+        from datetime import datetime, timedelta
+        ts_code = _to_ts_code(symbol)
+        end = datetime.now().strftime("%Y%m%d")
+        start = (datetime.now() - timedelta(days=150)).strftime("%Y%m%d")
+        pro = _get_pro()
+        df = pro.moneyflow(ts_code=ts_code, start_date=start, end_date=end)
+        if df is None or df.empty:
+            return f"{symbol} 120日资金流向数据暂不可用。"
+        df = df.copy()
+        df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+        keep = [c for c in ["trade_date", "net_mf_amount"] if c in df.columns]
+        df = df[keep]
+        df.columns = [c.replace("trade_date", "日期").replace("net_mf_amount", "主力净流入(万)") for c in df.columns]
+        return f"{symbol} 120日主力资金趋势（Tushare，{len(df)} 条）：\n{df.tail(30).to_string(index=False)}"
 
     def get_lhb_detail(self, symbol: str, date: str) -> str:
         """龙虎榜明细。"""
@@ -97,8 +132,21 @@ class CnTushareProvider(BaseMarketDataProvider):
         return f"{symbol} 龙虎榜明细（{date}，Tushare）：\n{df.head(20).to_string(index=False)}"
 
     def get_hsgt_individual(self, symbol: str) -> str:
-        """个股北向资金持仓 — Tushare 当前积分不支持此接口，fallback 到 akshare。"""
-        raise NotImplementedError("tushare hsgt_hold requires higher tier, fallback to akshare")
+        """个股北向资金持仓 — 走 Tushare hk_hold 接口。"""
+        from datetime import datetime, timedelta
+        ts_code = _to_ts_code(symbol)
+        end = datetime.now().strftime("%Y%m%d")
+        start = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+        pro = _get_pro()
+        df = pro.hk_hold(ts_code=ts_code, start_date=start, end_date=end)
+        if df is None or df.empty:
+            return f"{symbol} 北向资金持仓数据暂不可用（可能非沪深港通标的）。"
+        df = df.tail(5).copy()
+        df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+        cols = {"trade_date": "日期", "vol": "持股数(股)", "ratio": "占流通股比(%)"}
+        keep = [c for c in cols if c in df.columns]
+        df = df[keep].rename(columns={c: cols[c] for c in keep})
+        return f"{symbol} 北向资金持仓（近5日，Tushare）：\n{df.to_string(index=False)}"
 
     def get_hsgt_flow(self) -> str:
         """北向资金整体净流入。"""
