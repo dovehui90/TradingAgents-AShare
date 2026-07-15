@@ -182,7 +182,7 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
 
             {/* Buttons */}
             <div className="flex gap-2 pt-2">
-                <button onClick={onSearch} disabled={loading}
+                <button onClick={onSearch} disabled={loading || !filter.date}
                     className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">
                     <Search className="w-3.5 h-3.5" />
                     开始筛选

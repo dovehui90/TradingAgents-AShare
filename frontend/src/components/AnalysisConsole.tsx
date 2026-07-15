@@ -54,10 +54,11 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
     const autoStartedRef = useRef(false)
     const [searchParams] = useSearchParams()
 
-    // 从自选股页面点击「分析」跳转时，自动触发分析
+    // 从自选股页面点击「分析」跳转时，自动触发分析；带 no_auto 参数时跳过
     useEffect(() => {
         const urlSymbol = (searchParams.get('symbol') || '').trim().toUpperCase()
-        if (!urlSymbol || autoStartedRef.current) return
+        const noAuto = searchParams.get('no_auto')
+        if (!urlSymbol || autoStartedRef.current || noAuto === '1') return
         // 如果正在分析或已分析同一股票，不重复触发
         if (isAnalyzing || analysisRunState === 'running') return
         autoStartedRef.current = true

@@ -90,7 +90,7 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                             {results.map(r => (
                                 <tr key={r.symbol}
                                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                                    onClick={() => navigate(`/analysis?symbol=${r.symbol}`)}>
+                                    onClick={() => navigate(`/analysis?symbol=${r.symbol}&no_auto=1`)}>
                                     <td className="px-3 py-2 font-mono text-xs">{r.symbol.split('.')[0]}</td>
                                     <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
                                     <td className="px-3 py-2 text-xs text-slate-500 max-w-[120px] truncate" title={r.concepts ?? undefined}>{r.concepts || '-'}</td>

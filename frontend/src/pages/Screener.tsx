@@ -45,6 +45,10 @@ export default function Screener() {
     }, [allResults, storeFilter])
 
     const handleSearch = async () => {
+        if (!storeFilter.date) {
+            setError('请先选择日期')
+            return
+        }
         setLoading(true)
         setError('')
         try {
