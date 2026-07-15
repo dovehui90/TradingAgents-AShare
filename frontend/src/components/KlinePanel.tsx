@@ -113,6 +113,8 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const tdMarkerContainerRef = useRef<HTMLDivElement | null>(null)
     const [showSr, setShowSr] = useState(false)
     const showSrRef = useRef(false)
+    const [showTd, setShowTd] = useState(false)
+    const showTdRef = useRef(false)
     const srSeriesRefs = useRef<Record<string, ISeriesApi<'Line'>>>({})
     const candlesRef = useRef<KlineCandle[]>([])
     const candlesPeriodRef = useRef<KlinePeriod>('daily')
@@ -446,7 +448,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         renderSrMarkers()
         chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
             renderSrMarkers()
-            if (showSrRef.current && tdData.length) renderTdMarkers(tdData)
+            if (showTdRef.current && tdData.length) renderTdMarkers(tdData)
         })
     }
 
@@ -707,9 +709,11 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                 chartRef.current?.timeScale().fitContent()
                 // 等待图表完成渲染后再画标记，避免坐标偏移
                 requestAnimationFrame(() => {
-                    if (showSrRef.current) {
-                        if (srResp?.points) updateSrSeries(srResp.points)
-                        if (tdResp?.points) renderTdMarkers(tdResp.points)
+                    if (showSrRef.current && srResp?.points) {
+                        updateSrSeries(srResp.points)
+                    }
+                    if (showTdRef.current && tdResp?.points) {
+                        renderTdMarkers(tdResp.points)
                     }
                 })
                 // K线数据加载完后触发同步到雷达
@@ -894,8 +898,6 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                         showSrRef.current = next
                         setShowSr(next)
                         if (srData.length) updateSrSeries(srData)
-                        if (next && tdData.length) renderTdMarkers(tdData)
-                        else tdMarkerContainerRef.current && (tdMarkerContainerRef.current.innerHTML = '')
                     }}
                     className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showSr
                         ? 'border-red-500 text-red-500 bg-red-50 dark:bg-red-500/10'
@@ -904,6 +906,22 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
                     title="显示/隐藏支撑压力位"
                 >
                     止盈止损
+                </button>
+                <button
+                    onClick={() => {
+                        const next = !showTdRef.current
+                        showTdRef.current = next
+                        setShowTd(next)
+                        if (next && tdData.length) renderTdMarkers(tdData)
+                        else tdMarkerContainerRef.current && (tdMarkerContainerRef.current.innerHTML = '')
+                    }}
+                    className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${showTd
+                        ? 'border-purple-500 text-purple-500 bg-purple-50 dark:bg-purple-500/10'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                    title="显示/隐藏神奇九转"
+                >
+                    九转
                 </button>
             </div>
             <div className="relative flex-1 min-h-0 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
