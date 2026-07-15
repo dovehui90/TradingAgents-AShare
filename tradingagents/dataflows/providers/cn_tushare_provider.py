@@ -92,6 +92,69 @@ class CnTushareProvider(BaseMarketDataProvider):
         keep = [c for c in ["Date", "Open", "High", "Low", "Close", "Volume", "Amount"] if c in df.columns]
         return df[keep].to_csv(index=False)
 
+    def get_f10_detail(self, symbol: str, category: int = 0) -> str:
+        """F10 公司资料，通过 Tushare API 获取。
+        category: 0=公司概况+财务摘要+股东+高管 2=财务分析 3=股东研究 4=主力追踪"""
+        ts_code = _to_ts_code(symbol)
+        pro = _get_pro()
+        parts = []
+
+        try:
+            info = pro.stock_company(ts_code=ts_code)
+            if info is not None and not info.empty:
+                row = info.iloc[0]
+                parts.append(f"[公司基本信息]\n名称: {row.get('com_name', '')}"
+                    f"\n行业: {row.get('industry', '')}"
+                    f"\n上市日期: {row.get('list_date', '')}"
+                    f"\n注册资本: {row.get('reg_capital', '')}万"
+                    f"\n主营业务: {row.get('business_scope', str(row.get('main_business', '')))}"
+                )
+        except Exception:
+            pass
+
+        if category in (0, 2):
+            try:
+                from datetime import datetime, timedelta
+                end = datetime.now().strftime("%Y%m%d")
+                start = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
+                fin = pro.fina_indicator(ts_code=ts_code, start_date=start, end_date=end)
+                if fin is not None and not fin.empty:
+                    fin = fin.sort_values("end_date").tail(4)
+                    cols = [c for c in ["end_date", "roe", "roa", "grossprofit_margin",
+                        "netprofit_margin", "debt_to_assets", "current_ratio",
+                        "eps", "bps", "or_yoy", "profit_yoy"] if c in fin.columns]
+                    parts.append(f"[近4季财务指标]\n{fin[cols].to_string(index=False)}")
+            except Exception:
+                pass
+
+        if category in (0, 3):
+            try:
+                holders = pro.top10_holders(ts_code=ts_code)
+                if holders is not None and not holders.empty:
+                    h = holders.sort_values("end_date").tail(10)
+                    cols = [c for c in ["end_date", "holder_name", "hold_num", "hold_ratio"] if c in h.columns]
+                    parts.append(f"[前十大股东]\n{h[cols].to_string(index=False)}")
+            except Exception:
+                pass
+
+        if category in (0, 4):
+            try:
+                from datetime import datetime, timedelta
+                end = datetime.now().strftime("%Y%m%d")
+                start = (datetime.now() - timedelta(days=180)).strftime("%Y%m%d")
+                trades = pro.stk_holdertrade(ts_code=ts_code, start_date=start, end_date=end)
+                if trades is not None and not trades.empty:
+                    t = trades.tail(10)
+                    cols = [c for c in ["trade_date", "holder_name", "buy_vol", "sell_vol",
+                        "vol_change", "hold_vol_after"] if c in t.columns]
+                    parts.append(f"[股东增减持]\n{t[cols].to_string(index=False)}")
+            except Exception:
+                pass
+
+        if parts:
+            return f"## F10 公司资料（Tushare，category={category}）\n\n" + "\n\n".join(parts)
+        raise NotImplementedError("Tushare F10: 数据暂不可用，回退到其他数据源")
+
     def get_individual_fund_flow(self, symbol: str) -> str:
         """个股近5日主力资金净流向，走 Tushare moneyflow 接口。"""
         from datetime import datetime, timedelta

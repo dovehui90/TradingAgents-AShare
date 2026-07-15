@@ -878,6 +878,9 @@ def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
     tasks.update({
         "orderbook": (get_five_level_orderbook, {"symbol": ticker}),
         "f10_detail": (get_f10_detail, {"symbol": ticker, "category": 0}),
+        "f10_finance": (get_f10_detail, {"symbol": ticker, "category": 2}),
+        "f10_holders": (get_f10_detail, {"symbol": ticker, "category": 3}),
+        "f10_tracking": (get_f10_detail, {"symbol": ticker, "category": 4}),
         "level2_quotes": (get_level2_quotes, {"symbol": ticker, "date": level2_date}),
         "cninfo_announcements": (get_cninfo_announcements, {"symbol": ticker, "start_date": week_ago, "end_date": trade_date}),
     })
