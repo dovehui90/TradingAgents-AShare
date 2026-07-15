@@ -2325,7 +2325,7 @@ async def _run_job_inner(
             })
             _log(f"[DualHorizon] Collecting data for {ticker} {request.trade_date} (horizons={request.horizons})…")
             collect_start_t = time.time()
-            await asyncio.to_thread(graph.data_collector.collect, ticker, request.trade_date, horizons=request.horizons)
+            await asyncio.to_thread(graph.data_collector.collect, ticker, request.trade_date, horizons=request.horizons, force=True)
             _log(f"[Timer] Data Collection step in _run_job took {time.time() - collect_start_t:.2f}s")
 
             _emit_job_event(job_id, "agent.tool_call", {
