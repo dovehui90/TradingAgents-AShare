@@ -266,6 +266,10 @@ async def lifespan(app: FastAPI):
     await asyncio.to_thread(_load_cn_stock_map)
     _log("Stock map pre-loaded on startup.")
 
+    # Pre-build concept cache in background (avoid blocking screener requests)
+    import threading as _th
+    _th.Thread(target=_build_concept_cache, daemon=True).start()
+
     # 自动检测源码变更 → 重建衍生数据（阳谱/金银手指/红绿背景）
     try:
         from tradingagents.yang_yin.auto_rebuild import check_and_rebuild
@@ -3845,6 +3849,48 @@ _board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
 
 # ─── Stock Screener ───────────────────────────────────────────────────────────
 
+def _build_concept_cache():
+    """Background task: pre-build stock→concept mapping cache."""
+    from tradingagents.screener.cache import load_concept_map, save_concept_map
+    import logging
+    _log = logging.getLogger(__name__).info
+
+    try:
+        concept_map = load_concept_map()
+        if concept_map:
+            return  # already built
+
+        _load_board_maps()
+        concept_names = [name for name, (_, btype) in _board_map.items() if btype == '概念']
+        if not concept_names:
+            _log('[ConceptCache] No concept boards found')
+            return
+
+        total = min(len(concept_names), 80)
+        _log(f'[ConceptCache] Building cache for {total} concepts...')
+        for i, bname in enumerate(concept_names[:total]):
+            info = _board_map.get(bname)
+            if not info:
+                continue
+            try:
+                _, bdf = _fetch_board_constituents(info[0])
+                if bdf is not None and not bdf.empty:
+                    code_col = '代码' if '代码' in bdf.columns else bdf.columns[0]
+                    for _, row in bdf.iterrows():
+                        cs = str(row[code_col]).replace('.0', '')
+                        if cs and len(cs) == 6 and cs.isdigit():
+                            sym = _normalize_symbol(cs)
+                            if sym not in concept_map:
+                                concept_map[sym] = []
+                            if bname not in concept_map[sym]:
+                                concept_map[sym].append(bname)
+            except Exception:
+                pass
+        save_concept_map(concept_map)
+        _log(f'[ConceptCache] Built: {len(concept_map)} stocks mapped')
+    except Exception as e:
+        _log(f'[ConceptCache] Build failed: {e}')
+
 def _compute_screener_signals(code: str) -> Optional[dict]:
     """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow)."""
     import numpy as _np
@@ -4163,30 +4209,9 @@ def stock_screener(
             except Exception:
                 pass
 
-    # ── Populate concepts from screener cache ──
-    from tradingagents.screener.cache import load_concept_map, save_concept_map
+    # ── Populate concepts from screener cache (built in background at startup) ──
+    from tradingagents.screener.cache import load_concept_map
     concept_map = load_concept_map()
-    if not concept_map:
-        _load_board_maps()
-        concept_names = [name for name, (_, btype) in _board_map.items() if btype == "概念"]
-        for bname in concept_names[:8]:
-            info = _board_map.get(bname)
-        if info:
-            try:
-                _, bdf = _fetch_board_constituents(info[0])
-                if bdf is not None and not bdf.empty:
-                    code_col = "代码" if "代码" in bdf.columns else bdf.columns[0]
-                    for _, row in bdf.iterrows():
-                        cs = str(row[code_col]).replace(".0", "")
-                        if cs and len(cs) == 6 and cs.isdigit():
-                            sym = _normalize_symbol(cs)
-                            if sym not in concept_map:
-                                concept_map[sym] = []
-                            if bname not in concept_map[sym]:
-                                concept_map[sym].append(bname)
-            except Exception:
-                pass
-        save_concept_map(concept_map)
 
     for r in precomputed:
         concepts = concept_map.get(r["symbol"], [])
