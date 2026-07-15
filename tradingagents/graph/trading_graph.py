@@ -326,7 +326,7 @@ class TradingAgentsGraph:
 
         # Pre-collect data once (always full data); analysts will read from cache
         print(f"[TradingAgentsGraph] Collecting data for {ticker} {trade_date}…")
-        self.data_collector.collect(ticker, trade_date)
+        self.data_collector.collect(ticker, trade_date, force=True)
 
         graph_args = self.propagator.get_graph_args()
         graph_args["config"]["configurable"] = {"thread_id": f"{ticker}_{trade_date}"}

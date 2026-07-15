@@ -986,13 +986,17 @@ class DataCollector:
                 self._locks[key] = threading.Lock()
             return self._locks[key]
 
-    def collect(self, ticker: str, trade_date: str, horizons: Optional[List[str]] = None) -> Dict[str, Any]:
+    def collect(self, ticker: str, trade_date: str, horizons: Optional[List[str]] = None,
+                force: bool = False) -> Dict[str, Any]:
         """Fetch all data and store in cache.
 
         Thread-safe: concurrent calls for the same ticker+date will block
         on a per-key lock, so data is fetched only once.
+        Set force=True to invalidate stale cache and re-fetch.
         """
         key = make_cache_key(ticker, trade_date)
+        if force:
+            self._cache.pop(key, None)
         key_lock = self._get_key_lock(key)
         with key_lock:
             if key not in self._cache:
