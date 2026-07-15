@@ -165,7 +165,7 @@ class CnTushareProvider(BaseMarketDataProvider):
         df = pro.moneyflow(ts_code=ts_code, start_date=start, end_date=end)
         if df is None or df.empty:
             return f"{symbol} 近期主力资金流向数据暂不可用。"
-        df = df.tail(5).copy()
+        df = df.sort_values("trade_date").tail(5).copy()
         df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
         # 选取关键列并重命名
         cols = {"trade_date": "日期", "buy_sm_amount": "小单买入(万)", "sell_sm_amount": "小单卖出(万)",
@@ -187,7 +187,7 @@ class CnTushareProvider(BaseMarketDataProvider):
         df = pro.moneyflow(ts_code=ts_code, start_date=start, end_date=end)
         if df is None or df.empty:
             return f"{symbol} 120日资金流向数据暂不可用。"
-        df = df.copy()
+        df = df.sort_values("trade_date").copy()
         df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
         keep = [c for c in ["trade_date", "net_mf_amount"] if c in df.columns]
         df = df[keep]
