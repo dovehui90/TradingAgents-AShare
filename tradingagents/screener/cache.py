@@ -110,8 +110,8 @@ def load_concept_map() -> dict[str, list[str]]:
         try:
             import json
             age = time.time() - path.stat().st_mtime
-            if age < 7 * 86400:  # 1 week TTL
-                with open(path) as f:
+            if age < 30 * 86400:  # 1 month TTL
+                with open(path, encoding='utf-8') as f:
                     _CONCEPT_CACHE = json.load(f)
                 return _CONCEPT_CACHE
         except Exception:
@@ -124,6 +124,6 @@ def save_concept_map(concept_map: dict[str, list[str]]):
     import json
     global _CONCEPT_CACHE
     _CONCEPT_CACHE = concept_map
-    with open(_CONCEPT_MAP_PATH, "w") as f:
+    with open(_CONCEPT_MAP_PATH, "w", encoding='utf-8') as f:
         json.dump(concept_map, f, ensure_ascii=False)
     logger.info(f"Concept map saved: {len(concept_map)} stocks")

@@ -1,5 +1,9 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ScreenerResultItem } from '@/types'
+
+const PAGE_SIZE = 20
 
 const POSITION_LABELS: Record<string, string> = {
     overbought: '超买', high: '偏高', neutral: '中性', low: '偏低', oversold: '超卖',
@@ -36,6 +40,15 @@ interface Props {
 
 export default function ScreenerTable({ results, totalCandidates, totalFiltered, elapsedMs, dataDate }: Props) {
     const navigate = useNavigate()
+    const [page, setPage] = useState(1)
+    const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE))
+
+    const pageResults = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE
+        return results.slice(start, start + PAGE_SIZE)
+    }, [results, page])
+
+    useEffect(() => { setPage(1) }, [results.length])
 
     const fmtMcap = (v: number | null) => {
         if (v == null) return '-'
@@ -87,7 +100,7 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {results.map(r => (
+                            {pageResults.map(r => (
                                 <tr key={r.symbol}
                                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                                     onClick={() => navigate(`/analysis?symbol=${r.symbol}&no_auto=1`)}>
@@ -118,6 +131,26 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                     </table>
                 </div>
             </div>
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-3">
+                    <button
+                        className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled={page <= 1}
+                        onClick={() => setPage(p => Math.max(1, p - 1))}>
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {page} / {totalPages}
+                    </span>
+                    <button
+                        className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled={page >= totalPages}
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

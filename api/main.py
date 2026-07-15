@@ -3850,9 +3850,9 @@ _board_kline_df_cache: Dict[str, tuple] = {}  # key -> (timestamp, DataFrame)
 # ─── Stock Screener ───────────────────────────────────────────────────────────
 
 def _build_concept_cache():
-    """Background task: pre-build stock→concept mapping cache."""
+    """Background task: pre-build stock→concepts cache by querying THS per stock."""
     from tradingagents.screener.cache import load_concept_map, save_concept_map
-    import logging
+    import logging, time as _time, re as _re, os as _os
     _log = logging.getLogger(__name__).info
 
     try:
@@ -3860,36 +3860,52 @@ def _build_concept_cache():
         if concept_map:
             return  # already built
 
-        _load_board_maps()
-        concept_names = [name for name, (_, btype) in _board_map.items() if btype == '概念']
-        if not concept_names:
-            _log('[ConceptCache] No concept boards found')
+        import requests as _requests
+
+        old_no_proxy = _os.environ.get('NO_PROXY', '')
+        old_no_proxy_lower = _os.environ.get('no_proxy', '')
+        _os.environ['NO_PROXY'] = '*'
+        _os.environ['no_proxy'] = '*'
+
+        # A-share stock code prefixes (excludes ETFs like 159/510-518/560-589/588)
+        _AS_PREFIX = {'600','601','603','605','000','001','002','003','300','301','688'}
+        stock_map = _load_cn_stock_map()
+        symbols = sorted(
+            s for s in stock_map.values()
+            if len(s.split('.')[0]) == 6 and s.split('.')[0][:3] in _AS_PREFIX
+        )
+        if not symbols:
+            _log('[ConceptCache] No A-share stocks found')
             return
 
-        total = min(len(concept_names), 80)
-        _log(f'[ConceptCache] Building cache for {total} concepts...')
-        for i, bname in enumerate(concept_names[:total]):
-            info = _board_map.get(bname)
-            if not info:
-                continue
+        _log(f'[ConceptCache] Building cache for {len(symbols)} stocks via THS...')
+        for i, sym in enumerate(symbols):
+            code = sym.split('.')[0]
             try:
-                _, bdf = _fetch_board_constituents(info[0])
-                if bdf is not None and not bdf.empty:
-                    code_col = '代码' if '代码' in bdf.columns else bdf.columns[0]
-                    for _, row in bdf.iterrows():
-                        cs = str(row[code_col]).replace('.0', '')
-                        if cs and len(cs) == 6 and cs.isdigit():
-                            sym = _normalize_symbol(cs)
-                            if sym not in concept_map:
-                                concept_map[sym] = []
-                            if bname not in concept_map[sym]:
-                                concept_map[sym].append(bname)
+                url = f'https://basic.10jqka.com.cn/{code}/concept.html'
+                r = _requests.get(url,
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                             'Referer': 'https://basic.10jqka.com.cn/'},
+                    timeout=10)
+                text = r.content.decode('gbk', errors='ignore')
+                names = _re.findall(r'class="gnName"[^>]*>\s*([^<]+?)\s*</td>', text)
+                if names:
+                    concept_map[sym] = [n.strip() for n in names[:5]]
             except Exception:
                 pass
+
+            if (i + 1) % 200 == 0:
+                save_concept_map(concept_map)
+                _log(f'[ConceptCache] {i+1}/{len(symbols)} stocks, {len(concept_map)} with concepts')
+            _time.sleep(0.15)
+
         save_concept_map(concept_map)
-        _log(f'[ConceptCache] Built: {len(concept_map)} stocks mapped')
+        _log(f'[ConceptCache] Built: {len(concept_map)}/{len(symbols)} stocks with concepts')
     except Exception as e:
         _log(f'[ConceptCache] Build failed: {e}')
+    finally:
+        _os.environ['NO_PROXY'] = old_no_proxy
+        _os.environ['no_proxy'] = old_no_proxy_lower
 
 def _compute_screener_signals(code: str) -> Optional[dict]:
     """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow)."""
@@ -4215,7 +4231,7 @@ def stock_screener(
 
     for r in precomputed:
         concepts = concept_map.get(r["symbol"], [])
-        r["concepts"] = ", ".join(concepts[:3]) if concepts else None
+        r["concepts"] = ", ".join(concepts[:5]) if concepts else None
 
     elapsed_ms = int((time.monotonic() - t0) * 1000)
 
