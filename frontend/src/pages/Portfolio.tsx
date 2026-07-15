@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     Briefcase, Plus, Trash2, TrendingUp, Activity, Search,
     Clock, AlertTriangle, CheckCircle2, XCircle, Loader2, Timer,
-    Database, ImagePlus,
+    Database, ImagePlus, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+
+const WATCHLIST_PAGE_SIZE = 30
 import { api } from '@/services/api'
 import { ConceptTags } from '@/components/ConceptTags'
 import type { WatchlistItem, ScheduledAnalysis, StockSearchResult, Report } from '@/types'
@@ -99,6 +101,15 @@ export default function Portfolio() {
     const notesInputRef = useRef<HTMLInputElement>(null)
     const savingNotesRef = useRef(false)
     const [refreshingConceptsId, setRefreshingConceptsId] = useState<string | null>(null)
+
+    // Watchlist pagination
+    const [watchlistPage, setWatchlistPage] = useState(1)
+    const watchlistTotalPages = Math.max(1, Math.ceil(watchlist.length / WATCHLIST_PAGE_SIZE))
+    const pagedWatchlist = useMemo(() => {
+        const start = (watchlistPage - 1) * WATCHLIST_PAGE_SIZE
+        return watchlist.slice(start, start + WATCHLIST_PAGE_SIZE)
+    }, [watchlist, watchlistPage])
+    useEffect(() => { setWatchlistPage(1) }, [watchlist.length])
 
     const navigate = useNavigate()
     const trimmedQuery = searchQuery.trim()
@@ -720,7 +731,7 @@ export default function Portfolio() {
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {watchlist.map(item => {
+                                {pagedWatchlist.map(item => {
                                     const report = latestReports[item.symbol]
                                     const isSelected = selectedWatchlistIdSet.has(item.id)
                                     return (
@@ -817,6 +828,26 @@ export default function Portfolio() {
                                         </div>
                                     )
                                 })}
+                            </div>
+                        )}
+
+                        {watchlistTotalPages > 1 && (
+                            <div className="flex items-center justify-center gap-3 mt-3">
+                                <button
+                                    className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    disabled={watchlistPage <= 1}
+                                    onClick={() => setWatchlistPage(p => Math.max(1, p - 1))}>
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                    {watchlistPage} / {watchlistTotalPages}
+                                </span>
+                                <button
+                                    className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    disabled={watchlistPage >= watchlistTotalPages}
+                                    onClick={() => setWatchlistPage(p => Math.min(watchlistTotalPages, p + 1))}>
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
                             </div>
                         )}
                     </div>

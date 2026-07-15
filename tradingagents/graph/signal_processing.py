@@ -148,12 +148,12 @@ def _extract_decision_keyword(text: str) -> str | None:
             "中性",
         ]
 
+        if any(k in cleaned for k in hold_keywords):
+            return "HOLD"
         if any(k in cleaned for k in buy_keywords):
             return "BUY"
         if any(k in cleaned for k in sell_keywords):
             return "SELL"
-        if any(k in cleaned for k in hold_keywords):
-            return "HOLD"
         return None
 
     verdict_decision = parse_verdict_direction(text)
