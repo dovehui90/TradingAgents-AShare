@@ -3957,18 +3957,21 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
     # ── Trend Strength ──
     try:
         ts = calculate_trend_strength(df.copy())
-        if len(ts) >= 2:
-            cur_ts = ts.iloc[-1]
-            prev_ts = ts.iloc[-2]
-            cur_zone = str(cur_ts.get("zone", ""))
-            prev_zone = str(prev_ts.get("zone", ""))
-            if cur_zone == "strong":
-                if prev_zone != "strong":
-                    result["trend_status"] = "to_red"
-                else:
+        if len(ts) >= 3:
+            cur_val = ts.iloc[-1].get("trend_strength", 0)
+            cur_val = float(cur_val) if not _np.isnan(float(cur_val)) else 0
+            # 回溯前5天（排除当天），判断近期是否出现过红柱(>0)
+            lookback_start = max(0, len(ts) - 6)
+            lookback_end = len(ts) - 1
+            recent_vals = ts.iloc[lookback_start:lookback_end]["trend_strength"].fillna(0).values
+            had_red = any(float(v) > 0 for v in recent_vals)
+            if cur_val > 0:
+                if had_red:
                     result["trend_status"] = "red_hold"
+                else:
+                    result["trend_status"] = "to_red"
             else:
-                if prev_zone == "strong":
+                if had_red:
                     result["trend_status"] = "to_green"
                 else:
                     result["trend_status"] = "green_hold"
