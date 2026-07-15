@@ -4714,6 +4714,27 @@ def get_board_constituents(
     if not stock_list:
         return BoardConstituentsResponse(symbol=s, name=board_name or s, stocks=[])
 
+    # 1.5 Refresh prices from spot data (8s TTL) — stock list cached 10d, prices fresh
+    try:
+        import akshare as _ak3
+        spot_df = _ak3.stock_zh_a_spot_em()
+        if spot_df is not None and not spot_df.empty:
+            spot_price = {}
+            for _, row in spot_df.iterrows():
+                c = str(row.get("代码", ""))
+                if c:
+                    spot_price[c] = (
+                        float(row.get("最新价", 0)) if row.get("最新价") else None,
+                        float(row.get("涨跌幅", 0)) if row.get("涨跌幅") else None,
+                    )
+            for item in stock_list:
+                sp = spot_price.get(item["code"])
+                if sp and sp[0]:
+                    item["price"] = sp[0]
+                    item["chg"] = sp[1]
+    except Exception:
+        pass
+
     # 2. Fill market cap from Tushare (cached per session, 1-hour TTL)
     global _mcap_cache, _mcap_ts
     if not _mcap_cache or time.time() - _mcap_ts > 3600:
