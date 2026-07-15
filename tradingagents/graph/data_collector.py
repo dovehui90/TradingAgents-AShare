@@ -890,10 +890,9 @@ def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
         for future in future_to_key:
             key = future_to_key[future]
             result = future.result()
-            # 过滤错误字符串，避免伪装成数据传给 LLM
+            # 失败时不存 key，让后续 pool.get(key, default) 正确回退到默认值
             if isinstance(result, str) and "调用失败" in result:
                 print(f"  [Warning] {key}: {result}")
-                results[key] = None
             else:
                 results[key] = result
 
