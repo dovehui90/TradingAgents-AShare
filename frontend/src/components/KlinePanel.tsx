@@ -110,6 +110,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
     const showGsLinesRef = useRef(false)
     const [srData, setSrData] = useState<SupportResistancePoint[]>([])
     const [tdData, setTdData] = useState<TdPoint[]>([])
+    const tdDataRef = useRef<TdPoint[]>([])
     const tdMarkerContainerRef = useRef<HTMLDivElement | null>(null)
     const [showSr, setShowSr] = useState(false)
     const showSrRef = useRef(false)
@@ -448,7 +449,6 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
         renderSrMarkers()
         chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
             renderSrMarkers()
-            if (showTdRef.current && tdData.length) renderTdMarkers(tdData)
         })
     }
 
@@ -630,8 +630,15 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             })
         }
 
+        // TD markers re-render on zoom/scroll
+        const handleTdZoom = () => {
+            if (showTdRef.current && tdDataRef.current.length) renderTdMarkers(tdDataRef.current)
+        }
+        chart.timeScale().subscribeVisibleLogicalRangeChange(handleTdZoom)
+
         window.addEventListener('resize', onResize)
         return () => {
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleTdZoom)
             window.removeEventListener('resize', onResize)
             containerRef.current?.removeEventListener('dblclick', handleDblClick)
             chart.unsubscribeCrosshairMove(handleCrosshairMove)
@@ -703,6 +710,7 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
 
                 // Update TD Sequential overlay
                 if (tdResp?.points) {
+                    tdDataRef.current = tdResp.points
                     setTdData(tdResp.points)
                 }
 
