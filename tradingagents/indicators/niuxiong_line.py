@@ -143,7 +143,7 @@ def fetch_realtime_data(symbol: str, days: int = 120, period: str = "daily") -> 
     # 优先级: Tushare(最快) → AkShare 各源
     def _fetch_tushare():
         import tushare as ts
-        token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+        token = os.environ.get("TUSHARE_TOKEN", "")
         ts.set_token(token)
         pro = ts.pro_api()
         if is_index:
@@ -1365,7 +1365,7 @@ def fetch_fund_flow_data(symbol: str, days: int = 120) -> pd.DataFrame:
     # 方案1: Tushare (资金流数据更稳定)
     try:
         import tushare as ts
-        token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+        token = os.environ.get("TUSHARE_TOKEN", "")
         ts.set_token(token)
         pro = ts.pro_api()
 

@@ -113,7 +113,7 @@ def extract_structured_data(
 
         client = create_llm_client(
             provider=config.get("llm_provider", "openai"),
-            model=config.get("quick_think_llm", "gpt-4o-mini"),
+            model=config.get("quick_think_llm", "deepseek-v4-flash"),
             base_url=config.get("backend_url"),
             api_key=config.get("api_key"),
         )

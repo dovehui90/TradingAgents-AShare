@@ -270,6 +270,25 @@ async def lifespan(app: FastAPI):
     import threading as _th
     _th.Thread(target=_build_concept_cache, daemon=True).start()
 
+    # Pre-warm screener K-line cache in background (avoid blocking first screener request)
+    def _warm_screener_cache():
+        try:
+            codes = list(_get_reverse_stock_map_cached_only().keys())
+            # Filter to A-shares only (same logic as screener endpoint)
+            cache_symbols = [
+                _normalize_symbol(c) for c in codes
+                if c[:1] in ("0", "3", "6") and not c.startswith("688")
+                and "ST" not in _get_reverse_stock_map_cached_only().get(c, "")
+            ][:500]
+            from tradingagents.screener.cache import build_screener_cache, cached_symbol_count
+            if cached_symbol_count() < 100:
+                _log(f"[screener] Background cache warm-up: {len(cache_symbols)} stocks")
+                build_screener_cache(cache_symbols, max_workers=8)
+                _log(f"[screener] Background cache warm-up complete")
+        except Exception as exc:
+            _log(f"[screener] Background cache warm-up skipped: {exc}")
+    _th.Thread(target=_warm_screener_cache, daemon=True).start()
+
     # 自动检测源码变更 → 重建衍生数据（阳谱/金银手指/红绿背景）
     try:
         from tradingagents.yang_yin.auto_rebuild import check_and_rebuild
@@ -3938,14 +3957,15 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
     if len(close_vals) >= 2 and close_vals[-2] != 0:
         change_pct = round(float((close_vals[-1] - close_vals[-2]) / close_vals[-2] * 100), 2)
 
-    # Apply period mapping: daily/weekly/monthly needed for consistent column names
+    # Prepare input once — all indicators share the same sorted DataFrame
     df = df.sort_index()
+    df_input = df.copy()
 
     result = {"symbol": symbol, "name": "", "price": price_val, "change_pct": change_pct}
 
     # ── Niuxiong (decision_line, bull_line, orbit_line) ──
     try:
-        nx = calculate_niuxiong_line(df.copy())
+        nx = calculate_niuxiong_line(df_input)
         if len(nx) >= 2:
             cur = nx.iloc[-1]
             prev = nx.iloc[-2]
@@ -3983,7 +4003,7 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
 
     # ── Position Index ──
     try:
-        pos = calculate_position_index(df.copy())
+        pos = calculate_position_index(df_input)
         if len(pos) >= 1:
             zone = pos.iloc[-1].get("zone")
             result["position_zone"] = str(zone) if zone else None
@@ -3992,7 +4012,7 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
 
     # ── GS Strategy (G/S signals + zones) ──
     try:
-        gs = calculate_gs_strategy(df.copy())
+        gs = calculate_gs_strategy(df_input)
         if len(gs) >= 1:
             cur_gs = gs.iloc[-1]
             gs_buy = bool(cur_gs.get("gs_buy", False))
@@ -4017,7 +4037,7 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
 
     # ── Trend Strength ──
     try:
-        ts = calculate_trend_strength(df.copy())
+        ts = calculate_trend_strength(df_input)
         if len(ts) >= 3:
             cur_val = ts.iloc[-1].get("trend_strength", 0)
             cur_val = float(cur_val) if not _np.isnan(float(cur_val)) else 0
@@ -4041,7 +4061,7 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
 
     # ── Radar ──
     try:
-        radar = calculate_radar_indicator(df.copy().reset_index(drop=True))
+        radar = calculate_radar_indicator(df_input.reset_index(drop=True))
         if len(radar) >= 1:
             wave = float(radar.iloc[-1].get("radar_wave", _np.nan))
             result["radar_wave"] = wave if not _np.isnan(wave) else None
@@ -4189,13 +4209,15 @@ def stock_screener(
         except Exception:
             pass
 
-    # ── Phase 3.5: Warm screener cache if cold ──
+    # ── Phase 3.5: Warm screener cache if cold (non-blocking; startup already pre-warms) ──
     from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
     if cached_symbol_count() < 100:
-        # First run: build cache for all candidates (background-sync, limit to 500)
+        # Cache is still cold — trigger background build but don't block the request.
+        # The user may see partial results on first run; subsequent runs will be fast.
+        import threading
         cache_symbols = codes[:500]
-        logger.info(f"[screener] Cold cache, warming {len(cache_symbols)} stocks...")
-        build_screener_cache(cache_symbols, max_workers=8)
+        logger.info(f"[screener] Cache cold, starting background warm of {len(cache_symbols)} stocks")
+        threading.Thread(target=build_screener_cache, args=(cache_symbols,), kwargs={"max_workers": 8}, daemon=True).start()
 
     # ── Phase 4: Parallel compute indicators (max 500 stocks) ──
     max_compute = min(len(codes), 500)

@@ -73,8 +73,7 @@ def fetch_sh_index_data(start_date: str = "20150101", end_date: str = None) -> p
         from datetime import datetime
         end_date = datetime.now().strftime("%Y%m%d")
 
-    token = os.environ.get("TUSHARE_TOKEN",
-                           "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+    token = os.environ.get("TUSHARE_TOKEN", "")
     import tushare as ts
     ts.set_token(token)
     pro = ts.pro_api()

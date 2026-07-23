@@ -11,14 +11,11 @@ from .base import BaseMarketDataProvider
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_TUSHARE_TOKEN = "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"
+_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 
-_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN") or _DEFAULT_TUSHARE_TOKEN
-
-if not os.environ.get("TUSHARE_TOKEN"):
-    logger.info("TUSHARE_TOKEN env not set, using built-in default token")
-    # Set env so subprocesses and other modules can see it
-    os.environ.setdefault("TUSHARE_TOKEN", _DEFAULT_TUSHARE_TOKEN)
+if not _TUSHARE_TOKEN:
+    logger.error("TUSHARE_TOKEN 环境变量未设置！请在 .env 中配置 TUSHARE_TOKEN")
+    raise RuntimeError("TUSHARE_TOKEN 环境变量未设置，无法初始化 Tushare 数据源")
 
 
 def _get_pro():
