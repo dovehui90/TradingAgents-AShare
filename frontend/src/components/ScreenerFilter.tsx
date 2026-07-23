@@ -49,6 +49,19 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
 
     return (
         <div className="space-y-4">
+            {/* Buttons */}
+            <div className="flex gap-2">
+                <button onClick={onSearch} disabled={loading || !filter.date}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">
+                    <Search className="w-3.5 h-3.5" />
+                    开始筛选
+                </button>
+                <button onClick={onClear}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
             {/* Date */}
             <div>
                 <label className="text-xs font-medium text-slate-500 dark:text-slate-400">日期</label>
@@ -180,18 +193,6 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
                 </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex gap-2 pt-2">
-                <button onClick={onSearch} disabled={loading || !filter.date}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">
-                    <Search className="w-3.5 h-3.5" />
-                    开始筛选
-                </button>
-                <button onClick={onClear}
-                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-            </div>
         </div>
     )
 }

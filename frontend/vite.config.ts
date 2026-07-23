@@ -33,7 +33,7 @@ function getBuildMeta() {
 
 const buildMeta = getBuildMeta()
 
-const backendPort = process.env.VITE_BACKEND_PORT || '8088'
+const backendPort = process.env.VITE_BACKEND_PORT || '8000'
 
 export default defineConfig({
   define: {

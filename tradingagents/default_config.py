@@ -8,10 +8,10 @@ DEFAULT_CONFIG = {
         "dataflows/data_cache",
     ),
     # LLM settings
-    "llm_provider": os.getenv("TA_LLM_PROVIDER", "openai"),
-    "deep_think_llm": os.getenv("TA_LLM_DEEP", "gpt-4o"),
-    "quick_think_llm": os.getenv("TA_LLM_QUICK", "gpt-4o-mini"),
-    "backend_url": os.getenv("TA_BASE_URL", "https://api.openai.com/v1"),
+    "llm_provider": os.getenv("TA_LLM_PROVIDER", "deepseek"),
+    "deep_think_llm": os.getenv("TA_LLM_DEEP", "deepseek-v4-pro"),
+    "quick_think_llm": os.getenv("TA_LLM_QUICK", "deepseek-v4-flash"),
+    "backend_url": os.getenv("TA_BASE_URL", "https://api.deepseek.com/v1"),
     "api_key": os.getenv("TA_API_KEY", ""),
     
     # Provider-specific thinking configuration

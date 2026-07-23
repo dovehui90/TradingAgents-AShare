@@ -213,7 +213,7 @@ def fetch_batch_fund_flow(ts_codes: list[str], trade_date: str = None,
 
     import os
     import tushare as ts
-    token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+    token = os.environ.get("TUSHARE_TOKEN", "")
     ts.set_token(token)
     pro = ts.pro_api()
 

@@ -24,7 +24,7 @@ BG_STATE_FILE = "bg_state.json"
 
 def _get_tushare_pro():
     import tushare as ts
-    token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+    token = os.environ.get("TUSHARE_TOKEN", "")
     ts.set_token(token)
     return ts.pro_api()
 

@@ -645,7 +645,9 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             chartRef.current?.remove()
             chartRef.current = null
             seriesRef.current = null
-            // Cleanup sub-chart
+            // 清空 overlay 标记，避免周期切换时旧标记残留
+            if (srMarkerContainerRef.current) srMarkerContainerRef.current.innerHTML = ''
+            if (tdMarkerContainerRef.current) tdMarkerContainerRef.current.innerHTML = ''
         }
     }, [isDark, klinePeriod])
 
@@ -657,6 +659,10 @@ export default function KlinePanel({ symbol, onSymbolChange, onChartReady, onSyn
             if (!seriesRef.current) return
             setLoading(true)
             setError(null)
+            // 切换周期时清空旧 overlay 与数据引用
+            tdDataRef.current = []
+            if (srMarkerContainerRef.current) srMarkerContainerRef.current.innerHTML = ''
+            if (tdMarkerContainerRef.current) tdMarkerContainerRef.current.innerHTML = ''
             try {
                 const [klineResp, niuxiongResp, gsResp, srResp, tdResp] = await Promise.all([
                     api.getKline(symbol, range.start, range.end, klinePeriod, ac.signal),

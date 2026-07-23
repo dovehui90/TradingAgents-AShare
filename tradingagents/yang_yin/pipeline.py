@@ -13,10 +13,7 @@ from .rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
-_TUSHARE_TOKEN = os.environ.get(
-    "TUSHARE_TOKEN",
-    "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada",
-)
+_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 
 # pro_bar(adj='qfq') 内部调两个API(pro_bar+adj_factor)，都计入200次/分限额
 # 所以安全速率 = 200 × 0.8 / 2 = 80次/分

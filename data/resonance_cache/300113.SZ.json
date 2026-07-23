@@ -1,14 +1,38 @@
 {
-  "resonance_score": -0.03,
+  "resonance_score": -0.14,
   "leading_boards": [
     {
-      "name": "电子竞技",
-      "correlation": -0.14864039583163458,
+      "name": "算力租赁",
+      "correlation": 0.7505994527362289,
       "direction": "跌",
-      "strength": 1.127704857533267
+      "strength": 0.9659947467673979
+    },
+    {
+      "name": "云计算",
+      "correlation": 0.7442063764328642,
+      "direction": "跌",
+      "strength": 0.6901521408144595
+    },
+    {
+      "name": "腾讯概念",
+      "correlation": 0.7026960305262075,
+      "direction": "跌",
+      "strength": 0.8459293166458348
+    },
+    {
+      "name": "云游戏",
+      "correlation": 0.7002696513244472,
+      "direction": "跌",
+      "strength": 1.225566726953502
+    },
+    {
+      "name": "元宇宙",
+      "correlation": 0.6478589729307922,
+      "direction": "跌",
+      "strength": 1.2849526922018217
     }
   ],
-  "board_trend_summary": "主导概念：电子竞技。共振评分：-0.03（跟跌）",
+  "board_trend_summary": "主导概念：算力租赁、云计算、腾讯概念。共振评分：-0.14（跟跌）",
   "divergence_alert": false,
   "board_disagreement": false,
   "is_flat": false,
