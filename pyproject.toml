@@ -50,4 +50,14 @@ include = ["tradingagents*", "cli*", "api*", "scheduler*"]
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-cov>=6.0.0",
+    "freezegun>=1.5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+markers = [
+    "slow: tests that hit real APIs (Tushare, LLM)",
+    "integration: tests requiring DB or network",
 ]
