@@ -3427,10 +3427,10 @@ def stock_screener(
 
     # ── Populate concepts from screener cache (built in background at startup) ──
     from tradingagents.screener.cache import load_concept_map
-    concept_map = load_concept_map()
+    concept_map = load_concept_map() or {}
 
     for r in precomputed:
-        concepts = concept_map.get(r["symbol"], [])
+        concepts = concept_map.get(r["symbol"], []) if concept_map else []
         r["concepts"] = ", ".join(concepts[:5]) if concepts else None
 
     elapsed_ms = int((time.monotonic() - t0) * 1000)
