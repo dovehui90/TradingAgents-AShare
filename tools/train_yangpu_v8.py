@@ -46,7 +46,7 @@ logger.info(f"特征面板列: {list(panel.columns)}")
 
 # ── 资金流缓存 ──
 import tushare as ts
-TOKEN = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 ts.set_token(TOKEN)
 pro = ts.pro_api()
 mf_cache_dir = pipeline.summary_dir / "moneyflow"

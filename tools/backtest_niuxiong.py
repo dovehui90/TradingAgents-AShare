@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 def fetch_data(symbol: str, days: int = 365) -> pd.DataFrame:
     """获取前复权日K数据"""
     import tushare as ts
-    token = "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"
+    token = os.environ.get("TUSHARE_TOKEN", "")
     ts.set_token(token)
     pro = ts.pro_api()
 

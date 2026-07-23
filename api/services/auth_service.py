@@ -33,11 +33,23 @@ def _as_utc(value: Optional[datetime]) -> Optional[datetime]:
     return value.astimezone(timezone.utc)
 
 
-_DEFAULT_SECRET = "tradingagents-ashare-dev-secret"
+_DEFAULT_SECRET = "tradingagents-ashare-dev-secret"  # DEPRECATED: v1.x 遗留，仅用于数据迁移回退
 
 
 def _secret_key() -> str:
-    return os.getenv("TA_APP_SECRET_KEY") or _DEFAULT_SECRET
+    """返回 JWT / Fernet 签名密钥。
+
+    生产环境必须设置环境变量 TA_APP_SECRET_KEY。
+    首次设置后，重启时自动触发数据库加密字段迁移。
+    """
+    key = os.getenv("TA_APP_SECRET_KEY")
+    if not key:
+        raise RuntimeError(
+            "TA_APP_SECRET_KEY environment variable is not set.\n"
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'\n"
+            "Then add it to .env and restart."
+        )
+    return key
 
 
 def _fernet_from_key(key: str) -> Fernet:

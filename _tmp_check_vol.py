@@ -1,5 +1,5 @@
 ﻿import tushare as ts
-ts.set_token("23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+ts.set_token(os.environ.get('TUSHARE_TOKEN', ''))
 pro = ts.pro_api()
 
 # Check a known stock: 000001.SZ daily bar for 20260620

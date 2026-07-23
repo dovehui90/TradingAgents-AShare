@@ -22,7 +22,7 @@ def fetch_data(symbol: str = "300476", days: int = 80) -> pd.DataFrame:
     end = datetime.now().strftime("%Y%m%d")
     start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
     import tushare as ts
-    token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+    token = os.environ.get("TUSHARE_TOKEN", "")
     ts.set_token(token)
     pro = ts.pro_api()
     ts_code = f"{symbol}.{'SH' if symbol.startswith(('6','9')) else 'SZ'}"

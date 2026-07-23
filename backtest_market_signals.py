@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-TUSHARE_TOKEN = "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"
+TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 ts.set_token(TUSHARE_TOKEN)
 pro = ts.pro_api()
 

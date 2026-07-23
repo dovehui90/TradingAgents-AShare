@@ -18,9 +18,20 @@ import urllib.request
 import paramiko
 
 # ---------- 配置 ----------
-SERVER = "119.23.155.192"
-USER = "root"
-PASSWORD = "Qq121918="
+SERVER = os.environ.get("DEPLOY_SERVER", "")
+USER = os.environ.get("DEPLOY_USER", "root")
+# ⚠️ 不再支持密码认证，请使用 SSH Key：
+#   ssh-copy-id root@<server>
+# 或在运行前设置环境变量：
+#   export DEPLOY_SERVER=your-server-ip
+#   export DEPLOY_SSH_KEY=/path/to/private_key
+_SSH_KEY = os.environ.get("DEPLOY_SSH_KEY", "")
+_REQUIRED = {"DEPLOY_SERVER": SERVER}
+_missing = [k for k, v in _REQUIRED.items() if not v]
+if _missing:
+    print(f"[ERROR] 缺少环境变量: {', '.join(_missing)}")
+    print("  export DEPLOY_SERVER=your-server-ip")
+    sys.exit(1)
 REMOTE_DIR = "/opt/tradingagents"
 BACKEND_DIRS = ["api", "tradingagents", "scheduler"]
 BACKEND_PORT = 8088
@@ -49,8 +60,8 @@ def git_changed_dirs(last_commit):
         return {"frontend": True, "backend": True}
 
     result = subprocess.run(
-        f"git diff --name-only {last_commit} HEAD",
-        capture_output=True, shell=True, cwd=PROJECT_DIR, text=True,
+        ["git", "diff", "--name-only", last_commit, "HEAD"],
+        capture_output=True, cwd=PROJECT_DIR, text=True,
     )
     if result.returncode != 0:
         return {"frontend": True, "backend": True}
@@ -72,11 +83,12 @@ def build_frontend():
 
     # 清理旧构建
     if os.path.exists(dist_dir):
-        subprocess.run(f"rm -rf {dist_dir}", shell=True, cwd=frontend_dir)
+        import shutil
+        shutil.rmtree(dist_dir)
 
     result = subprocess.run(
-        "npm run build",
-        cwd=frontend_dir, capture_output=True, shell=True,
+        ["npm", "run", "build"],
+        cwd=frontend_dir, capture_output=True,
     )
     if result.returncode != 0:
         print("[FAIL] 前端构建失败")
@@ -457,7 +469,20 @@ def main():
     print(">>> 连接服务器...")
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(SERVER, username=USER, password=PASSWORD)
+    if _SSH_KEY:
+        from paramiko import RSAKey, Ed25519Key, ECDSAKey
+        for key_class in (RSAKey, Ed25519Key, ECDSAKey):
+            try:
+                pkey = key_class.from_private_key_file(_SSH_KEY)
+                client.connect(SERVER, username=USER, pkey=pkey)
+                break
+            except Exception:
+                continue
+        else:
+            print("[ERROR] 无法使用 SSH Key 连接，请检查 DEPLOY_SSH_KEY")
+            sys.exit(1)
+    else:
+        client.connect(SERVER, username=USER)
     sftp = client.open_sftp()
 
     try:
@@ -498,8 +523,8 @@ def main():
 
     # 记录部署状态
     current = subprocess.run(
-        "git rev-parse HEAD",
-        capture_output=True, shell=True, cwd=PROJECT_DIR, text=True,
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True, cwd=PROJECT_DIR, text=True,
     ).stdout.strip()
     save_state({"last_commit": current})
     print(f"\n[DONE] 部署完成! http://{SERVER}")

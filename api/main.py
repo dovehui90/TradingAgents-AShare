@@ -68,7 +68,7 @@ from tradingagents.graph.data_collector import DataCollector
 # 全局共享 DataCollector：同一 ticker+date 的数据只拉一次，所有 job 复用缓存
 _shared_data_collector = DataCollector()
 from tradingagents.dataflows.trade_calendar import cn_today_str
-from tradingagents.dataflows.config import set_config
+from tradingagents.dataflows.config import set_config, get_tushare_token
 from tradingagents.dataflows.interface import route_to_vendor
 from tradingagents.graph.intent_parser import parse_intent as _parse_intent
 from tradingagents.agents.utils.context_utils import USER_CONTEXT_KEYS, normalize_user_context
@@ -3175,7 +3175,7 @@ def _fetch_index_kline(symbol: str, start_date: str, end_date: str, period: str 
     # Tushare 最快（~0.1s），优先使用
     def _fetch_tushare_index():
         import tushare as ts
-        token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+        token = get_tushare_token()
         ts.set_token(token)
         pro = ts.pro_api()
         raw = pro.index_daily(ts_code=symbol_key, start_date=yyyymmdd_start, end_date=yyyymmdd_end)
@@ -4154,7 +4154,7 @@ def stock_screener(
     if not _mcap_cache:
         try:
             import tushare as _ts, os as _os
-            _ts.set_token(_os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
+            _ts.set_token(get_tushare_token())
             pro = _ts.pro_api()
             # Try today first, then previous trading days
             for date_try in [cn_today_str().replace("-",""),
@@ -4784,7 +4784,7 @@ def get_board_constituents(
     if not _mcap_cache or time.time() - _mcap_ts > 3600:
         try:
             import tushare as ts
-            ts.set_token(os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
+            ts.set_token(get_tushare_token())
             pro = ts.pro_api()
             trade_date = cn_today_str().replace("-", "")
             raw = pro.daily_basic(trade_date=trade_date, fields="ts_code,circ_mv")
@@ -5122,7 +5122,7 @@ def get_fund_flow(
     # ── 方案1: Tushare moneyflow ──
     try:
         import tushare as ts
-        token = os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada")
+        token = get_tushare_token()
         ts.set_token(token)
         pro = ts.pro_api()
         mf = pro.moneyflow(
