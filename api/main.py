@@ -3064,6 +3064,7 @@ def _build_concept_cache():
         concept_map = load_concept_map()
         if concept_map:
             return  # already built
+        concept_map = {}  # initialize empty cache for building
 
         import requests as _requests
 
