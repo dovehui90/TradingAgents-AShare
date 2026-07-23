@@ -313,17 +313,29 @@ def batch_delete_scheduled(db: Session, user_id: str, item_ids: Iterable[str]) -
 
 
 def get_pending_tasks(db: Session, today: str, current_hhmm: str) -> List[ScheduledAnalysisDB]:
-    """Get all active tasks that haven't run today and whose trigger time has passed."""
-    all_active = (
+    """Get active tasks that haven't run today and whose trigger time has passed.
+
+    Pushes trigger_time filtering into SQL to avoid loading all active tasks into memory.
+    """
+    # Filter tasks whose trigger_time, defaulting to "20:00", is <= current_hhmm
+    # SQL: trigger_time <= current_hhmm OR (trigger_time IS NULL AND '20:00' <= current_hhmm)
+    return (
         db.query(ScheduledAnalysisDB)
         .filter(
             ScheduledAnalysisDB.is_active == True,
             (ScheduledAnalysisDB.last_run_date != today) | (ScheduledAnalysisDB.last_run_date == None),
+            (
+                (ScheduledAnalysisDB.trigger_time != None)
+                & (ScheduledAnalysisDB.trigger_time <= current_hhmm)
+            )
+            | (
+                (ScheduledAnalysisDB.trigger_time == None)
+                & ("20:00" <= current_hhmm)
+            ),
         )
+        .limit(100)
         .all()
     )
-    # Filter by trigger_time <= current_hhmm
-    return [t for t in all_active if (t.trigger_time or "20:00") <= current_hhmm]
 
 
 def mark_run_success(db: Session, item_id: str, trade_date: str, report_id: str):

@@ -344,13 +344,20 @@ def backfill_reports(user_id: Optional[str] = None, force: bool = False) -> Dict
             query = query.filter(ReportDB.user_id == user_id)
         reports = query.order_by(ReportDB.trade_date.desc()).all()
 
+        # Pre-fetch existing backtests in one query to avoid N+1
+        report_ids = [r.id for r in reports]
+        existing_map: Dict[str, SignalBacktestDB] = {}
+        if report_ids:
+            existing_records = db.query(SignalBacktestDB).filter(
+                SignalBacktestDB.report_id.in_(report_ids)
+            ).all()
+            existing_map = {b.report_id: b for b in existing_records}
+
         results: List[Dict] = []
         incomplete_count = 0  # signals too recent for 20d horizon
 
         for report in reports:
-            existing = db.query(SignalBacktestDB).filter(
-                SignalBacktestDB.report_id == report.id
-            ).first()
+            existing = existing_map.get(report.id)
             if not force and existing and existing.correct_3d is not None and existing.correct_5d is not None and existing.correct_10d is not None and existing.correct_20d is not None:
                 results.append(_serialize_backtest(existing))
                 continue

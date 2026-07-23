@@ -343,19 +343,31 @@ def _recover_stale_tasks():
             .all()
         )
         if stale:
+            # Pre-fetch matching reports in one batch query (avoid N+1)
+            report_ids = [
+                item.last_report_id for item in stale
+                if item.last_report_id and item.last_run_date
+            ]
+            completed_by_id: dict = {}
+            if report_ids:
+                rows = (
+                    db.query(ReportDB.id, ReportDB.created_at)
+                    .filter(
+                        ReportDB.id.in_(report_ids),
+                        ReportDB.status == "completed",
+                    )
+                    .all()
+                )
+                completed_by_id = {r.id: r.created_at for r in rows}
+
             recovered_count = 0
             reset_count = 0
             for item in stale:
                 has_report = (
-                    item.last_report_id
-                    and item.last_run_date
-                    and db.query(ReportDB)
-                    .filter(
-                        ReportDB.id == item.last_report_id,
-                        ReportDB.status == "completed",
-                        ReportDB.created_at >= item.last_run_date,
-                    )
-                    .first()
+                    item.last_report_id is not None
+                    and item.last_run_date is not None
+                    and item.last_report_id in completed_by_id
+                    and completed_by_id[item.last_report_id] >= item.last_run_date
                 )
                 if has_report:
                     item.last_run_status = "success"

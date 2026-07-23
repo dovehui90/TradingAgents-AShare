@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timezone
 from typing import Generator
 
-from sqlalchemy import Boolean, create_engine, Column, String, DateTime, Text, Integer, Float, JSON, UniqueConstraint, event, text
+from sqlalchemy import Boolean, create_engine, Column, String, DateTime, Text, Integer, Float, JSON, UniqueConstraint, Index, event, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 # Database URL - default to SQLite for simplicity
@@ -162,6 +162,7 @@ def _ensure_user_schema() -> None:
                 )
             """))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_user_query_logs_user_id ON user_query_logs(user_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_user_query_logs_created ON user_query_logs(created_at)"))
             # Migrate existing tables: add endpoint + ip_address columns
             for col, col_type in [("endpoint", "VARCHAR(128)"), ("ip_address", "VARCHAR(64)")]:
                 try:
@@ -462,7 +463,11 @@ class ScheduledAnalysisDB(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint('user_id', 'symbol', name='uq_scheduled_user_symbol'),)
+    __table_args__ = (
+        UniqueConstraint('user_id', 'symbol', name='uq_scheduled_user_symbol'),
+        Index('idx_scheduled_active_trigger', 'is_active', 'trigger_time'),
+        Index('idx_scheduled_last_run', 'last_run_date'),
+    )
 
 
 class SponsorDB(Base):

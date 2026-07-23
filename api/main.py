@@ -373,6 +373,7 @@ def get_job_store():
 
 # Runtime config overrides via PATCH /v1/config
 _global_config_overrides: Dict[str, Any] = {}
+_config_override_lock = Lock()  # guards _global_config_overrides reads/writes
 
 # Allowlist for config_overrides from client requests.
 # Security: prevents injection of api_key, backend_url, or other sensitive keys.
@@ -1582,8 +1583,9 @@ def _build_runtime_config(overrides: Dict[str, Any], user_id: Optional[str] = No
     overrides = {k: v for k, v in overrides.items() if k in _CONFIG_OVERRIDES_ALLOWLIST}
 
     # Apply global config overrides (from PATCH /v1/config)
-    if _global_config_overrides:
-        config = _deep_merge(config, dict(_global_config_overrides))
+    with _config_override_lock:
+        if _global_config_overrides:
+            config = _deep_merge(config, dict(_global_config_overrides))
     
     # Fetch user specific overrides from DB (pass db to reuse caller's session)
     user_overrides = _user_config_overrides(user_id, db=db)
