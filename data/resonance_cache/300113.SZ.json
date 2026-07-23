@@ -1,18 +1,18 @@
 {
-  "resonance_score": -0.01,
+  "resonance_score": -0.03,
   "leading_boards": [
     {
       "name": "电子竞技",
-      "correlation": -0.12915772647707022,
+      "correlation": -0.14864039583163458,
       "direction": "跌",
-      "strength": 0.2935393267969699
+      "strength": 1.127704857533267
     }
   ],
-  "board_trend_summary": "主导概念：电子竞技。共振评分：-0.01（跟跌）",
+  "board_trend_summary": "主导概念：电子竞技。共振评分：-0.03（跟跌）",
   "divergence_alert": false,
   "board_disagreement": false,
   "is_flat": false,
   "insufficient_data": false,
   "warnings": [],
-  "computed_at": "2026-07-06"
+  "computed_at": "2026-07-23"
 }

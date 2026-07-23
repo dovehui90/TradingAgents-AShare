@@ -1,32 +1,44 @@
 {
-  "resonance_score": 0.01,
+  "resonance_score": -0.18,
   "leading_boards": [
     {
       "name": "粤港澳大湾区",
-      "correlation": -0.14148237370898162,
-      "direction": "涨",
-      "strength": 0.4190328394987208
+      "correlation": -0.18333363192603422,
+      "direction": "跌",
+      "strength": 1.5144323942899218
     },
     {
       "name": "物联网",
-      "correlation": -0.13254911848365702,
+      "correlation": -0.15217538601087946,
+      "direction": "跌",
+      "strength": 1.276212556778069
+    },
+    {
+      "name": "PCB概念",
+      "correlation": -0.14664505452950716,
       "direction": "涨",
-      "strength": 0.4207698769364688
+      "strength": 2.8189231470704645
     },
     {
       "name": "5G",
-      "correlation": -0.1133475870804723,
-      "direction": "涨",
-      "strength": 0.15686145512014305
+      "correlation": -0.14199288545208416,
+      "direction": "跌",
+      "strength": 1.9380392348745668
+    },
+    {
+      "name": "新能源汽车",
+      "correlation": -0.13528400267247137,
+      "direction": "跌",
+      "strength": 1.9029882651092023
     }
   ],
-  "board_trend_summary": "主导概念：粤港澳大湾区、物联网、5G。共振评分：0.01（跟涨）",
+  "board_trend_summary": "主导概念：粤港澳大湾区、物联网、PCB概念。共振评分：-0.18（方向分裂）",
   "divergence_alert": false,
-  "board_disagreement": false,
+  "board_disagreement": true,
   "is_flat": false,
   "insufficient_data": false,
   "warnings": [
     "概念'人民币贬值受益'未出现在THS概念板块列表中，跳过"
   ],
-  "computed_at": "2026-07-07"
+  "computed_at": "2026-07-23"
 }

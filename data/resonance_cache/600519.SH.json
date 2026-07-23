@@ -3,27 +3,27 @@
   "leading_boards": [
     {
       "name": "白酒概念",
-      "correlation": -0.225814949952232,
+      "correlation": -0.2830174853963194,
       "direction": "跌",
-      "strength": 0.3915556985856816
+      "strength": 0.5254635712379296
     },
     {
       "name": "超级品牌",
-      "correlation": -0.16995555439518217,
+      "correlation": -0.2427575841215971,
       "direction": "跌",
-      "strength": 0.5212478486274041
+      "strength": 0.18463849334211302
     },
     {
       "name": "同花顺漂亮100",
-      "correlation": -0.11895447782887214,
+      "correlation": -0.1715346936657822,
       "direction": "跌",
-      "strength": 0.26941841387903454
+      "strength": 0.23586205899348126
     },
     {
       "name": "证金持股",
-      "correlation": -0.11166156910469646,
+      "correlation": -0.15552258957749904,
       "direction": "跌",
-      "strength": 0.48959018701270507
+      "strength": 0.013301809451959912
     }
   ],
   "board_trend_summary": "主导概念：白酒概念、超级品牌、同花顺漂亮100。共振评分：-0.01（跟跌）",
@@ -32,5 +32,5 @@
   "is_flat": false,
   "insufficient_data": false,
   "warnings": [],
-  "computed_at": "2026-07-07"
+  "computed_at": "2026-07-23"
 }

@@ -1,42 +1,42 @@
 {
-  "resonance_score": 0.06,
+  "resonance_score": -0.12,
   "leading_boards": [
     {
-      "name": "钠离子电池",
-      "correlation": -0.2647770879175584,
-      "direction": "涨",
-      "strength": 0.1241358635270906
+      "name": "宁德时代概念",
+      "correlation": -0.3519337409802688,
+      "direction": "跌",
+      "strength": 1.9082586306130376
     },
     {
-      "name": "同花顺漂亮100",
-      "correlation": -0.25584954120930725,
+      "name": "钠离子电池",
+      "correlation": -0.3428994959135541,
       "direction": "跌",
-      "strength": 0.26941841387903454
+      "strength": 1.5234064900376754
     },
     {
       "name": "锂电池概念",
-      "correlation": -0.2518867931821974,
-      "direction": "涨",
-      "strength": 0.11299908880592958
-    },
-    {
-      "name": "宁德时代概念",
-      "correlation": -0.2365994398916562,
-      "direction": "涨",
-      "strength": 0.20260879401728937
-    },
-    {
-      "name": "动力电池回收",
-      "correlation": -0.22334597972051412,
+      "correlation": -0.3413020838651307,
       "direction": "跌",
-      "strength": 0.2076736588729489
+      "strength": 1.8373410744369802
+    },
+    {
+      "name": "小米汽车",
+      "correlation": -0.34069865462307614,
+      "direction": "跌",
+      "strength": 1.6803715585005374
+    },
+    {
+      "name": "新能源汽车",
+      "correlation": -0.33609934236057076,
+      "direction": "跌",
+      "strength": 1.9029882651092023
     }
   ],
-  "board_trend_summary": "主导概念：钠离子电池、同花顺漂亮100、锂电池概念。共振评分：0.06（方向分裂）",
+  "board_trend_summary": "主导概念：宁德时代概念、钠离子电池、锂电池概念。共振评分：-0.12（跟跌）",
   "divergence_alert": false,
-  "board_disagreement": true,
+  "board_disagreement": false,
   "is_flat": false,
   "insufficient_data": false,
   "warnings": [],
-  "computed_at": "2026-07-07"
+  "computed_at": "2026-07-23"
 }
