@@ -166,9 +166,9 @@ def fetch_realtime_data(symbol: str, days: int = 120, period: str = "daily") -> 
                     basic["date"] = pd.to_datetime(basic["trade_date"], format="%Y%m%d")
                     basic = basic.set_index("date")
                     raw["turnover_rate"] = basic["turnover_rate"] / 100
-            except Exception:
-                pass
-        return raw
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
+            return raw
 
     sources: list[tuple[str, callable]] = [("tushare", _fetch_tushare)]
 
@@ -1389,9 +1389,10 @@ def fetch_fund_flow_data(symbol: str, days: int = 120) -> pd.DataFrame:
             df["main_net"] = (df["buy_elg_amount"] + df["buy_lg_amount"]) - (df["sell_elg_amount"] + df["sell_lg_amount"])
             df.index.name = "date"
             return df[["main_net"]].tail(days)
-    except Exception:
-        pass
-
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
     # 方案2: AkShare 回退
     try:
         import akshare as ak
@@ -1406,9 +1407,10 @@ def fetch_fund_flow_data(symbol: str, days: int = 120) -> pd.DataFrame:
                 df = df.set_index("date").sort_index()
                 df["main_net"] = pd.to_numeric(df["main_net"], errors="coerce")
                 return df[["main_net"]].tail(days)
-    except Exception:
-        pass
-
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
     return pd.DataFrame(columns=["main_net"])
 
 

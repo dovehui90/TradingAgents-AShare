@@ -247,9 +247,7 @@ def _notify_dapan_update(pipeline):
         notify_file = os.path.join(summary_dir, "dapan_update.json")
         with open(notify_file, "w", encoding="utf-8") as f:
             json.dump({"updated_at": datetime.now().isoformat()}, f)
-    except Exception:
-        pass
-
+    except Exception as e:        logger.debug(f"[notification write] failed: {e}", exc_info=True)
 
 # ── 盘中实时扫描 ──────────────────────────────────────
 

@@ -47,9 +47,8 @@ def get_kline(symbol: str, days: int = 250) -> Optional[pd.DataFrame]:
             df = pd.read_parquet(str(path))
             if not df.empty and "close" in df.columns:
                 return df.tail(days)
-        except Exception:
-            pass
-
+        except Exception as e:
+            logger.warning(f"[file read] failed: {e}", exc_info=True)
     # Fetch fresh data
     from tradingagents.indicators import fetch_realtime_data
 
@@ -65,9 +64,8 @@ def get_kline(symbol: str, days: int = 250) -> Optional[pd.DataFrame]:
     df_out = df.reset_index()
     try:
         df_out.to_parquet(str(path), index=False)
-    except Exception:
-        pass
-
+    except Exception as e:
+        logger.debug(f"[file write] failed: {e}", exc_info=True)
     return df
 
 
@@ -83,9 +81,9 @@ def build_screener_cache(symbols: list[str], max_workers: int = 8):
                 df = fut.result(timeout=45)
                 if df is not None and not df.empty:
                     updated += 1
-            except Exception:
-                pass
-    logger.info(f"Screener cache updated: {updated}/{len(symbols)} stocks")
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
+            logger.info(f"Screener cache updated: {updated}/{len(symbols)} stocks")
     return updated
 
 
@@ -114,9 +112,9 @@ def load_concept_map() -> dict[str, list[str]]:
                 with open(path, encoding='utf-8') as f:
                     _CONCEPT_CACHE = json.load(f)
                 return _CONCEPT_CACHE
-        except Exception:
-            pass
-    return {}
+        except Exception as e:
+            logger.debug(f"[JSON parse] failed: {e}", exc_info=True)
+        return {}
 
 
 def save_concept_map(concept_map: dict[str, list[str]]):

@@ -109,9 +109,7 @@ class CnTushareProvider(BaseMarketDataProvider):
                     f"\n注册资本: {row.get('reg_capital', '')}万"
                     f"\n主营业务: {row.get('business_scope', str(row.get('main_business', '')))}"
                 )
-        except Exception:
-            pass
-
+        except Exception as e:            logger.warning(f"[operation] failed: {e}", exc_info=True)
         if category in (0, 2):
             try:
                 from datetime import datetime, timedelta
@@ -124,9 +122,7 @@ class CnTushareProvider(BaseMarketDataProvider):
                         "netprofit_margin", "debt_to_assets", "current_ratio",
                         "eps", "bps", "or_yoy", "profit_yoy"] if c in fin.columns]
                     parts.append(f"[近4季财务指标]\n{fin[cols].to_string(index=False)}")
-            except Exception:
-                pass
-
+            except Exception as e:                logger.debug(f"[operation] failed: {e}", exc_info=True)
         if category in (0, 3):
             try:
                 holders = pro.top10_holders(ts_code=ts_code)
@@ -134,9 +130,7 @@ class CnTushareProvider(BaseMarketDataProvider):
                     h = holders.sort_values("end_date").tail(10)
                     cols = [c for c in ["end_date", "holder_name", "hold_num", "hold_ratio"] if c in h.columns]
                     parts.append(f"[前十大股东]\n{h[cols].to_string(index=False)}")
-            except Exception:
-                pass
-
+            except Exception as e:                logger.debug(f"[operation] failed: {e}", exc_info=True)
         if category in (0, 4):
             try:
                 from datetime import datetime, timedelta
@@ -148,9 +142,7 @@ class CnTushareProvider(BaseMarketDataProvider):
                     cols = [c for c in ["trade_date", "holder_name", "buy_vol", "sell_vol",
                         "vol_change", "hold_vol_after"] if c in t.columns]
                     parts.append(f"[股东增减持]\n{t[cols].to_string(index=False)}")
-            except Exception:
-                pass
-
+            except Exception as e:                logger.debug(f"[operation] failed: {e}", exc_info=True)
         if parts:
             return f"## F10 公司资料（Tushare，category={category}）\n\n" + "\n\n".join(parts)
         raise NotImplementedError("Tushare F10: 数据暂不可用，回退到其他数据源")
@@ -285,8 +277,8 @@ class CnTushareProvider(BaseMarketDataProvider):
                     df_day = df_day[df_day["ts_code"] == ts_code]
                     if not df_day.empty:
                         frames.append(df_day)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             current += timedelta(days=1)
         if not frames:
             return f"{symbol} 在 {start_date}~{end_date} 无机构买卖统计数据。"
@@ -312,8 +304,8 @@ class CnTushareProvider(BaseMarketDataProvider):
                 df_day = pro.top_inst(trade_date=day_str)
                 if df_day is not None and not df_day.empty:
                     frames.append(df_day)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             current += timedelta(days=1)
         if not frames:
             return f"{start_date}~{end_date} 活跃营业部数据暂不可用。"

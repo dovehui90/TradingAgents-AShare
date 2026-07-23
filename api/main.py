@@ -110,8 +110,8 @@ def _report_version_stats() -> None:
                 json={"v": APP_VERSION, "nonce": uuid.uuid4().hex},
                 timeout=30,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[operation] failed: {e}", exc_info=True)
 
     threading.Thread(target=_send, daemon=True).start()
 
@@ -138,8 +138,8 @@ def _build_scheduled_analyze_request(
     if user_cfg and user_cfg.default_analysts:
         try:
             selected = json.loads(user_cfg.default_analysts)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[operation] failed: {e}", exc_info=True)
     req = AnalyzeRequest(
         symbol=symbol,
         trade_date=trade_date,
@@ -2004,8 +2004,8 @@ class AgentProgressTracker:
                     "horizon": self.horizon,
                 },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     def emit_debate_message(
         self, debate: str, agent: str, round_num: int,
@@ -2191,8 +2191,8 @@ async def _run_job(
         try:
             with get_db_ctx() as db:
                 report_service.mark_report_failed(db, job_id, err_msg)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[operation] failed: {e}", exc_info=True)
         _emit_job_event(job_id, "job.failed", {"job_id": job_id, "error": err_msg})
     finally:
         sem.release()
@@ -3264,8 +3264,8 @@ def _fetch_index_kline(symbol: str, start_date: str, end_date: str, period: str 
                                     for k in expired_k:
                                         _index_kline_cache.pop(k, None)
                                 return _aggregate_candles(candles, period)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[operation] failed: {e}", exc_info=True)
                     # Sina 实时快照兜底：eastmoney 盘中数据不可用时（如午盘休市）
                     last_candle_date = candles[-1]["date"] if candles else None
                     if not last_candle_date or last_candle_date < today_str:
@@ -3297,8 +3297,8 @@ def _fetch_index_kline(symbol: str, start_date: str, end_date: str, period: str 
                                         "change_percent": sn_change_pct,
                                         "turnover_rate": None,
                                     })
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[operation] failed: {e}", exc_info=True)
 
             result = _aggregate_candles(candles, period)
             _index_kline_cache[cache_key] = (now, result)
@@ -3593,8 +3593,8 @@ def get_kline(
                     df = _normalize_kline_df(raw_df)
                     if not df.empty:
                         candles = _df_to_candles(df)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[import akshare] failed: {e}", exc_info=True)
         else:
             # Daily: use fetch_realtime_data (3-level fallback + turnover_rate)
             from tradingagents.indicators import fetch_realtime_data
@@ -3647,8 +3647,8 @@ def get_kline(
             from tradingagents.indicators import fetch_realtime_quote
             quote = fetch_realtime_quote(symbol)
             stock_name = quote.get("name")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
     # 记录K线查询日志（仅记录用户从搜索框主动查询的K线，跳过分析页/自选页自动加载）
     referer = request.headers.get("Referer", "")
     if "/analysis" not in referer and "/portfolio" not in referer and "/reports" not in referer:
@@ -3661,8 +3661,8 @@ def get_kline(
                     payload = decode_access_token(auth[7:])
                     uid = str(payload.get("sub") or "anonymous")
                     uemail = payload.get("email")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"[headers lookup] failed: {e}", exc_info=True)
             display_name = f"{stock_name} ({symbol})" if stock_name else symbol
             db.add(UserQueryLogDB(
                 id=uuid4().hex,
@@ -3673,8 +3673,8 @@ def get_kline(
                 symbol=symbol,
             ))
             db.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[DB query] failed: {e}", exc_info=True)
     return KlineResponse(
         symbol=symbol,
         name=stock_name,
@@ -3736,8 +3736,8 @@ def get_capital_flow(
                 if rows:
                     df = pd.DataFrame(rows).set_index("date")
                     df = df[df.index >= start]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[operation] failed: {e}", exc_info=True)
 
         # Fallback: route_to_vendor (no turnover) → merge turnover from EastMoney or baostock
         if df.empty or "turnover_rate" not in df.columns:
@@ -3773,8 +3773,8 @@ def get_capital_flow(
                 em_df = pd.DataFrame(rows).set_index("date")
                 df["turnover_rate"] = em_df["turnover_rate"]
                 _fetched = df["turnover_rate"].notna().any()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[operation] failed: {e}", exc_info=True)
         # Try baostock
         if not _fetched:
             try:
@@ -3796,8 +3796,8 @@ def get_capital_flow(
                         bs_df["turn"] = pd.to_numeric(bs_df["turn"], errors="coerce")
                         bs_df = bs_df.set_index("date")
                         df["turnover_rate"] = bs_df["turn"]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     if "turnover_rate" not in df.columns or not df["turnover_rate"].notna().any():
         raise HTTPException(status_code=400, detail="数据源不含换手率字段")
@@ -3836,8 +3836,8 @@ def get_capital_flow(
     stock_name = symbol
     try:
         stock_name = _get_reverse_stock_map_cached_only().get(symbol.upper(), symbol)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
     return {
         "symbol": symbol, "name": stock_name,
         "signal": signal, "lines": lines,
@@ -3890,8 +3890,8 @@ def _build_concept_cache():
                 names = _re.findall(r'class="gnName"[^>]*>\s*([^<]+?)\s*</td>', text)
                 if names:
                     concept_map[sym] = [n.strip() for n in names[:5]]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[_requests lookup] failed: {e}", exc_info=True)
 
             if (i + 1) % 200 == 0:
                 save_concept_map(concept_map)
@@ -3978,8 +3978,8 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
                     result["orbit_status"] = "above2"
                 elif close_val < orbit:
                     result["orbit_status"] = "below2"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── Position Index ──
     try:
@@ -3987,8 +3987,8 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
         if len(pos) >= 1:
             zone = pos.iloc[-1].get("zone")
             result["position_zone"] = str(zone) if zone else None
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── GS Strategy (G/S signals + zones) ──
     try:
@@ -4012,8 +4012,8 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
                         found = "S_zone"
                         break
                 result["gs_status"] = found  # None if no signal in 60 days
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── Trend Strength ──
     try:
@@ -4036,8 +4036,8 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
                     result["trend_status"] = "to_green"
                 else:
                     result["trend_status"] = "green_hold"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── Radar ──
     try:
@@ -4045,8 +4045,8 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
         if len(radar) >= 1:
             wave = float(radar.iloc[-1].get("radar_wave", _np.nan))
             result["radar_wave"] = wave if not _np.isnan(wave) else None
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     return result
 
@@ -4148,8 +4148,8 @@ def stock_screener(
                         break
                 except Exception:
                     continue
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── Phase 3: Market cap filter ──
     if f.market_cap_min is not None or f.market_cap_max is not None:
@@ -4186,8 +4186,8 @@ def stock_screener(
                                     float(row.get("涨跌幅", 0)) if row.get("涨跌幅") else None,
                                 )
                                 break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[row lookup] failed: {e}", exc_info=True)
 
     # ── Phase 3.5: Warm screener cache if cold ──
     from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
@@ -4221,8 +4221,8 @@ def stock_screener(
                 mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
                 r["market_cap"] = round(mcap_wan / 10000, 2) if mcap_wan else None
                 precomputed.append(r)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[r lookup] failed: {e}", exc_info=True)
 
     # ── Populate concepts from screener cache (built in background at startup) ──
     from tradingagents.screener.cache import load_concept_map
@@ -4365,8 +4365,8 @@ def get_niuxiong(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return NiuxiongResponse(
         symbol=symbol,
@@ -4468,8 +4468,8 @@ def get_gs_strategy(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return GSResponse(
         symbol=symbol,
@@ -4574,8 +4574,8 @@ def get_radar(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return RadarResponse(
         symbol=symbol,
@@ -4638,8 +4638,8 @@ def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
         try:
             df = ak.stock_board_concept_cons_em(symbol=board_name)
             _log(f"[BoardCons] EM concept: {len(df)} stocks")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[import akshare] failed: {e}", exc_info=True)
         if df is None or df.empty:
             _log(f"[BoardCons] EM failed, fallback to THS")
             from bs4 import BeautifulSoup
@@ -4734,7 +4734,7 @@ def get_board_constituents(
         board_name, cons_df = _fetch_board_constituents(s)
         def _to_num(v):
             try: return float(v) if v is not None and v != "-" else None
-            except: return None
+            except (ValueError, TypeError): return None
         stock_list = []
         for _, row in cons_df.iterrows():
             code = str(row.get("代码", ""))[:6]
@@ -4744,7 +4744,7 @@ def get_board_constituents(
                 mcap = None
                 if mcap_raw is not None and mcap_raw != "-":
                     try: mcap = round(float(mcap_raw) / 1e8, 1)
-                    except: pass
+                    except (ValueError, TypeError): pass
                 stock_list.append({
                     "code": code, "name": name,
                     "symbol": _normalize_symbol(code),
@@ -4773,7 +4773,7 @@ def get_board_constituents(
                     mv = row.get("circ_mv")
                     if c and pd.notna(mv):
                         try: _mcap_cache[c] = round(float(mv) / 1e4, 0)
-                        except: pass
+                        except (ValueError, TypeError): pass
                 _mcap_ts = time.time()
                 _log(f"[BoardCons] Tushare mcap loaded: {len(_mcap_cache)} stocks")
         except Exception as e:
@@ -4793,13 +4793,13 @@ def get_board_constituents(
 
     def _to_num(v):
         try: return float(v) if v is not None and v not in ("-", "") else None
-        except: return None
+        except (ValueError, TypeError): return None
     stocks_data = []
     for sl in unique_stocks:
         mcap = sl.get("mcap")
         if mcap is not None:
             try: mcap = round(float(mcap) / 1e8, 1)
-            except: mcap = None
+            except (ValueError, TypeError): mcap = None
         if mcap is None:
             mcap = mcap_lookup.get(sl["code"])
         stocks_data.append({
@@ -4820,8 +4820,8 @@ def get_board_constituents(
         ).all()
         for item in items:
             watchlist_symbols.add(item.symbol)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"[DB query] failed: {e}", exc_info=True)
 
     stocks = []
     for sd in stocks_data[:limit]:
@@ -4912,8 +4912,8 @@ def get_position(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return PositionResponse(
         symbol=symbol,
@@ -4995,8 +4995,8 @@ def get_volume_wash(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return VolumeWashResponse(
         symbol=symbol,
@@ -5064,8 +5064,8 @@ def get_ai_gravity(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return AiGravityResponse(
         symbol=symbol,
@@ -5126,8 +5126,8 @@ def get_fund_flow(
             mf["main_pct"] = (mf["main_net"] / (total_trade / 2) * 100).round(4)
             mf["main_pct"] = mf["main_pct"].replace([float("inf"), float("-inf")], None)
             df = mf[["main_net", "main_pct", "super_large_net", "large_net", "medium_net", "small_net"]].copy()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     # ── 方案2: akshare 回退 ──
     if df.empty:
@@ -5150,8 +5150,8 @@ def get_fund_flow(
                     if col_name in raw_df.columns:
                         raw_df[col_name] = pd.to_numeric(raw_df[col_name], errors="coerce")
                 df = raw_df[["main_net", "main_pct", "super_large_net", "large_net", "medium_net", "small_net"]].copy()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     if df.empty:
         raise HTTPException(status_code=404, detail="无资金流数据")
@@ -5188,8 +5188,8 @@ def get_fund_flow(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return FundFlowResponse(
         symbol=symbol,
@@ -5331,8 +5331,8 @@ def get_bollinger_deviation(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return BollingerDeviationResponse(
         symbol=symbol,
@@ -5414,8 +5414,8 @@ def get_trend_strength(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return TrendStrengthResponse(
         symbol=symbol,
@@ -5497,8 +5497,8 @@ def get_td_sequential(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return TdResponse(
         symbol=symbol,
@@ -5583,8 +5583,8 @@ def get_support_resistance(
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return SupportResistanceResponse(
         symbol=symbol,
@@ -5750,8 +5750,8 @@ def get_bias_analysis(symbol: str) -> BiasAnalysisResponse:
     try:
         quote = fetch_realtime_quote(symbol)
         name = quote.get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_realtime_quote] failed: {e}", exc_info=True)
 
     return BiasAnalysisResponse(
         symbol=symbol,
@@ -6072,8 +6072,8 @@ def get_yang_yin_history(days: int = 30) -> List[Dict]:
     from tradingagents.yang_yin.staleness import ensure_data_fresh
     try:
         ensure_data_fresh()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[app lookup] failed: {e}", exc_info=True)
     hist = load_history()
     if hist.empty:
         return []
@@ -6091,8 +6091,8 @@ def get_gold_finger_history(days: int = 30) -> List[Dict]:
     from tradingagents.yang_yin.staleness import ensure_data_fresh
     try:
         ensure_data_fresh()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[app lookup] failed: {e}", exc_info=True)
     hist = load_gold_finger_history()
     if hist.empty:
         return []
@@ -6108,8 +6108,8 @@ def get_red_green_bg_history(days: int = 30) -> List[Dict]:
     pipeline = YangYinPipeline()
     try:
         ensure_data_fresh(pipeline)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[app lookup] failed: {e}", exc_info=True)
     return get_bg_history(pipeline, days=days)
 
 
@@ -6128,8 +6128,8 @@ async def dapan_dianjin_events(request: Request):
                     if mtime > last_mtime:
                         last_mtime = mtime
                         yield f"event: scan_completed\ndata: {json.dumps({'type': 'scan_completed', 'ts': datetime.now().isoformat()})}\n\n"
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[operation] failed: {e}", exc_info=True)
             await asyncio.sleep(5)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream",
@@ -6165,8 +6165,8 @@ def get_39rules_decision(
         sh_df = fetch_sh_index_data()
         sh_df = classify_market_state(sh_df)
         market_state = get_current_market_state(sh_df)["state"]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[fetch_sh_index_data] failed: {e}", exc_info=True)
 
     # 获取K线数据
     from tradingagents.indicators import fetch_realtime_data
@@ -6253,8 +6253,8 @@ async def analyze(
         try:
             code_to_name = _get_reverse_stock_map()
             stock_name = code_to_name.get(request.symbol, "")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[code_to_name lookup] failed: {e}", exc_info=True)
         display = f"{stock_name} ({request.symbol})" if stock_name else request.symbol
         with get_db_ctx() as db:
             db.add(UserQueryLogDB(
@@ -6265,8 +6265,8 @@ async def analyze(
                 symbol=request.symbol,
             ))
             db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"[DB query] failed: {e}", exc_info=True)
     if request.dry_run:
         await _run_job(job_id, request, True, True, current_user.id, "api")
         final_status = _get_job(job_id).get("status", "completed")
@@ -6418,8 +6418,8 @@ async def analyze_batch(
                 symbol=",".join(symbols[:10]),
             ))
             db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"[DB query] failed for ,: {e}", exc_info=True)
 
     return BatchAnalyzeResponse(
         batch_id=batch_id,
@@ -6849,8 +6849,8 @@ async def chat_completions(
                     try:
                         code_to_name = _get_reverse_stock_map()
                         stock_name = code_to_name.get(analyze_req.symbol, "")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"[code_to_name lookup] failed: {e}", exc_info=True)
                     display = f"{stock_name} ({analyze_req.symbol})" if stock_name else analyze_req.symbol
                     prefix = f"分析报告: {display}" if text == display or text == analyze_req.symbol else f"聊天分析: {text} → {display}"
                     with get_db_ctx() as db:
@@ -6862,8 +6862,8 @@ async def chat_completions(
                             symbol=analyze_req.symbol,
                         ))
                         db.commit()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"[DB query] failed: {e}", exc_info=True)
                 await _run_job(job_id, analyze_req, True, True, current_user.id, "chat")
             except Exception as exc:
                 _log(f"[chat] _extract_and_run failed: {exc}")

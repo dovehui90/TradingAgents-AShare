@@ -310,9 +310,9 @@ async def _fetch_overseas_market() -> dict:
                                     "close": round(latest, 2),
                                     "change_pct": round(chg_pct, 2),
                                 })
-                except Exception:
-                    pass
-            return items
+                except Exception as e:
+                    logger.debug(f"[connection close] failed: {e}", exc_info=True)
+                return items
         result["commodities"] = await asyncio.to_thread(_fetch_commodities)
     except Exception as e:
         logger.warning(f"Commodities fetch failed: {e}")
@@ -636,17 +636,15 @@ async def _fetch_north_bound() -> Optional[dict]:
                             "date": str(row.get("日期", "")),
                             "net_flow_yi": round(float(row.get("净流入", 0)) / 1e8, 2),
                         })
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             try:
                 sgt = ak.stock_hsgt_hist_em(symbol="深股通")
                 if sgt is not None and not sgt.empty:
                     sgt_val = float(sgt.iloc[-1].get("净流入", 0))
                     result["sgt_net"] = round(sgt_val / 1e8, 2)
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             if result["hgt_net"] is not None and result["sgt_net"] is not None:
                 result["total_net"] = round(result["hgt_net"] + result["sgt_net"], 2)
             # If all values are zero, data is not available (exchanges stopped publishing since 2024-08)
@@ -676,9 +674,8 @@ async def _fetch_dragon_tiger(curr_date: str) -> Optional[dict]:
                         total_buy += float(row.get("买入额", 0) or 0)
                         total_sell += float(row.get("卖出额", 0) or 0)
                     result["institution_net"] = round((total_buy - total_sell) / 1e8, 2)
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             # Get top net buy stocks from LHB detail
             try:
                 detail_df = ak.stock_lhb_detail_em(start_date=curr_date.replace("-", ""), end_date=curr_date.replace("-", ""))
@@ -709,9 +706,8 @@ async def _fetch_dragon_tiger(curr_date: str) -> Optional[dict]:
                              "sell_wan": round(r[sell_col] / 10000, 1)}
                             for _, r in top_sell.iterrows()
                         ]
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             return result
         return await asyncio.to_thread(_get)
     except Exception as e:
@@ -959,9 +955,8 @@ async def _fetch_macro_data() -> Optional[dict]:
                             "date": str(latest[date_col]),
                             "national_yoy": float(latest[val_col]),
                         }
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             # PMI
             try:
                 pmi_df = ak.macro_china_pmi()
@@ -973,9 +968,8 @@ async def _fetch_macro_data() -> Optional[dict]:
                         "manufacturing": float(latest.get("制造业-指数", 0) or 0),
                         "non_manufacturing": float(latest.get("非制造业-指数", 0) or 0),
                     }
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             # Social financing
             try:
                 sf_df = ak.macro_china_social_financing()
@@ -985,9 +979,8 @@ async def _fetch_macro_data() -> Optional[dict]:
                         "date": str(latest.iloc[0]) if len(latest) > 0 else "",
                         "value_yi": round(float(latest.iloc[1]) / 1e8, 2) if len(latest) > 1 and latest.iloc[1] else 0,
                     }
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.debug(f"[operation] failed: {e}", exc_info=True)
             return result if result else None
         return await asyncio.to_thread(_get)
     except Exception as e:
@@ -1008,9 +1001,8 @@ async def _analyze_watchlist(db: Session, user_id: str, prev_trade_date: str) ->
     try:
         from api.main import _get_reverse_stock_map_cached_only
         stock_name_map = _get_reverse_stock_map_cached_only()
-    except Exception:
-        pass
-
+    except Exception as e:
+        logger.warning(f"[operation] failed: {e}", exc_info=True)
     async def _analyze_one(wl: dict) -> dict:
         symbol = wl["symbol"]
         name = stock_name_map.get(symbol, "") or wl.get("name", "") or symbol
@@ -1076,15 +1068,13 @@ async def _analyze_watchlist(db: Session, user_id: str, prev_trade_date: str) ->
             # News
             try:
                 result["news_summary"] = await asyncio.to_thread(_fetch_stock_news, symbol, prev_trade_date)
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.warning(f"[data fetch] failed: {e}", exc_info=True)
             # THS EPS forecast
             try:
                 result["eps_forecast"] = await asyncio.to_thread(_fetch_ths_eps_forecast, symbol)
-            except Exception:
-                pass
-
+            except Exception as e:
+                logger.warning(f"[data fetch] failed: {e}", exc_info=True)
         except Exception as e:
             logger.warning(f"Watchlist analysis failed for {symbol}: {e}")
 
@@ -1116,9 +1106,8 @@ async def _analyze_portfolio(db: Session, user_id: str, prev_trade_date: str) ->
     try:
         from api.main import _get_reverse_stock_map_cached_only
         stock_name_map = _get_reverse_stock_map_cached_only()
-    except Exception:
-        pass
-
+    except Exception as e:
+        logger.warning(f"[operation] failed: {e}", exc_info=True)
     async def _analyze_one(pos: dict) -> dict:
         symbol = pos["symbol"]
         name = pos.get("name") or stock_name_map.get(symbol, "") or symbol

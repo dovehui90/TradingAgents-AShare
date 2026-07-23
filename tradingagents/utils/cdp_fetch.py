@@ -62,9 +62,7 @@ def _close_tab(ws_url: str) -> None:
             if tab.get("webSocketDebuggerUrl") == ws_url:
                 _cdp("GET", f"/json/close/{tab['id']}")
                 return
-    except Exception:
-        pass
-
+    except Exception as e:        logger.debug(f"[connection close] failed: {e}", exc_info=True)
 
 def _recv_msg(ws, deadline: float) -> dict | None:
     while time.time() < deadline:
