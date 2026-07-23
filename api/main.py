@@ -426,15 +426,6 @@ def _log(msg: str):
     logger.info(msg)
 
 
-def _serialize_datetime_utc(value: Optional[datetime]) -> Optional[str]:
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    else:
-        value = value.astimezone(timezone.utc)
-    return value.isoformat()
-
 
 _cn_stock_map_loaded_at: float = 0  # timestamp of last load
 _STOCK_MAP_TTL = 7 * 86400  # 7 days (successful load)

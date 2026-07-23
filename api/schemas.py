@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
 from tradingagents.dataflows.trade_calendar import cn_today_str
+
+
+def _serialize_datetime_utc(value: Optional[datetime]) -> Optional[str]:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat()
 
 class UserContextInput(BaseModel):
     objective: Optional[str] = Field(None, description="用户目标动作，如建仓/加仓/减仓/止损/观察")
