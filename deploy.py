@@ -125,11 +125,18 @@ def upload_frontend(ssh_client):
 
 
 def server_reset_code(ssh_client):
-    """服务器重置代码到 origin/main（避免合并冲突）"""
+    """服务器重置代码到当前分支（避免合并冲突）"""
+    # 获取当前分支名，推送到 origin 后用同样的分支部署
+    current_branch = subprocess.run(
+        "git branch --show-current",
+        capture_output=True, shell=True, cwd=PROJECT_DIR, text=True,
+    ).stdout.strip()
+    remote_ref = f"origin/{current_branch}" if current_branch else "origin/main"
+    print(f"  部署分支: {remote_ref}")
     stdin, stdout, stderr = ssh_client.exec_command(
         f"cd {REMOTE_DIR} && "
         f"git fetch origin && "
-        f"git reset --hard origin/main 2>&1"
+        f"git reset --hard {remote_ref} 2>&1"
     )
     out = stdout.read().decode().strip()
     print("  git: " + out.replace("\n", "\n  git: "))
