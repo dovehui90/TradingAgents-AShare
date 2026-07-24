@@ -887,12 +887,18 @@ def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
 
     results: Dict[str, Any] = {}
     fetch_start = time.time()
+    # 单任务超时（秒）：mootdx TCP 连接在云服务器上可能挂死，需要超时保护
+    _TASK_TIMEOUT = 45
     # 减少并发池大小，避免被反爬
     with ThreadPoolExecutor(max_workers=min(10, len(tasks))) as executor:
         future_to_key = {executor.submit(_safe, tool, payload): key for key, (tool, payload) in tasks.items()}
         for future in future_to_key:
             key = future_to_key[future]
-            result = future.result()
+            try:
+                result = future.result(timeout=_TASK_TIMEOUT)
+            except Exception as exc:
+                print(f"  [Warning] {key}: 超时或异常 ({type(exc).__name__}: {exc})")
+                continue
             # 失败时不存 key，让后续 pool.get(key, default) 正确回退到默认值
             if isinstance(result, str) and "调用失败" in result:
                 print(f"  [Warning] {key}: {result}")
