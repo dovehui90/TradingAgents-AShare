@@ -664,22 +664,62 @@ class CnAkshareProvider(BaseMarketDataProvider):
             code = self._normalize_symbol(ticker)
             df = None
 
-            # 尝试 stock_news_em（Python 3.12 + pyarrow 存在兼容问题，
-            # ArrowInvalid 属于上游库 bug，捕获后返回友好提示）
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", SyntaxWarning)
                     df = ak.stock_news_em(symbol=code)
             except Exception as exc:
-                logger.debug("stock_news_em failed for %s: %s", ticker, exc)
-                df = None
-
-            if df is None or (hasattr(df, 'empty') and df.empty):
+                logger.warning("get_news failed for %s: %s", ticker, exc)
                 return (
                     f"## {ticker} 新闻（{start_date} 至 {end_date}）\n\n"
-                    f"个股新闻数据暂时不可用（上游数据接口兼容问题），"
-                    f"请基于其他数据源（技术面、资金面、基本面等）综合判断。"
+                    f"新闻数据获取失败（{type(exc).__name__}），请稍后重试。"
                 )
+
+            if df is None or df.empty:
+                return f"No news found for {ticker}"
+
+            date_col = "发布时间" if "发布时间" in df.columns else None
+            if date_col is not None:
+                df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                df = df[(df[date_col] >= start_dt) & (df[date_col] < end_dt)]
+
+            if df.empty:
+                return f"No news found for {ticker} between {start_date} and {end_date}"
+
+            stock_name = _get_stock_name(code)
+
+            def _is_index_mislabel(row) -> bool:
+                title = str(row.get("新闻标题", row.get("标题", "")))
+                content = str(row.get("新闻内容", row.get("内容", "")))
+                text = title + content
+                if re.search(rf"\b{re.escape(code)}\.CSI\b", text):
+                    return True
+                if stock_name and "指数" in title and stock_name not in title and stock_name not in content:
+                    return True
+                return False
+
+            original = len(df)
+            df = df[~df.apply(_is_index_mislabel, axis=1)]
+
+            rows = []
+            for _, row in df.head(20).iterrows():
+                title = str(row.get("新闻标题", row.get("标题", "No title")))
+                src = str(row.get("文章来源", row.get("来源", "Unknown")))
+                summary = str(row.get("新闻内容", row.get("内容", "")))
+                link = str(row.get("新闻链接", row.get("链接", "")))
+                rows.append(f"### {title} (source: {src})")
+                if summary and summary != "nan":
+                    rows.append(summary[:400])
+                if link and link != "nan":
+                    rows.append(f"Link: {link}")
+                rows.append("")
+
+            filtered_note = ""
+            if len(df) < original:
+                filtered_note = f"（已过滤 {original - len(df)} 条指数代码误匹配新闻）"
+            return f"## {ticker} 新闻（{start_date} 至 {end_date}）{filtered_note}：\n\n" + "\n".join(rows)
 
     def get_global_news(
         self, curr_date: str, look_back_days: int = 7, limit: int = 50
