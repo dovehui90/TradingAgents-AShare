@@ -46,6 +46,7 @@ def run_scan_v7(
     """
     from .factors_v7 import compute_factors
     from .model_v7 import predict_yangpu
+    from .model_v8 import predict_yangpu_v8
 
     if pipeline is None:
         pipeline = YangYinPipeline()
@@ -69,7 +70,19 @@ def run_scan_v7(
     if factors is None:
         raise RuntimeError(f"无法计算因子: {trade_date}")
 
-    yang_pct = predict_yangpu(factors)
+    # 主力模型: v7 (岭回归, 经过验证)
+    # v8 (XGBoost) 作为对比参考，待重新训练验证后启用
+    yang_pct_v7 = predict_yangpu(factors)
+    yang_pct = yang_pct_v7
+
+    try:
+        yang_pct_v8 = predict_yangpu_v8(factors)
+        logger.info(
+            f"[Model Compare] {trade_date}: v7={yang_pct_v7:.1f}% v8={yang_pct_v8:.1f}% "
+            f"diff={yang_pct_v8 - yang_pct_v7:+.1f}% | prev_yangpu={factors.get('prev_yangpu', 'N/A')}"
+        )
+    except Exception:
+        logger.debug(f"v8 模型预测失败 (非致命): {trade_date}", exc_info=True)
     total = panel[panel["trade_date"] == trade_date]["ts_code"].nunique()
 
     snapshot = YangYinSnapshot(
@@ -261,6 +274,7 @@ def run_scan_intraday(
     """
     from .factors_v7 import compute_factors_intraday
     from .model_v7 import predict_yangpu
+    from .model_v8 import predict_yangpu_v8
 
     if pipeline is None:
         pipeline = YangYinPipeline()
@@ -285,7 +299,19 @@ def run_scan_intraday(
     if factors is None:
         raise RuntimeError(f"盘中因子计算失败: {trade_date}")
 
-    yang_pct = predict_yangpu(factors)
+    # 主力模型: v7 (岭回归, 经过验证)
+    # v8 (XGBoost) 作为对比参考，待重新训练验证后启用
+    yang_pct_v7 = predict_yangpu(factors)
+    yang_pct = yang_pct_v7
+
+    try:
+        yang_pct_v8 = predict_yangpu_v8(factors)
+        logger.info(
+            f"[Intraday Model Compare] {trade_date}: v7={yang_pct_v7:.1f}% v8={yang_pct_v8:.1f}% "
+            f"diff={yang_pct_v8 - yang_pct_v7:+.1f}% | prev_yangpu={factors.get('prev_yangpu', 'N/A')}"
+        )
+    except Exception:
+        logger.debug(f"v8 盘中预测失败 (非致命): {trade_date}", exc_info=True)
     total = len(realtime)
 
     # 盘中持久化 prev_yangpu 供后续盘中扫描使用，标记 source=intraday
