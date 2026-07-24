@@ -1,10 +1,26 @@
 import asyncio
+import logging
+from datetime import datetime, timedelta
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from tradingagents.dataflows.config import get_config
 from tradingagents.prompts import get_prompt
 from tradingagents.graph.intent_parser import build_horizon_context
 from tradingagents.agents.utils.agent_states import current_tracker_var, extract_verdict
+
+logger = logging.getLogger(__name__)
+
+
+def _is_empty_or_failed(value) -> bool:
+    """Check if data is empty, default placeholder, or contains a failure message."""
+    if not value:
+        return True
+    s = str(value)
+    if s == "无数据":
+        return True
+    if "调用失败" in s:
+        return True
+    return False
 
 
 def create_social_media_analyst(llm, data_collector=None):
@@ -13,6 +29,25 @@ def create_social_media_analyst(llm, data_collector=None):
             return await asyncio.to_thread(tool.invoke, payload)
         except Exception as exc:
             return f"调用失败：{exc}"
+
+    async def _fetch_missing(ticker: str, current_date: str):
+        """Retry fetching news, zt_pool, hot_stocks directly when cache data is empty."""
+        from tradingagents.agents.utils.agent_utils import get_news, get_zt_pool, get_hot_stocks_xq
+
+        days = 7
+        end_dt = datetime.strptime(current_date, "%Y-%m-%d")
+        start_dt = end_dt - timedelta(days=days)
+
+        results = await asyncio.gather(
+            _safe(get_news, {
+                "ticker": ticker,
+                "start_date": start_dt.strftime("%Y-%m-%d"),
+                "end_date": current_date,
+            }),
+            _safe(get_zt_pool, {"date": current_date}),
+            _safe(get_hot_stocks_xq, {}),
+        )
+        return results[0], results[1], results[2]
 
     async def social_media_analyst_node(state):
         current_date = state["trade_date"]
@@ -26,33 +61,63 @@ def create_social_media_analyst(llm, data_collector=None):
         system_message = get_prompt("social_system_message", config=config)
         horizon_ctx = build_horizon_context(horizon, focus_areas, specific_questions, agent_type="social")
 
+        # ── Data fetching with fallback for individual failed sources ──
+        news_text = zt_data = hot_stocks = None
+
         pool = data_collector.get(ticker, current_date) if data_collector else None
 
         if pool is not None:
             news_text = pool.get("news", "无数据")
             zt_data = pool.get("zt_pool", "无数据")
             hot_stocks = pool.get("hot_stocks", "无数据")
-        else:
-            from datetime import datetime, timedelta
-            from tradingagents.agents.utils.agent_utils import get_news, get_zt_pool, get_hot_stocks_xq
-            days = 7
-            end_dt = datetime.strptime(current_date, "%Y-%m-%d")
-            start_dt = end_dt - timedelta(days=days)
-            
-            # Parallelize fallback fetches
-            results = await asyncio.gather(
-                _safe(get_news, {
-                    "ticker": ticker, "start_date": start_dt.strftime("%Y-%m-%d"), "end_date": current_date,
-                }),
-                _safe(get_zt_pool, {"date": current_date}),
-                _safe(get_hot_stocks_xq, {})
+
+        # Retry any failed/empty data source via direct tool calls
+        if _is_empty_or_failed(news_text) or _is_empty_or_failed(zt_data) or _is_empty_or_failed(hot_stocks):
+            logger.warning(
+                f"Social Analyst: data missing for {ticker} "
+                f"(news={'ok' if not _is_empty_or_failed(news_text) else 'empty'}, "
+                f"zt={'ok' if not _is_empty_or_failed(zt_data) else 'empty'}, "
+                f"hot={'ok' if not _is_empty_or_failed(hot_stocks) else 'empty'}), retrying..."
             )
-            news_text, zt_data, hot_stocks = results
+            try:
+                retry_news, retry_zt, retry_hot = await _fetch_missing(ticker, current_date)
+                if _is_empty_or_failed(news_text) and not _is_empty_or_failed(retry_news):
+                    news_text = retry_news
+                if _is_empty_or_failed(zt_data) and not _is_empty_or_failed(retry_zt):
+                    zt_data = retry_zt
+                if _is_empty_or_failed(hot_stocks) and not _is_empty_or_failed(retry_hot):
+                    hot_stocks = retry_hot
+            except Exception as exc:
+                logger.error(f"Social Analyst retry failed for {ticker}: {exc}")
+
+        # Final defaults
+        if news_text is None:
+            news_text = "无数据"
+        if zt_data is None:
+            zt_data = "无数据"
+        if hot_stocks is None:
+            hot_stocks = "无数据"
+
+        # Build data availability note for the LLM
+        missing_parts = []
+        if _is_empty_or_failed(news_text):
+            missing_parts.append("个股新闻")
+        if _is_empty_or_failed(zt_data):
+            missing_parts.append("涨停池")
+        if _is_empty_or_failed(hot_stocks):
+            missing_parts.append("热门股票")
+
+        data_note = ""
+        if missing_parts:
+            data_note = (
+                f"\n⚠️ 以下数据源获取失败：{'、'.join(missing_parts)}。"
+                f"请基于可用数据给出分析，并在 confidence 中体现数据缺失的影响。"
+            )
 
         messages = [
             SystemMessage(content=(
                 system_message
-                + "\n\n请严格基于提供的舆情数据输出报告，全程使用中文。"
+                + "\n\n请严格基于提供的舆情数据输出报告，全程使用中文。" + data_note
             )),
             HumanMessage(content=(
                 horizon_ctx + "\n"
