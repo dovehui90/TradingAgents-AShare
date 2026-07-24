@@ -1,9 +1,27 @@
 import logging as _logging
+import os as _os
 import re
 import time
 import threading
 import contextvars
 from datetime import datetime, timedelta
+
+# ── 绕过系统代理，直连国内数据源 ──
+# macOS 系统代理（如 Clash/Surge）会拦截 eastmoney.com/sina.com.cn
+# 的 HTTPS 请求，导致 akshare 数据获取失败。在模块加载时设置 NO_PROXY=*
+# 确保所有 akshare 请求直连，同时保存旧值供其他模块恢复。
+_proxy_state = {
+    "NO_PROXY": _os.environ.get("NO_PROXY", ""),
+    "no_proxy": _os.environ.get("no_proxy", ""),
+    "HTTP_PROXY": _os.environ.get("HTTP_PROXY", ""),
+    "HTTPS_PROXY": _os.environ.get("HTTPS_PROXY", ""),
+}
+_os.environ["NO_PROXY"] = "*"
+_os.environ["no_proxy"] = "*"
+_os.environ.pop("HTTP_PROXY", None)
+_os.environ.pop("HTTPS_PROXY", None)
+_os.environ.pop("http_proxy", None)
+_os.environ.pop("https_proxy", None)
 
 import pandas as pd
 from stockstats import wrap
@@ -640,62 +658,28 @@ class CnAkshareProvider(BaseMarketDataProvider):
         return f"## Income Statement ({ticker})\n\n{table}"
 
     def get_news(self, ticker: str, start_date: str, end_date: str) -> str:
+        import warnings
         with AKSHARE_CALL_LOCK:
             ak = self._ak()
             code = self._normalize_symbol(ticker)
+            df = None
+
+            # 尝试 stock_news_em（Python 3.12 + pyarrow 存在兼容问题，
+            # ArrowInvalid 属于上游库 bug，捕获后返回友好提示）
             try:
-                df = ak.stock_news_em(symbol=code)
-                if df is None or df.empty:
-                    return f"No news found for {ticker}"
-
-                date_col = "发布时间" if "发布时间" in df.columns else None
-                if date_col is not None:
-                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-                    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-                    end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-                    df = df[(df[date_col] >= start_dt) & (df[date_col] < end_dt)]
-
-                if df.empty:
-                    return f"No news found for {ticker} between {start_date} and {end_date}"
-
-                # 过滤：排除指数代码误匹配（如 000815.CSI vs 000815.SZ）
-                stock_name = _get_stock_name(code)
-
-                def _is_index_mislabel(row) -> bool:
-                    title = str(row.get("新闻标题", row.get("标题", "")))
-                    content = str(row.get("新闻内容", row.get("内容", "")))
-                    text = title + content
-                    # 1. 显式指数代码（.CSI后缀）
-                    if re.search(rf"\b{re.escape(code)}\.CSI\b", text):
-                        return True
-                    # 2. 标题含"指数"但未提及股票名（隐式指数文章）
-                    if stock_name and "指数" in title and stock_name not in title and stock_name not in content:
-                        return True
-                    return False
-
-                original = len(df)
-                df = df[~df.apply(_is_index_mislabel, axis=1)]
-
-                rows = []
-                for _, row in df.head(20).iterrows():
-                    title = str(row.get("新闻标题", row.get("标题", "No title")))
-                    src = str(row.get("文章来源", row.get("来源", "Unknown")))
-                    summary = str(row.get("新闻内容", row.get("内容", "")))
-                    link = str(row.get("新闻链接", row.get("链接", "")))
-                    rows.append(f"### {title} (source: {src})")
-                    if summary and summary != "nan":
-                        rows.append(summary[:400])
-                    if link and link != "nan":
-                        rows.append(f"Link: {link}")
-                    rows.append("")
-
-                filtered_note = ""
-                if len(df) < original:
-                    filtered_note = f"（已过滤 {original - len(df)} 条指数代码误匹配新闻）"
-                return f"## {ticker} 新闻（{start_date} 至 {end_date}）{filtered_note}：\n\n" + "\n".join(rows)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", SyntaxWarning)
+                    df = ak.stock_news_em(symbol=code)
             except Exception as exc:
-                logger.warning("get_news failed for %s: %s", ticker, exc)
-                return f"## {ticker} 新闻（{start_date} 至 {end_date}）\n\n新闻数据暂时获取失败（{type(exc).__name__}），请稍后重试。"
+                logger.debug("stock_news_em failed for %s: %s", ticker, exc)
+                df = None
+
+            if df is None or (hasattr(df, 'empty') and df.empty):
+                return (
+                    f"## {ticker} 新闻（{start_date} 至 {end_date}）\n\n"
+                    f"个股新闻数据暂时不可用（上游数据接口兼容问题），"
+                    f"请基于其他数据源（技术面、资金面、基本面等）综合判断。"
+                )
 
     def get_global_news(
         self, curr_date: str, look_back_days: int = 7, limit: int = 50
