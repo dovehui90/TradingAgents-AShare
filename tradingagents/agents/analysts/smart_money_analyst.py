@@ -71,6 +71,7 @@ def create_smart_money_analyst(llm, data_collector=None):
             fund_flow, lhb, volume, hsgt_individual, hsgt_flow, block_trades, lhb_inst, lhb_seats, fund_flow_120d = results
             concept_board = "无数据"
             concept_fund_flow = "无数据"
+            consistency_warnings_text = ""
 
         # 数据一致性警告
         warnings_block = ""
