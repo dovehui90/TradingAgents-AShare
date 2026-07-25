@@ -41,6 +41,8 @@ def create_fundamentals_analyst(llm, data_collector=None):
             outputs["f10_finance"] = pool.get("f10_finance", "无数据")
             outputs["f10_holders"] = pool.get("f10_holders", "无数据")
             outputs["f10_tracking"] = pool.get("f10_tracking", "无数据")
+            outputs["daily_basic"] = pool.get("daily_basic", "无数据")
+            outputs["forecast"] = pool.get("forecast", "无数据")
         else:
             from tradingagents.agents.utils.agent_utils import (
                 get_fundamentals, get_balance_sheet, get_cashflow, get_income_statement,
@@ -60,7 +62,7 @@ def create_fundamentals_analyst(llm, data_collector=None):
             results = await asyncio.gather(*[tasks[k] for k in keys])
             outputs = dict(zip(keys, results))
             # 确保非工具字段也有默认值
-            for _k in ("shareholder_count", "dividend_history", "f10_detail", "f10_finance", "f10_holders", "f10_tracking"):
+            for _k in ("shareholder_count", "dividend_history", "f10_detail", "f10_finance", "f10_holders", "f10_tracking", "daily_basic", "forecast"):
                 outputs.setdefault(_k, "无数据")
 
         messages = [
@@ -81,7 +83,9 @@ def create_fundamentals_analyst(llm, data_collector=None):
                 f"【F10公司资料-概况】\n{outputs['f10_detail']}\n\n"
                 f"【F10财务分析】\n{outputs['f10_finance']}\n\n"
                 f"【F10股东研究】\n{outputs['f10_holders']}\n\n"
-                f"【F10主力追踪】\n{outputs['f10_tracking']}\n"
+                f"【F10主力追踪】\n{outputs['f10_tracking']}\n\n"
+                f"【每日估值指标】\n{outputs['daily_basic']}\n\n"
+                f"【业绩预告】\n{outputs['forecast']}\n"
             )),
         ]
 

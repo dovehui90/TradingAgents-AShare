@@ -21,6 +21,8 @@ TOOLS_CATEGORIES = {
             "get_balance_sheet",
             "get_cashflow",
             "get_income_statement",
+            "get_daily_basic",
+            "get_forecast",
         ],
     },
     "news_data": {
@@ -77,6 +79,9 @@ TOOLS_CATEGORIES = {
             "get_concept_board",
             "get_individual_fund_flow_120d",
             "get_cninfo_announcements",
+            "get_daily_basic",
+            "get_forecast",
+            "get_stk_limit",
         ],
     },
 }

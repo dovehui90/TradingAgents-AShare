@@ -331,3 +331,57 @@ class CnTushareProvider(BaseMarketDataProvider):
         if "trade_date" in df.columns:
             df["trade_date"] = pd.to_datetime(df["trade_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
         return f"{symbol} 融资融券明细（{date}，Tushare）：\n{df.head(5).to_string(index=False)}"
+
+    def get_daily_basic(self, symbol: str, date: str) -> str:
+        """每日指标：PE/PB/总市值/流通市值/换手率/量比等。"""
+        ts_code = _to_ts_code(symbol)
+        date_str = date.replace("-", "")
+        pro = _get_pro()
+        df = pro.daily_basic(ts_code=ts_code, trade_date=date_str)
+        if df is None or df.empty:
+            return f"{symbol} 在 {date} 每日指标数据暂不可用。"
+        row = df.iloc[0]
+        metrics = {
+            "收盘价": row.get("close"),
+            "PE(动)": row.get("pe_ttm"),
+            "PE(静)": row.get("pe"),
+            "PB": row.get("pb"),
+            "PS(TTM)": row.get("ps_ttm"),
+            "股息率(%)": row.get("dv_ttm"),
+            "总市值(亿)": round(row.get("total_mv", 0) / 10000, 2) if row.get("total_mv") else None,
+            "流通市值(亿)": round(row.get("circ_mv", 0) / 10000, 2) if row.get("circ_mv") else None,
+            "换手率(%)": row.get("turnover_rate_f"),
+            "量比": row.get("volume_ratio"),
+            "总股本(亿)": round(row.get("total_share", 0) / 10000, 2) if row.get("total_share") else None,
+            "流通股本(亿)": round(row.get("float_share", 0) / 10000, 2) if row.get("float_share") else None,
+        }
+        lines = [f"{k}: {v}" for k, v in metrics.items() if v is not None]
+        return f"{symbol} 每日估值指标（{date}，Tushare）：\n" + "\n".join(lines)
+
+    def get_stk_limit(self, symbol: str, date: str) -> str:
+        """每日涨跌停价格。"""
+        ts_code = _to_ts_code(symbol)
+        date_str = date.replace("-", "")
+        pro = _get_pro()
+        df = pro.stk_limit(ts_code=ts_code, trade_date=date_str)
+        if df is None or df.empty:
+            return f"{symbol} 在 {date} 涨跌停价格数据暂不可用。"
+        row = df.iloc[0]
+        return (
+            f"{symbol} 涨跌停价格（{date}，Tushare）：\n"
+            f"涨停价: {row.get('up_limit', '无')}\n"
+            f"跌停价: {row.get('down_limit', '无')}"
+        )
+
+    def get_forecast(self, symbol: str) -> str:
+        """业绩预告：预增/预减/扭亏/首亏，变动幅度。"""
+        ts_code = _to_ts_code(symbol)
+        pro = _get_pro()
+        df = pro.forecast(ts_code=ts_code)
+        if df is None or df.empty:
+            return f"{symbol} 业绩预告数据暂不可用。"
+        df = df.sort_values("ann_date", ascending=False).head(5)
+        if "ann_date" in df.columns:
+            df["ann_date"] = pd.to_datetime(df["ann_date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+        cols = [c for c in ["ann_date", "end_date", "type", "p_change_min", "p_change_max", "summary"] if c in df.columns]
+        return f"{symbol} 近期业绩预告（Tushare）：\n{df[cols].to_string(index=False)}"

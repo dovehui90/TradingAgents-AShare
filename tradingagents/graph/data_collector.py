@@ -45,6 +45,9 @@ from tradingagents.agents.utils.agent_utils import (
     get_f10_detail,
     get_level2_quotes,
     get_cninfo_announcements,
+    get_daily_basic,
+    get_stk_limit,
+    get_forecast,
 )
 
 INDICATORS = [
@@ -999,6 +1002,13 @@ def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
         "f10_tracking": (get_f10_detail, {"symbol": ticker, "category": 4}),
         "level2_quotes": (get_level2_quotes, {"symbol": ticker, "date": level2_date}),
         "cninfo_announcements": (get_cninfo_announcements, {"symbol": ticker, "start_date": week_ago, "end_date": trade_date}),
+    })
+
+    # Tushare 2000积分新增：估值指标、涨跌停、业绩预告
+    tasks.update({
+        "daily_basic": (get_daily_basic, {"symbol": ticker, "date": trade_date}),
+        "stk_limit": (get_stk_limit, {"symbol": ticker, "date": trade_date}),
+        "forecast": (get_forecast, {"symbol": ticker}),
     })
 
     results: Dict[str, Any] = {}

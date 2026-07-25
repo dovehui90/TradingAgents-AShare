@@ -200,3 +200,31 @@ def get_level2_quotes(
 ) -> str:
     """获取个股逐笔成交数据（Level 2），分析盘中资金进出细节。非交易时间返回空。symbol 格式如 600519.SH。"""
     return route_to_vendor("get_level2_quotes", symbol, date)
+
+
+# ── Tushare 2000积分新增接口 ──
+
+@tool
+def get_daily_basic(
+    symbol: Annotated[str, "股票代码，格式如 600519.SH"],
+    date: Annotated[str, "日期，格式 YYYY-MM-DD"],
+) -> str:
+    """获取每日估值指标：PE/PB/总市值/流通市值/换手率/量比等。用于基本面估值分析。symbol 格式如 600519.SH。"""
+    return route_to_vendor("get_daily_basic", symbol, date)
+
+
+@tool
+def get_stk_limit(
+    symbol: Annotated[str, "股票代码，格式如 600519.SH"],
+    date: Annotated[str, "日期，格式 YYYY-MM-DD"],
+) -> str:
+    """获取每日涨跌停价格（涨停价/跌停价）。用于量价分析判断涨跌停封板强度。symbol 格式如 600519.SH。"""
+    return route_to_vendor("get_stk_limit", symbol, date)
+
+
+@tool
+def get_forecast(
+    symbol: Annotated[str, "股票代码，格式如 600519.SH"],
+) -> str:
+    """获取业绩预告数据（预增/预减/扭亏/首亏及变动幅度）。用于提前捕捉业绩拐点。symbol 格式如 600519.SH。"""
+    return route_to_vendor("get_forecast", symbol)

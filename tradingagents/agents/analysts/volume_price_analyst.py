@@ -90,6 +90,7 @@ def create_volume_price_analyst(llm, data_collector=None):
         vpa_data = stock_data = level2_quotes = data_window = None
         used_fallback = False
 
+        stk_limit = "无数据"
         if data_collector is not None:
             pool = data_collector.get(ticker, current_date)
             if pool is not None:
@@ -98,6 +99,7 @@ def create_volume_price_analyst(llm, data_collector=None):
                 stock_data = windowed.get("stock_data", "无数据")
                 level2_quotes = windowed.get("level2_quotes", "无数据")
                 data_window = windowed.get("_data_window", "14天")
+                stk_limit = pool.get("stk_limit", "无数据")
 
         # If any critical data is missing, fall back to direct tool calls
         if _is_empty_or_failed(stock_data) or _is_empty_or_failed(vpa_data):
@@ -138,6 +140,7 @@ def create_volume_price_analyst(llm, data_collector=None):
             HumanMessage(content=(
                 f"以下是 {ticker} 在 {current_date} 的量价分析预计算数据（数据窗口：{data_window}）{data_source_note}。\n\n"
                 f"{vpa_data}\n\n"
+                f"【涨跌停价格】\n{stk_limit}\n\n"
                 f"【原始 K 线数据参考】\n{stock_data}\n\n"
                 f"【逐笔成交明细（Level 2）】\n{level2_quotes}"
             )),
