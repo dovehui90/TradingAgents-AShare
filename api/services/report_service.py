@@ -136,6 +136,7 @@ def extract_structured_data(
             "1. decision：决策方向关键词（BUY/SELL/HOLD 或 增持/减持/持有）\n"
             "2. confidence：整体置信度（0-100整数），若文中未明确给出则根据语气判断\n"
             "3. target_price / stop_loss_price：纯数字。若方向偏多，提取上涨目标（目标价/目标位/关键价位/阻力位/突破做多等）；若方向偏空，提取下跌目标（下行目标/看空目标/目标位等，区别于止损位）。若文中确实未提及任何目标价格则为 null\n"
+            "   ★ 重要：只提取【主方案/核心方案】的价格，忽略\"追加建仓\"、\"加仓场景\"、\"第二阶段\"等二级方案的价格。若报告有\"核心目标位\"、\"第一目标位\"，优先提取该值。\n"
             "4. risks：最多5条主要风险，每条包含名称（15字内）、等级（high/medium/low）、一句话说明\n"
             "5. key_metrics：最多6条关键财务/估值指标，每条包含名称、值（含单位）、优劣（good/neutral/bad）"
         )
@@ -204,6 +205,10 @@ def _extract_price_regex(text: Optional[str], price_type: str = "target") -> Opt
     clean = re.sub(r'\*{1,2}', '', text)
     if price_type == "target":
         patterns = [
+            # ★ 主方案核心目标（最高优先级：避免从"追加建仓"等二级场景误提取）
+            r'核心目标[位价][^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'第一目标[位价][^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            r'主[目要]标[位价][^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             # 看空/看跌方向目标（优先：更精确的方向性目标）
             r'下行目标[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             r'下跌目标[^：:\n]{0,15}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
@@ -234,6 +239,11 @@ def _extract_price_regex(text: Optional[str], price_type: str = "target") -> Opt
         ]
     else:
         patterns = [
+            # ★ 主方案止损（最高优先级：避免从"追加建仓"等二级场景误提取）
+            r'核心止损[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            r'止损位[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            r'止损价[^：:\n]{0,20}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            # 通用止损
             r'止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
             r'stop[-\s_]?loss[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
             r'硬止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
@@ -294,6 +304,30 @@ def resolve_report_fields(
 
     confidence = confidence_override if confidence_override is not None else _extract_confidence_regex(final_trade_decision)
 
+    # ── 价格幻觉检测：RM引用的当前价 vs market_report实际当前价 ──
+    _market_current_price = None
+    if market_report:
+        _mcp = re.search(r'(?:当前价|最新价|现价|收盘价|close)[^\d]*(\d+\.?\d+)', str(market_report), re.IGNORECASE)
+        if _mcp:
+            _market_current_price = float(_mcp.group(1))
+
+    _decision_ref_price = None
+    if final_trade_decision:
+        _drp = re.search(r'当前价[^\d]{0,10}(\d+\.?\d+)', str(final_trade_decision))
+        if _drp:
+            _decision_ref_price = float(_drp.group(1))
+
+    _price_hallucinated = False
+    if _market_current_price and _decision_ref_price:
+        _deviation = abs(_decision_ref_price - _market_current_price) / _market_current_price
+        if _deviation > 0.05:  # 偏差超过5%
+            _price_hallucinated = True
+            logger.warning(
+                f"⚠️ 价格幻觉检测: RM引用当前价 {_decision_ref_price}，"
+                f"market_report实际价 {_market_current_price}，偏差 {_deviation:.1%}。"
+                f"将使用 market_report 价格校验目标价/止损价。"
+            )
+
     target_price = target_price_override if target_price_override is not None else _extract_price_regex(final_trade_decision, "target")
     if target_price is None:
         target_price = _extract_price_regex(trader_investment_plan, "target")
@@ -320,6 +354,17 @@ def resolve_report_fields(
     stop_loss_price = stop_loss_override if stop_loss_override is not None else _extract_price_regex(final_trade_decision, "stop_loss")
     if stop_loss_price is None:
         stop_loss_price = _extract_price_regex(trader_investment_plan, "stop_loss")
+
+    # 价格幻觉时：清空从 final_trade_decision 提取的目标价/止损价（基于错误当前价）
+    # 尝试从 trader_investment_plan 重新提取（可能包含原始正确参数）
+    if _price_hallucinated:
+        logger.warning(f"价格幻觉: 丢弃目标价={target_price}、止损价={stop_loss_price}，尝试从 trader_investment_plan 重提取")
+        target_price = _extract_price_regex(trader_investment_plan, "target")
+        stop_loss_price = _extract_price_regex(trader_investment_plan, "stop_loss")
+        if target_price or stop_loss_price:
+            logger.info(f"从 trader_investment_plan 重提取: 目标价={target_price}、止损价={stop_loss_price}")
+        else:
+            logger.warning("trader_investment_plan 中也未找到价格，目标价/止损价设为 null")
 
     return {
         "market_report": market_report,
