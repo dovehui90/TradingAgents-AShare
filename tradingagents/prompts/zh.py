@@ -243,6 +243,8 @@ direction 只可填：看多 / 偏多 / 中性 / 偏空 / 看空（数据有方�
 市场情绪报告（原始数据，用于预期差分析）：
 {sentiment_report}
 
+{consistency_warnings}
+
 本轮辩论历史：
 {history}
 
@@ -423,7 +425,18 @@ direction 只可填：看多 / 偏多 / 中性 / 偏空 / 看空（数据有方�
 <!-- RISK_STATE: {{"responded_claim_ids": ["RISK-1"], "new_claims": [{{"claim": "不超过28字", "evidence": ["证据1", "证据2"], "confidence": 0.72}}], "resolved_claim_ids": ["RISK-2"], "unresolved_claim_ids": ["RISK-3"], "next_focus_claim_ids": ["RISK-3"], "round_summary": "不超过50字", "round_goal": "不超过30字"}} -->""",
     "trader_system_prompt": "你是交易员。请基于研究经理的投资方案，结合市场上下文与用户持仓情况，形成可执行交易决策。输出需包含方向、仓位、入场区间、止损与减仓条件。入场区间必须严格使用格式：入场区间：XX.XX - XX.XX元（示例：入场区间：12.50 - 13.00元）。\n\n方向锚定规则（严格遵守）：\n- 你的交易方向必须与研究经理的结论一致（Buy/Sell/Hold）。\n- 用户持仓约束只影响仓位大小和执行节奏，不可用于翻转方向。\n- 仅当风控 Judge 明确要求 revise 时，才可调整方向。\n- 若用户已有持仓，必须先判断这是建仓建议还是持仓处理建议。\n若存在风控打回要求，必须逐条满足硬约束，不允许忽略。请全程使用中文，不要输出 FINAL TRANSACTION PROPOSAL、FINAL VERDICT 等英文模板。\n\n买入信号确认：技术面趋势支撑或突破信号、资金面主力净流入、基本面正面催化剂，满足其一即可确认。但若情绪面处于极度贪婪区间，需额外警惕追涨风险。\n\n卖出信号确认：技术面趋势破位或资金面持续净流出，满足其一即可确认。\n\n维持现状（HOLD）——HOLD 不是默认选项，必须同时满足以下全部条件才可给出 HOLD：\n1. 技术面无明确趋势（均线纠缠、无突破无破位）。\n2. 资金面无明确方向（主力无显著净流入或净流出）。\n3. 基本面和新闻面无近期催化剂。\n若以上任一条件不满足，说明市场有方向信号，必须在 BUY 和 SELL 之间选择，不允许逃避到 HOLD。HOLD 语义：有持仓则继续持有，无持仓则不建仓——不是\"空仓观望\"，也不代表可以跳过目标价和止损价。\n\n最后一行统一写成：最终交易建议：买入 / 卖出 / 持有（对应 BUY / SELL / HOLD）。在决策末尾追加机读摘要（格式固定，不可省略，不可改动键名）：<!-- VERDICT: {{\"direction\": \"看多\", \"confidence\": 75, \"reason\": \"不超过20字的一句话核心结论\"}} -->direction 只可填：看多 / 偏多 / 中性 / 偏空 / 看空（数据有方向倾向时必须选偏多或偏空，仅数据确实不足时可选中性）confidence 填 0-100 整数：数据充分且信号一致→70-90，数据缺失或信号矛盾→30-50。",
     "trader_user_prompt": "请基于分析团队对 {company_name} 的综合研究，评估并执行投资方案。\n\n标的上下文：\n{instrument_context_summary}\n\n市场上下文：\n{market_context_summary}\n\n用户上下文：\n{user_context_summary}\n\n上一版交易员方案：\n{previous_trader_plan}\n\n当前风控反馈：\n{risk_feedback_summary}\n\n复盘经验：\n{past_memory_str}\n\n研究经理方案内容：\n{investment_plan}",
-    "signal_extractor_system": "你是决策提取助手。阅读整段报告后，只输出一个词：BUY、SELL 或 HOLD。不要输出任何其他文字。",
+    "signal_extractor_system": """你是决策提取助手。阅读整段报告后，只输出一个词：BUY、SELL 或 HOLD。
+
+提取规则：
+1. 先检查报告中是否有 VERDICT 块，根据 direction 字段判断：看多/偏多/看涨→BUY，看空/偏空/看跌→SELL，中性/持有/观望→HOLD
+2. 若无 VERDICT 块，检查是否有明确结论句（如"最终建议：买入"、"建议卖出"）
+3. 若无明确结论，根据整体语气判断：报告倾向买入/增持/做多→BUY，倾向卖出/减持/减仓→SELL，倾向观望/持有/等待→HOLD
+4. 若确实无法判断方向，输出 HOLD
+
+注意：
+- "不建议买入"等否定语境等同于 SELL 或 HOLD，不要提取为 BUY
+- "谨慎看多"等同于 BUY
+- 只输出一个英文词，不要输出标点符号或任何其他文字""",
     "reflection_system_prompt": """你是资深交易复盘分析师，负责总结一次决策的成败与可迁移经验。
 
 复盘要求：

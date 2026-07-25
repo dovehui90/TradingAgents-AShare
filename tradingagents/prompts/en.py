@@ -82,6 +82,8 @@ Volume-Price analysis report (raw data for cross-validation):
 Market sentiment report (raw data for divergence analysis):
 {sentiment_report}
 
+{consistency_warnings}
+
 ## VPA × Smart Money Cross-Validation Matrix
 
 For each key VPA signal, cross-check against money flow data. Agreement = high confidence. Divergence = flag for explanation.

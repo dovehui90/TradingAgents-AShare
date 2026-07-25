@@ -86,12 +86,15 @@ class OpenAIClient(BaseLLMClient):
         if not UnifiedChatOpenAI._is_reasoning_model(self.model):
             llm_kwargs["temperature"] = self.kwargs.get("temperature", 0)
 
-        # ── 极致稳定性配置 ──
-        # 1. 禁用一切重试：避免 Thinking 模型重复扣费或因重连导致的状态丢失
-        llm_kwargs["max_retries"] = 0
-        
-        # 2. 超长超时：默认 300 秒，给足推理模型思考时间
-        llm_kwargs["timeout"] = self.kwargs.get("timeout", 300.0)
+        # ── 稳定性配置 ──
+        # 1. 启用重试：网络不稳定时自动重试，最多 3 次
+        llm_kwargs["max_retries"] = self.kwargs.get("max_retries", 3)
+
+        # 2. 总超时：默认 600 秒
+        llm_kwargs["timeout"] = self.kwargs.get("timeout", 600.0)
+
+        # 3. 流式块超时：默认 300 秒（覆盖 LangChain 的 120秒默认值）
+        llm_kwargs["stream_chunk_timeout"] = self.kwargs.get("stream_chunk_timeout", 300.0)
         
         target_url = self.base_url or "https://api.openai.com/v1"
         if self.provider == "xai": target_url = "https://api.x.ai/v1"

@@ -144,6 +144,25 @@ def extract_structured_data(
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = json_repair.loads(raw)
         result = StructuredReport(**parsed)
+
+        # 统一 decision 为 BUY/SELL/HOLD（与 signal_processing 对齐）
+        _decision_normalize = {
+            "买入": "BUY", "增持": "BUY", "做多": "BUY", "看多": "BUY",
+            "偏多": "BUY", "看涨": "BUY", "建仓": "BUY", "加仓": "BUY",
+            "卖出": "SELL", "减持": "SELL", "做空": "SELL", "看空": "SELL",
+            "偏空": "SELL", "看跌": "SELL", "减仓": "SELL", "清仓": "SELL",
+            "持有": "HOLD", "观望": "HOLD", "中性": "HOLD", "等待": "HOLD",
+        }
+        if result.decision:
+            upper = result.decision.strip().upper()
+            if upper in ("BUY", "SELL", "HOLD"):
+                pass  # 已标准化
+            elif result.decision.strip() in _decision_normalize:
+                result.decision = _decision_normalize[result.decision.strip()]
+            else:
+                logger.warning(f"无法标准化 decision='{result.decision}'，默认 HOLD")
+                result.decision = "HOLD"
+
         if result.confidence is not None and not (0 <= result.confidence <= 100):
             result.confidence = None
         # 后置校验：目标价与决策方向/当前价矛盾时丢弃

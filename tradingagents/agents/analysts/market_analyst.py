@@ -45,19 +45,27 @@ def create_market_analyst(llm, data_collector=None):
                 data_window = windowed.get("_data_window", "14天")
                 margin_detail = windowed.get("margin_detail", "无数据")
                 orderbook = windowed.get("orderbook", "无数据")
+                consistency_warnings_text = windowed.get("consistency_warnings_text", "")
             else:
                 stock_data, indicators, data_window = await _fetch_direct(ticker, current_date, horizon)
                 margin_detail = "无数据"
                 orderbook = "无数据"
+                consistency_warnings_text = ""
         else:
             stock_data, indicators, data_window = await _fetch_direct(ticker, current_date, horizon)
             margin_detail = "无数据"
             orderbook = "无数据"
+            consistency_warnings_text = ""
 
         indicator_blocks = [
             f"【{ind}】\n{indicators.get(ind, '无数据')}"
             for ind in MARKET_INDICATORS
         ]
+
+        # 数据一致性警告
+        warnings_block = ""
+        if consistency_warnings_text:
+            warnings_block = f"\n\n{consistency_warnings_text}"
 
         messages = [
             SystemMessage(content=system_message + "\n\n请全程使用中文。"),
@@ -68,6 +76,7 @@ def create_market_analyst(llm, data_collector=None):
                 + "\n\n".join(indicator_blocks)
                 + f"\n\n【融资融券明细】\n{margin_detail}"
                 + f"\n\n【五档盘口（实时买卖挂单）】\n{orderbook}"
+                + warnings_block
             )),
         ]
 

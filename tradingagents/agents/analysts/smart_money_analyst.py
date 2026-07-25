@@ -44,6 +44,7 @@ def create_smart_money_analyst(llm, data_collector=None):
             fund_flow_120d = pool.get("fund_flow_120d", "无数据")
             concept_board = pool.get("concept_board", "无数据")
             concept_fund_flow = pool.get("fund_flow_concept", "无数据")
+            consistency_warnings_text = pool.get("consistency_warnings_text", "")
         else:
             from tradingagents.agents.utils.agent_utils import (
                 get_individual_fund_flow, get_lhb_detail, get_indicators,
@@ -71,6 +72,11 @@ def create_smart_money_analyst(llm, data_collector=None):
             concept_board = "无数据"
             concept_fund_flow = "无数据"
 
+        # 数据一致性警告
+        warnings_block = ""
+        if consistency_warnings_text:
+            warnings_block = f"\n\n{consistency_warnings_text}"
+
         messages = [
             SystemMessage(content=(
                 system_message
@@ -90,6 +96,7 @@ def create_smart_money_analyst(llm, data_collector=None):
                 f"【120日主力资金净流向（中长期趋势）】\n{fund_flow_120d}\n\n"
                 f"【个股概念板块归属】\n{concept_board}\n\n"
                 f"【今日概念板块资金流向排名】\n{concept_fund_flow}"
+                + warnings_block
             )),
         ]
 

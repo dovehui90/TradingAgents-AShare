@@ -817,6 +817,122 @@ def _safe(tool, payload: dict) -> Any:
         return f"{getattr(tool, 'name', str(tool))} 调用失败：{type(exc).__name__}: {exc}"
 
 
+def _check_data_consistency(
+    results: Dict[str, Any],
+    df: Optional[pd.DataFrame],
+) -> List[str]:
+    """检查数据内部一致性，返回警告列表。
+
+    检查维度：
+    1. 价格趋势 vs 资金流向方向是否矛盾
+    2. 价格趋势 vs 融资融券方向是否矛盾
+    3. 成交量异常（极低量配合大波动）
+    4. 多个资金数据源方向是否一致
+    """
+    warnings = []
+
+    # ── 1. 价格趋势 vs 资金流向 ──
+    if df is not None and len(df) >= 5:
+        try:
+            recent_close = df["close"].tail(5)
+            price_change = (recent_close.iloc[-1] - recent_close.iloc[0]) / recent_close.iloc[0]
+            price_direction = "up" if price_change > 0.02 else ("down" if price_change < -0.02 else "flat")
+
+            # 检查个股资金流向
+            fund_flow = results.get("fund_flow_individual", "")
+            if fund_flow and isinstance(fund_flow, str) and "净" in fund_flow:
+                flow_lower = fund_flow.lower()
+                has_inflow = any(kw in flow_lower for kw in ["净流入", "净买", "inflow"])
+                has_outflow = any(kw in flow_lower for kw in ["净流出", "净卖", "outflow"])
+
+                if price_direction == "up" and has_outflow:
+                    warnings.append(
+                        f"价格近5日上涨{price_change*100:.1f}%，但资金显示净流出，方向矛盾"
+                    )
+                elif price_direction == "down" and has_inflow:
+                    warnings.append(
+                        f"价格近5日下跌{price_change*100:.1f}%，但资金显示净流入，方向矛盾"
+                    )
+
+            # 检查龙虎榜数据
+            lhb = results.get("lhb", "")
+            if lhb and isinstance(lhb, str) and len(lhb) > 50:
+                lhb_lower = lhb.lower()
+                lhb_sells = any(kw in lhb_lower for kw in ["卖出", "净卖", "减持"])
+                if price_direction == "up" and lhb_sells and price_change > 0.05:
+                    warnings.append(
+                        f"价格近5日强势上涨{price_change*100:.1f}%，但龙虎榜显示卖出为主"
+                    )
+        except Exception:
+            pass
+
+    # ── 2. 融资融券 vs 价格趋势 ──
+    try:
+        margin = results.get("margin_detail", "")
+        if margin and isinstance(margin, str) and df is not None and len(df) >= 5:
+            recent_close = df["close"].tail(5)
+            price_change = (recent_close.iloc[-1] - recent_close.iloc[0]) / recent_close.iloc[0]
+            margin_lower = margin.lower()
+
+            # 融资余额变化
+            margin_up = any(kw in margin_lower for kw in ["融资余额增长", "融资增加", "融资买入"])
+            margin_down = any(kw in margin_lower for kw in ["融资余额下降", "融资减少", "融资卖出"])
+
+            if price_change < -0.03 and margin_up:
+                warnings.append(
+                    f"价格近5日下跌{price_change*100:.1f}%，但融资余额增长，杠杆资金与趋势矛盾"
+                )
+            elif price_change > 0.03 and margin_down:
+                warnings.append(
+                    f"价格近5日上涨{price_change*100:.1f}%，但融资余额下降，杠杆资金在撤退"
+                )
+    except Exception:
+        pass
+
+    # ── 3. 成交量异常 ──
+    if df is not None and len(df) >= 20:
+        try:
+            recent_vol = df["volume"].tail(5).mean()
+            avg_vol = df["volume"].tail(20).mean()
+            if avg_vol > 0:
+                vol_ratio = recent_vol / avg_vol
+                recent_close = df["close"].tail(5)
+                price_change = abs((recent_close.iloc[-1] - recent_close.iloc[0]) / recent_close.iloc[0])
+
+                if vol_ratio < 0.3 and price_change > 0.05:
+                    warnings.append(
+                        f"近5日成交量仅为20日均量的{vol_ratio*100:.0f}%，但价格波动{price_change*100:.1f}%，"
+                        f"低量大波动需警惕"
+                    )
+                elif vol_ratio > 3.0 and price_change < 0.01:
+                    warnings.append(
+                        f"近5日成交量为20日均量的{vol_ratio*100:.0f}%，但价格几乎不动，"
+                        f"放量滞涨需关注"
+                    )
+        except Exception:
+            pass
+
+    # ── 4. 板块资金 vs 个股资金方向 ──
+    try:
+        board_flow = results.get("fund_flow_board", "")
+        individual_flow = results.get("fund_flow_individual", "")
+        if (board_flow and individual_flow and
+            isinstance(board_flow, str) and isinstance(individual_flow, str)):
+            board_in = "净流入" in board_flow
+            board_out = "净流出" in board_flow
+            ind_in = "净流入" in individual_flow
+            ind_out = "净流出" in individual_flow
+
+            if board_in and ind_out:
+                warnings.append("板块资金净流入，但个股资金净流出，个股弱于板块")
+            elif board_out and ind_in:
+                warnings.append("板块资金净流出，但个股资金净流入，个股强于板块（独立行情）")
+    except Exception:
+        pass
+
+    return warnings
+
+
 def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
     """Fetch all data sources in parallel.
 
@@ -972,6 +1088,18 @@ def _fetch_all(ticker: str, trade_date: str) -> Dict[str, Any]:
     else:
         results["concept_resonance"] = None
         results["concept_resonance_text"] = ""
+
+    # ── 数据一致性检查 ──────────────────────────────
+    consistency_warnings = _check_data_consistency(results, df)
+    if consistency_warnings:
+        results["consistency_warnings"] = consistency_warnings
+        results["consistency_warnings_text"] = "⚠ 数据一致性警告：\n" + "\n".join(
+            f"- {w}" for w in consistency_warnings
+        )
+        print(f"  [Consistency] {len(consistency_warnings)} warning(s) for {ticker}")
+    else:
+        results["consistency_warnings"] = []
+        results["consistency_warnings_text"] = ""
 
     print(f"[Timer] Total Data Collection for {ticker} took {time.time() - fetch_start:.2f}s")
     return results

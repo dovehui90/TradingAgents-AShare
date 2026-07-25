@@ -35,24 +35,38 @@ class SignalProcessor:
 
     @staticmethod
     def _extract_confidence(text: str) -> int:
-        """Extract confidence value from VERDICT JSON block in text.
+        """Extract confidence value from VERDICT JSON block or text.
 
-        Returns 0-100 int if found, 0 if unparseable (treats as no-confidence).
+        Priority: VERDICT block > explicit confidence text > default 50.
+        Returns 0-100 int.
         """
+        # 1. 优先从 VERDICT 块提取
         m = re.search(r'<!--\s*VERDICT:\s*(\{.*?\})\s*-->', text or "", re.DOTALL)
-        if not m:
-            return 0
-        try:
-            d = json.loads(m.group(1))
-            raw = d.get("confidence")
-            if raw is None:
+        if m:
+            try:
+                d = json.loads(m.group(1))
+                raw = d.get("confidence")
+                if raw is not None:
+                    v = float(raw)
+                    return int(v) if v > 1.0 else int(v * 100)
                 return 50  # missing field → assume medium confidence
-            v = float(raw)
-            if v > 1.0:
-                return int(v)
-            return int(v * 100)
-        except Exception:
-            return 0
+            except Exception:
+                pass
+
+        # 2. 从正文提取置信度（如"置信度：70%"、"confidence: 75%"）
+        for pattern in (
+            r'置信度[：:]\s*(\d+)\s*%',
+            r'confidence[：:]\s*(\d+)\s*%',
+            r'信心[：:]\s*(\d+)\s*%',
+        ):
+            cm = re.search(pattern, text or "", re.IGNORECASE)
+            if cm:
+                v = int(cm.group(1))
+                if 0 <= v <= 100:
+                    return v
+
+        # 3. 无法提取时返回 0（触发置信度过滤，保守处理）
+        return 0
 
     def process_signal(self, full_signal: str) -> str:
         """Process a trading signal to extract decision, filtering low confidence.
@@ -99,15 +113,23 @@ def _extract_decision_keyword(text: str) -> str | None:
             return None
         direction = str(payload.get("direction", "")).strip().upper()
         direction_map = {
+            # 看多
             "看多": "BUY",
             "偏多": "BUY",
+            "看涨": "BUY",
+            "谨慎看多": "BUY",
             "BULLISH": "BUY",
             "BUY": "BUY",
+            # 看空
             "看空": "SELL",
             "偏空": "SELL",
+            "看跌": "SELL",
             "BEARISH": "SELL",
             "SELL": "SELL",
+            # 中性/持有
             "中性": "HOLD",
+            "持有": "HOLD",
+            "观望": "HOLD",
             "NEUTRAL": "HOLD",
             "HOLD": "HOLD",
             "谨慎": "HOLD",
@@ -123,29 +145,39 @@ def _extract_decision_keyword(text: str) -> str | None:
             "SELL",
             "卖出",
             "减持",
+            "减仓",
             "清仓",
             "空仓",
             "回避",
             "看空",
             "偏空",
+            "看跌",
+            "做空",
         ]
         buy_keywords = [
             "BUY",
             "买入",
             "增持",
+            "加仓",
             "做多",
             "看多",
             "偏多",
+            "看涨",
             "谨慎看多",
             "有条件建仓",
             "条件建仓",
             "建仓",
+            "抄底",
+            "补仓",
         ]
         hold_keywords = [
             "HOLD",
             "观望",
             "持有",
             "中性",
+            "等待",
+            "暂不操作",
+            "按兵不动",
         ]
 
         if any(k in cleaned for k in hold_keywords):
@@ -183,4 +215,4 @@ def _extract_decision_keyword(text: str) -> str | None:
     if decision:
         return decision
 
-    return "UNKNOWN"
+    return None

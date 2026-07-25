@@ -1,5 +1,7 @@
 # Data cache (large, regenerated at runtime — never commit)
 data/yang_yin_cache/
+data/screener_cache/
+data/resonance_cache/
 
 # Docs (local design/plan documents)
 docs/
