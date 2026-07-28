@@ -265,6 +265,22 @@ def analyze_dark_pool(symbol: str, date: str = None) -> Dict[str, Any]:
     mf_data = fetched['mf']
     today_k5 = fetched['k5']
 
+    # ==== 新增：数据验证 ====
+    from api.services.data_validator import validate_analysis_data
+
+    validation = validate_analysis_data(tick, mf_data, today_k5, date)
+
+    if not validation['is_valid']:
+        # 关键数据验证失败，返回错误
+        result['error'] = '; '.join(validation['errors'])
+        if validation['warnings']:
+            result['data_warnings'] = validation['warnings']
+        return result
+
+    # 有警告但不影响分析
+    if validation['warnings']:
+        result['data_warnings'] = validation['warnings']
+
     TOTAL_VOL = int(tick['volume'].sum())
     TOTAL_AMT = int(tick['amount'].sum())
 
