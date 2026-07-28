@@ -236,6 +236,24 @@ def _extract_price_regex(text: Optional[str], price_type: str = "target") -> Opt
             # 看空/看跌方向
             r'下[行看跌][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
             r'看[空跌][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+
+            # ===== 新增：更宽松的匹配模式 =====
+            # "建议目标价位"
+            r'建议目标[价位格][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d+)',
+            # "预计涨至XX元"
+            r'预计[涨上行跌下降][^至到]{0,10}[至到]\s*[¥$]?\s*(\d+\.?\d+)\s*元?',
+            # "看涨目标XX元" - 修正：确保完整匹配价格
+            r'看[涨跌]目标[^：:\n]{0,20}[：:\|]?\s*[¥$]?\s*(\d+\.?\d*)\s*元',
+            # "涨至XX元附近"
+            r'[涨跌升降][至到]\s*[¥$]?\s*(\d+\.?\d*)\s*元?\s*附近',
+            # "目标区间XX-YY元"（取上限）
+            r'目标区间[^：:\n]{0,20}[：:\|]?\s*\d+\.?\d*\s*[-–—~至]\s*[¥$]?\s*(\d+\.?\d*)\s*元?',
+            # "建议入场价格XX-YY元"（取上限）
+            r'建议入场[价格位][^：:\n]{0,20}[：:\|]?\s*\d+\.?\d*\s*[-–—~至]\s*[¥$]?\s*(\d+\.?\d*)\s*元?',
+            # "目标价格"
+            r'目标价[格位]?[^：:\n]{0,30}[：:\|]?\s*[¥$]?\s*(\d+\.?\d*)\s*元',
+            # "盈利目标"
+            r'盈利目标[^：:\n]{0,20}[：:\|]?\s*[¥$]?\s*(\d+\.?\d*)\s*元',
         ]
     else:
         patterns = [
@@ -247,11 +265,31 @@ def _extract_price_regex(text: Optional[str], price_type: str = "target") -> Opt
             r'止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
             r'stop[-\s_]?loss[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
             r'硬止损[^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+
+            # ===== 新增：更宽松的匹配模式 =====
+            # "建议止损价位"
+            r'建议止损[价位格][^：:\n]{0,30}[：:\|]\s*[¥$]?\s*(\d+\.?\d*)',
+            # "止损设在XX元"
+            r'止损设[在于]\s*[¥$]?\s*(\d+\.?\d*)\s*元?',
+            # "跌破XX元止损"
+            r'跌破\s*[¥$]?\s*(\d+\.?\d*)\s*元?\s*止损',
+            # "XX元以下止损"
+            r'[¥$]?\s*(\d+\.?\d*)\s*元?\s*以下止损',
+            # "严格止损XX元"
+            r'严格止损[^：:\n]{0,20}[：:\|]?\s*[¥$]?\s*(\d+\.?\d*)\s*元',
         ]
+
     for p in patterns:
         m = re.search(p, clean, re.IGNORECASE)
         if m:
-            return float(m.group(1))
+            try:
+                price = float(m.group(1))
+                # 基本合理性检查：价格应在0.1-10000之间
+                if 0.1 <= price <= 10000:
+                    return price
+            except (ValueError, IndexError):
+                continue
+
     return None
 
 
@@ -331,6 +369,24 @@ def resolve_report_fields(
     target_price = target_price_override if target_price_override is not None else _extract_price_regex(final_trade_decision, "target")
     if target_price is None:
         target_price = _extract_price_regex(trader_investment_plan, "target")
+        if target_price:
+            logger.info(f"✅ 从trader_investment_plan提取到目标价: {target_price}")
+        else:
+            logger.warning(f"⚠️ 未能从任何来源提取目标价")
+            if trader_investment_plan:
+                logger.debug(f"trader_investment_plan前300字符: {trader_investment_plan[:300]}")
+    else:
+        logger.info(f"✅ 从final_trade_decision提取到目标价: {target_price}")
+
+    stop_loss_price = stop_loss_override if stop_loss_override is not None else _extract_price_regex(final_trade_decision, "stop_loss")
+    if stop_loss_price is None:
+        stop_loss_price = _extract_price_regex(trader_investment_plan, "stop_loss")
+        if stop_loss_price:
+            logger.info(f"✅ 从trader_investment_plan提取到止损价: {stop_loss_price}")
+        else:
+            logger.warning(f"⚠️ 未能从任何来源提取止损价")
+    else:
+        logger.info(f"✅ 从final_trade_decision提取到止损价: {stop_loss_price}")
 
     # 后置校验：从报告中提取当前价，验证目标价与决策方向是否一致
     if target_price is not None and market_report:
