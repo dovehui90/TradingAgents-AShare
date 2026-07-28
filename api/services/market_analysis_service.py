@@ -124,9 +124,50 @@ def _calc_gold_silver_finger(mf: pd.DataFrame) -> pd.DataFrame:
     }, index=mf.index)
 
 
-# 内存缓存 (stock_date -> result, 5分钟TTL)
+# 内存缓存 (stock_date -> result, 差异化TTL)
 _cache: Dict[str, tuple] = {}
-_CACHE_TTL = 300  # 秒
+
+def _get_cache_ttl(analysis_date: str) -> int:
+    """
+    根据分析日期和当前时间动态确定缓存TTL
+
+    策略：
+    - 历史数据（往日）：24小时 - 数据不会变化
+    - 盘后数据（当日15:00后）：30分钟 - 数据基本稳定
+    - 盘中数据（9:30-15:00）：1分钟 - 需快速更新
+    - 盘前数据（其他时间）：10分钟 - 中等更新频率
+    """
+    from datetime import time
+
+    try:
+        target_date = datetime.strptime(analysis_date, '%Y-%m-%d').date()
+    except ValueError:
+        # 日期格式错误，使用默认5分钟
+        return 300
+
+    today = datetime.now().date()
+    current_time = datetime.now().time()
+
+    # 历史数据：24小时缓存
+    if target_date < today:
+        return 86400
+
+    # 当日数据：根据交易时段判断
+    if target_date == today:
+        # 盘后（15:00后）：30分钟缓存
+        if current_time >= time(15, 0):
+            return 1800
+
+        # 盘中（9:30-15:00）：1分钟缓存（快速更新）
+        if time(9, 30) <= current_time <= time(15, 0):
+            return 60
+
+        # 盘前（9:30前）：10分钟缓存
+        if current_time < time(9, 30):
+            return 600
+
+    # 未来日期（不应该出现，但防御性处理）：5分钟缓存
+    return 300
 
 def _parallel_fetch(ak_symbol, full_symbol, date):
     """并行拉取三个数据源"""
@@ -195,11 +236,12 @@ def analyze_dark_pool(symbol: str, date: str = None) -> Dict[str, Any]:
         full_symbol = f'{symbol_raw}.SH'
         ak_symbol = f'sh{symbol_raw}'
 
-    # 检查缓存
+    # 检查缓存（使用动态TTL）
     cache_key = f'{full_symbol}_{date}'
     if cache_key in _cache:
         cached_result, cached_time = _cache[cache_key]
-        if datetime.now().timestamp() - cached_time < _CACHE_TTL:
+        ttl = _get_cache_ttl(date)
+        if datetime.now().timestamp() - cached_time < ttl:
             return cached_result
 
     result = {
@@ -521,81 +563,50 @@ def analyze_dark_pool(symbol: str, date: str = None) -> Dict[str, Any]:
         'events': dark_events,
     }
 
-    # ==== 综合 ====
-    conf = 0
-    signals = []
-
-    if inst_net > 0 and full_pct < 0:
-        signals.append('机构逆势净买')
-        conf += 3
-    elif inst_net > 0:
-        signals.append('机构顺势净买')
-        conf += 2
-    elif inst_net < 0 and full_pct > 0:
-        signals.append('机构逆势净卖')
-        conf -= 3
-    elif inst_net < 0:
-        signals.append('机构顺势净卖')
-        conf -= 2
-
-    if tail_pct > 0 and tail_vol_ratio > 10:
-        signals.append('尾盘放量买入')
-        conf += 2
-    elif tail_pct < -0.3 and tail_vol_ratio > 10:
-        signals.append('尾盘放量卖出')
-        conf -= 2
+    # ==== 综合评分：使用组合规则引擎 ====
+    from api.services.signal_combination_engine import evaluate_signal_combinations
 
     # 拆单净方向
     split_net = active_vol - passive_vol
     split_ratio = split_vol / TOTAL_VOL * 100 if TOTAL_VOL > 0 else 0
 
-    if passive_vol > active_vol * 1.5:
-        signals.append('拆单偏卖')
-        conf -= 2
-    elif active_vol > passive_vol * 1.5:
-        signals.append('拆单偏买')
-        conf += 2
+    # 准备市场数据
+    market_data = {
+        'inst_net': inst_net,
+        'split_net': split_net,
+        'split_ratio': split_ratio,
+        'full_pct': day_chg_pct,
+        'tail_pct': tail_pct,
+        'tail_vol_ratio': tail_vol_ratio,
+        'high_conf_count': len(high_conf),
+        'active_vol': active_vol,
+        'passive_vol': passive_vol,
+    }
 
-    if len(high_conf) > 0:
-        buy_conf = sum(1 for e in high_conf if e['dir'] == '买盘')
-        sell_conf = sum(1 for e in high_conf if e['dir'] == '卖盘')
-        signals.append(f'暗盘{buy_conf}买{sell_conf}卖')
-        if buy_conf > sell_conf: conf += 2
-        elif sell_conf > buy_conf: conf -= 2
+    # 调用组合规则引擎
+    combo_result = evaluate_signal_combinations(market_data)
 
-    # 明暗一致性：机构净流向 vs 拆单净流向
-    inst_bullish = inst_net > 0
-    inst_bearish = inst_net < 0
-    split_bullish = split_net > 0
-    split_bearish = split_net < 0
-    significant_split = split_ratio > 1.0  # 拆单占比 >1% 才纳入明暗判断
+    # 使用引擎结果
+    conf = combo_result['total_score']
+    verdict = combo_result['verdict']
 
-    if significant_split:
-        if inst_bullish and split_bullish:
-            signals.append('明暗同向看多')
-            conf += 3
-        elif inst_bearish and split_bearish:
-            signals.append('明暗同向看空')
-            conf -= 3
-        elif inst_bullish and split_bearish:
-            signals.append('明买暗卖（警惕对倒）')
-            conf -= 1
-        elif inst_bearish and split_bullish:
-            signals.append('明卖暗买（疑似暗吸）')
-            conf += 1
+    # 整合信号列表（包含触发的规则名称）
+    signals = [rule['name'] for rule in combo_result['triggered_rules']]
 
-    if conf >= 5: verdict = '强烈偏多'
-    elif conf >= 2: verdict = '中性偏多'
-    elif conf >= -1: verdict = '中性/观望'
-    elif conf >= -4: verdict = '中性偏空'
-    else: verdict = '偏空'
+    # 如果有警告，添加到信号列表
+    if combo_result.get('warning'):
+        signals.append(f"⚠️ {combo_result['warning']}")
 
-    # ==== 主力意图推断 ====
+    # ==== 主力意图推断（保持原有逻辑）====
     dark_buy = sum(e['vol'] for e in events_unique if e.get('quality_score', 0) >= 6 and e['dir'] == '买盘')
     dark_sell = sum(e['vol'] for e in events_unique if e.get('quality_score', 0) >= 6 and e['dir'] == '卖盘')
     has_dark = len(high_conf) > 0 or len(suspected) > 0
     dark_bullish = split_net > 0
     dark_bearish = split_net < 0
+
+    inst_bullish = inst_net > 0
+    inst_bearish = inst_net < 0
+    significant_split = split_ratio > 1.0
 
     # 主力意图（四象限：明面机构 × 暗面拆单）
     if has_dark and inst_bullish and dark_bullish:
@@ -617,38 +628,55 @@ def analyze_dark_pool(symbol: str, date: str = None) -> Dict[str, Any]:
     else:
         intent_narrative = '机构动向不明确，多空力量均衡，建议观望。'
 
-    # 短期预测
-    if conf >= 5:
-        if inst_net > 0:
-            prediction = '短期偏多，若明日继续放量可确认反转，关注开盘量能。'
-        else:
-            prediction = '短期偏多，信号共振强烈，关注次日能否高开确认。'
+    # 短期预测（基于新评分系统）
+    max_confidence = combo_result.get('max_confidence', 50)
+
+    if conf >= 8:
+        prediction = f'短期强烈看多（置信度{max_confidence}%），多维度信号共振，建议积极关注。'
+    elif conf >= 5:
+        prediction = f'短期偏多（置信度{max_confidence}%），若明日继续放量可确认反转。'
     elif conf >= 2:
         prediction = '短期中性偏多，有建仓迹象但力度不够，需观察1-2日确认。'
     elif conf >= -1:
         prediction = '短期方向不明，多空信号混杂，建议观望等待更明确信号。'
     elif conf >= -4:
         prediction = '短期中性偏空，有撤退痕迹但未形成趋势，注意风控。'
+    elif conf >= -7:
+        prediction = f'短期偏空（置信度{max_confidence}%），多重信号看跌，建议减仓。'
     else:
-        prediction = '短期偏空，多重信号共振看跌，建议减仓或回避。'
+        prediction = f'短期强烈看空（置信度{max_confidence}%），建议回避或止损。'
 
-    # 关键数据摘要
+    # 关键数据摘要（增强版）
     key_facts = []
+
+    # 机构资金
     inst_label = f'机构净主动{inst_net:+.0f}万'
-    if (inst_net > 0 and full_pct < 0) or (inst_net < 0 and full_pct > 0):
+    if (inst_net > 0 and day_chg_pct < 0) or (inst_net < 0 and day_chg_pct > 0):
         inst_label += '（逆势）'
     key_facts.append(inst_label)
+
+    # 涨跌幅
     key_facts.append(f'全日{day_chg_pct:+.2f}%')
+
+    # 暗盘拆单
     if has_dark:
         dark_label = f'暗盘拆单{dark_buy}手买/{dark_sell}手卖'
         if significant_split:
             if (inst_bullish and dark_bullish) or (inst_bearish and dark_bearish):
-                dark_label += '（明暗一致）'
+                dark_label += '（明暗一致✓）'
             elif (inst_bullish and dark_bearish) or (inst_bearish and dark_bullish):
                 dark_label += '（明暗背离⚠️）'
         key_facts.append(dark_label)
+
+    # 尾盘异动
     if tail_vol_ratio > 8:
         key_facts.append(f'尾盘占比{tail_vol_ratio:.0f}%{tail_pct:+.2f}%')
+
+    # 添加触发的组合规则（最高置信度的一个）
+    if combo_result['triggered_rules']:
+        top_rule = max(combo_result['triggered_rules'], key=lambda x: x['confidence'])
+        if top_rule['rule_id'] != 'fallback':  # 不显示基础评分
+            key_facts.append(f"📊 {top_rule['name']}（{top_rule['confidence']}%）")
 
     result['composite'] = {
         'signals': signals,
@@ -657,6 +685,8 @@ def analyze_dark_pool(symbol: str, date: str = None) -> Dict[str, Any]:
         'intent': intent_narrative,
         'prediction': prediction,
         'key_facts': key_facts,
+        'max_confidence': max_confidence,  # 新增：最高置信度
+        'triggered_rules': combo_result['triggered_rules'],  # 新增：触发的规则详情
     }
 
     # 基础行情
