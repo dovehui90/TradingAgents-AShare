@@ -82,6 +82,25 @@ class GraphSetup:
         self.conditional_logic = conditional_logic
         self.data_collector = data_collector
 
+        # 模型分层策略：关键任务使用深度推理模型
+        self.ANALYST_MODEL_MAPPING = {
+            # 快速模型（数据密集型，简单处理）
+            'market': 'quick',
+            'social': 'quick',
+            'news': 'quick',
+            'macro': 'quick',
+
+            # 深度模型（复杂推理任务）
+            'smart_money': 'deep',
+            'volume_price': 'deep',
+            'fundamentals': 'deep',
+        }
+
+    def _get_llm_for_analyst(self, analyst_type: str):
+        """根据分析师类型返回合适的LLM模型"""
+        use_deep = self.ANALYST_MODEL_MAPPING.get(analyst_type, 'quick') == 'deep'
+        return self.deep_thinking_llm if use_deep else self.quick_thinking_llm
+
     def setup_graph(
         self, selected_analysts=["market", "social", "news", "fundamentals", "macro", "smart_money"],
         checkpointer=None
@@ -111,49 +130,49 @@ class GraphSetup:
 
         if "market" in selected_analysts:
             analyst_nodes["market"] = factories["create_market_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("market"), self.data_collector
             )
             tool_nodes["market"] = self.tool_nodes["market"]
             done_nodes["market"] = analyst_done_node
 
         if "social" in selected_analysts:
             analyst_nodes["social"] = factories["create_social_media_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("social"), self.data_collector
             )
             tool_nodes["social"] = self.tool_nodes["social"]
             done_nodes["social"] = analyst_done_node
 
         if "news" in selected_analysts:
             analyst_nodes["news"] = factories["create_news_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("news"), self.data_collector
             )
             tool_nodes["news"] = self.tool_nodes["news"]
             done_nodes["news"] = analyst_done_node
 
         if "fundamentals" in selected_analysts:
             analyst_nodes["fundamentals"] = factories["create_fundamentals_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("fundamentals"), self.data_collector
             )
             tool_nodes["fundamentals"] = self.tool_nodes["fundamentals"]
             done_nodes["fundamentals"] = analyst_done_node
 
         if "macro" in selected_analysts:
             analyst_nodes["macro"] = factories["create_macro_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("macro"), self.data_collector
             )
             tool_nodes["macro"] = self.tool_nodes["macro"]
             done_nodes["macro"] = analyst_done_node
 
         if "smart_money" in selected_analysts:
             analyst_nodes["smart_money"] = factories["create_smart_money_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("smart_money"), self.data_collector
             )
             tool_nodes["smart_money"] = self.tool_nodes["smart_money"]
             done_nodes["smart_money"] = analyst_done_node
 
         if "volume_price" in selected_analysts:
             analyst_nodes["volume_price"] = factories["create_volume_price_analyst"](
-                self.quick_thinking_llm, self.data_collector
+                self._get_llm_for_analyst("volume_price"), self.data_collector
             )
             tool_nodes["volume_price"] = self.tool_nodes["volume_price"]
             done_nodes["volume_price"] = analyst_done_node
