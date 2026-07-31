@@ -142,6 +142,22 @@ def server_reset_code(ssh_client):
     print("  git: " + out.replace("\n", "\n  git: "))
 
 
+def install_dependencies(ssh_client):
+    """安装 Python 依赖"""
+    print("  安装依赖...")
+    stdin, stdout, stderr = ssh_client.exec_command(
+        f"cd {REMOTE_DIR} && "
+        f"/usr/local/bin/python3.10 -m pip install -r requirements.txt --quiet 2>&1"
+    )
+    out = stdout.read().decode().strip()
+    err = stderr.read().decode().strip()
+    if out:
+        print(f"    {out[-200:]}")
+    if err and "error" in err.lower():
+        print(f"    [WARN] {err[-200:]}")
+    print("  [OK] 依赖安装完成")
+
+
 def kill_backend(ssh_client):
     """停止后端服务 — 三级强制清理 + 端口验证
 
@@ -478,6 +494,7 @@ def main():
             print(">>> 服务器更新代码...")
             kill_backend(client)
             server_reset_code(client)
+            install_dependencies(client)
             start_backend(client)
 
     finally:

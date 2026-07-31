@@ -25,3 +25,6 @@ markdown
 easytrader
 beautifulsoup4
 lxml
+# 问财数据获取（涨停原因题材串）
+git+https://github.com/shaw-baobao/iwencai-cli.git
+playwright
