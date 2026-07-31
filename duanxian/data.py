@@ -290,8 +290,9 @@ def get_theme_reasons(date: str) -> str:
             hot = tags.most_common(12)
             return f"{date} 涨停题材串热度 TOP（问财 OpenAPI）：" + "、".join(f"{t}×{c}" for t, c in hot)
 
-        # 降级：尝试 iwencai-cli
+        # 降级：尝试 iwencai-cli 或 playwright
         try:
+            # 优先尝试 iwencai-cli
             from . import iwencai_fetcher
             reasons_cli, err_cli = iwencai_fetcher.fetch_zt_reasons_via_cli(_ymd(date))
             if reasons_cli:
@@ -304,9 +305,27 @@ def get_theme_reasons(date: str) -> str:
                 hot = tags.most_common(12)
                 return f"{date} 涨停题材串热度 TOP（iwencai-cli）：" + "、".join(f"{t}×{c}" for t, c in hot)
             else:
-                logger.warning(f"iwencai-cli 也失败了: {err_cli}")
+                logger.warning(f"iwencai-cli 失败: {err_cli}")
         except Exception as cli_exc:
             logger.warning(f"iwencai-cli 调用异常: {cli_exc}")
+
+        # 最后尝试 playwright 直接访问
+        try:
+            from . import iwencai_simple
+            reasons_pw, err_pw = iwencai_simple.fetch_zt_reasons_via_playwright(_ymd(date))
+            if reasons_pw:
+                tags = Counter()
+                for r in reasons_pw.values():
+                    for t in r.split("+"):
+                        t = t.strip()
+                        if t:
+                            tags[t] += 1
+                hot = tags.most_common(12)
+                return f"{date} 涨停题材串热度 TOP（playwright）：" + "、".join(f"{t}×{c}" for t, c in hot)
+            else:
+                logger.warning(f"playwright 也失败了: {err_pw}")
+        except Exception as pw_exc:
+            logger.warning(f"playwright 调用异常: {pw_exc}")
 
         # 最终降级
         return _degrade_msg("题材涨停原因", date, f"涨停原因题材串未取到：{err}")
