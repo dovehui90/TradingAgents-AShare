@@ -15,6 +15,7 @@ import Thanks from './pages/Thanks'
 import Admin from './pages/Admin'
 import Briefing from './pages/Briefing'
 import Screener from './pages/Screener'
+import DailyReview from './pages/DailyReview'
 import { useAuthStore } from './stores/authStore'
 
 const ONLINE_HOST = 'app.510168.xyz'
@@ -76,6 +77,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/analysis" element={<Analysis />} />
+                  <Route path="/daily-review" element={<DailyReview />} />
                   <Route path="/screener" element={<RequireAdmin><Screener /></RequireAdmin>} />
                   <Route path="/briefing" element={<RequireAdmin><Briefing /></RequireAdmin>} />
                   {!isMobile && (
