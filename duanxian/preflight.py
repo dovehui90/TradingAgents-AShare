@@ -15,10 +15,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from . import data
 from .util import is_degraded_report
+
+logger = logging.getLogger(__name__)
 
 # (标签, `data` 里的取数函数名, 是不是核心)
 #
@@ -64,11 +67,18 @@ def check(date: str) -> dict:
 
     返回 `{"ok": bool, "missing_core": [...], "missing_optional": [...], "warnings": [...]}`。
     `ok=False` 表示**不该跑** —— 由调用方拒绝并把 `missing_core` 告诉用户。
+
+    非交易日自动使用上一个交易日的数据。
     """
-    # 第一道：这一场还没收盘 → 拿到的必然是盘中半成品（实测 09:35 只有 18 家涨停，
-    # 收盘是 81 家），而复盘要的是定稿数据。这条不看内容、只看日期，因为
-    # 盘中数据**是"有内容"的**，靠内容判断分不出来。
+    # 第一道：检查日期，非交易日自动使用上一个交易日
     from . import trade_calendar
+
+    # 非交易日自动使用上一个交易日
+    if trade_calendar.is_weekend(date) or not trade_calendar.is_settled(date):
+        last_dates = trade_calendar.last_trade_dates(1)
+        if last_dates:
+            date = last_dates[-1]
+            logger.info(f"非交易日，自动使用上一个交易日: {date}")
 
     if not trade_calendar.is_settled(date):
         return {"ok": False, "missing_core": [f"{date} 还没收盘"],

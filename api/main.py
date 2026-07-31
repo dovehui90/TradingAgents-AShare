@@ -426,14 +426,26 @@ class ReviewChatRequest(BaseModel):
 
 @app.post("/v1/review/run")
 async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTasks):
-    """触发每日复盘（异步执行）"""
+    """触发每日复盘（异步执行）
+
+    非交易日自动使用上一个交易日的数据。
+    """
     from duanxian.util import china_today, validate_trade_date
+    from duanxian import trade_calendar
 
     trade_date = request.trade_date or china_today()
     try:
         trade_date = validate_trade_date(trade_date)
     except ValueError as e:
         raise HTTPException(400, f"日期错误: {e}")
+
+    # 非交易日自动使用上一个交易日
+    if trade_calendar.is_weekend(trade_date) or not trade_calendar.is_settled(trade_date):
+        last_dates = trade_calendar.last_trade_dates(1)
+        if last_dates:
+            prev_date = last_dates[-1]
+            logger.info(f"{trade_date} 非交易日或未收盘，自动使用上一个交易日: {prev_date}")
+            trade_date = prev_date
 
     with _review_lock:
         if _review_state["running"]:
@@ -475,10 +487,20 @@ async def get_review_status():
 
 @app.get("/v1/review/latest")
 async def get_latest_review(trade_date: Optional[str] = None):
-    """获取最新复盘结果"""
+    """获取最新复盘结果
+
+    非交易日自动返回上一个交易日的结果。
+    """
     from duanxian.util import china_today
+    from duanxian import trade_calendar
 
     date = trade_date or china_today()
+
+    # 非交易日自动使用上一个交易日
+    if trade_calendar.is_weekend(date) or not trade_calendar.is_settled(date):
+        last_dates = trade_calendar.last_trade_dates(1)
+        if last_dates:
+            date = last_dates[-1]
 
     # 先检查内存中的结果
     with _review_lock:
