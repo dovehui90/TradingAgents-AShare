@@ -141,9 +141,9 @@ export default function DailyReview() {
 
   // 情绪指标卡片
   const EmotionCard = ({ label, value, status: s }: { label: string; value: string; status?: string }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-      <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="text-2xl font-bold mt-1">{value}</div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 md:p-4 border border-gray-200 dark:border-gray-700">
+      <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="text-lg md:text-2xl font-bold mt-1">{value}</div>
       {s && (
         <div className={`text-xs mt-1 ${s === '亢奋' ? 'text-red-500' : s === '退潮' ? 'text-green-500' : 'text-yellow-500'}`}>
           {s}
@@ -154,12 +154,12 @@ export default function DailyReview() {
 
   // 报告区块
   const ReportSection = ({ title, content }: { title: string; content: string }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <Activity className="w-5 h-5 text-blue-500" />
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 md:p-6 border border-gray-200 dark:border-gray-700">
+      <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4 flex items-center gap-2">
+        <Activity className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
         {title}
       </h3>
-      <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+      <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-xs md:text-sm leading-relaxed">
         {content || '暂无数据，请先运行复盘'}
       </div>
     </div>
@@ -182,56 +182,57 @@ export default function DailyReview() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* 页面标题和操作栏 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <TrendingUp className="w-7 h-7 text-blue-500" />
+          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 md:w-7 md:h-7 text-blue-500" />
             短线复盘
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1">
             A股短线情绪分析 · 五分析师收敛 · 每日复盘看板
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* 状态指示 */}
           {status.running && (
             <div className="flex items-center gap-2 text-blue-500">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">复盘运行中...</span>
+              <span className="text-sm">运行中...</span>
             </div>
           )}
           {status.error && (
             <div className="flex items-center gap-2 text-red-500">
               <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm">出错: {status.error}</span>
+              <span className="text-sm">出错</span>
             </div>
           )}
           {/* 运行按钮 */}
           <button
             onClick={handleRunReview}
             disabled={status.running}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
           >
             {status.running ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                运行中...
+                <span className="hidden md:inline">运行中...</span>
               </>
             ) : (
               <>
                 <Play className="w-4 h-4" />
-                运行复盘
+                <span className="hidden md:inline">运行复盘</span>
+                <span className="md:hidden">运行</span>
               </>
             )}
           </button>
           <button
             onClick={loadReview}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
           >
             <RefreshCw className="w-4 h-4" />
-            刷新
+            <span className="hidden md:inline">刷新</span>
           </button>
         </div>
       </div>
@@ -245,8 +246,8 @@ export default function DailyReview() {
       )}
 
       {/* Tab 导航 */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex gap-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <nav className="flex gap-4 md:gap-6 min-w-max">
           {[
             { key: 'overview', label: '总览' },
             { key: 'sentiment', label: '情绪面' },
@@ -259,7 +260,7 @@ export default function DailyReview() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
-              className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+              className={`py-2 md:py-3 px-1 border-b-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-blue-500 text-blue-500'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -304,9 +305,9 @@ export default function DailyReview() {
 
               {/* 外围市场 */}
               {overseas?.available && Array.isArray(overseas.indices) && overseas.indices.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <h3 className="font-semibold mb-3">隔夜外围</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 md:p-4 border border-gray-200 dark:border-gray-700">
+                  <h3 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">隔夜外围</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-xs md:text-sm">
                     {overseas.indices.map((item: {name?: string; price?: string | number; change_pct?: string | number}, idx: number) => (
                       <div key={idx}>
                         <span className="text-gray-500">{item.name || '--'}: </span>
@@ -317,9 +318,9 @@ export default function DailyReview() {
                     ))}
                   </div>
                   {Array.isArray(overseas.mag7) && overseas.mag7.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <h4 className="text-sm font-medium mb-2">美股七姐妹</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <h4 className="text-xs md:text-sm font-medium mb-2">美股七姐妹</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-xs md:text-sm">
                         {overseas.mag7.map((item: {name?: string; price?: string | number; change_pct?: string | number}, idx: number) => (
                           <div key={idx}>
                             <span className="text-gray-500">{item.name || '--'}: </span>
@@ -360,27 +361,27 @@ export default function DailyReview() {
       )}
 
       {/* 对话区 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="font-semibold mb-4">💬 复盘对话</h3>
-        <div className="flex gap-3">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 md:p-6 border border-gray-200 dark:border-gray-700">
+        <h3 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">💬 复盘对话</h3>
+        <div className="flex gap-2 md:gap-3">
           <input
             type="text"
             value={chatQuestion}
             onChange={e => setChatQuestion(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleChat()}
-            placeholder="基于复盘数据提问，例如：明天应该关注哪些方向？"
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="基于复盘数据提问..."
+            className="flex-1 px-3 md:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
           <button
             onClick={handleChat}
             disabled={chatLoading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="px-3 md:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors text-sm"
           >
             {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '发送'}
           </button>
         </div>
         {chatAnswer && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg prose dark:prose-invert max-w-none text-sm">
+          <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg prose dark:prose-invert max-w-none text-xs md:text-sm">
             {chatAnswer}
           </div>
         )}

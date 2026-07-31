@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, Bell, BellOff, ChevronDown, LogOut, Megaphone, Menu, Monitor, Moon, Newspaper, Settings, SlidersHorizontal, Sun, X } from 'lucide-react'
+import { Activity, Bell, BellOff, ChevronDown, LogOut, Megaphone, Menu, Monitor, Moon, Newspaper, Settings, SlidersHorizontal, Sun, TrendingUp, X } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/services/api'
@@ -142,6 +142,10 @@ export default function Header() {
                                     <button onClick={() => { navigate('/analysis'); setMobileMenuOpen(false) }}
                                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
                                         <Activity className="w-4 h-4" />智能分析
+                                    </button>
+                                    <button onClick={() => { navigate('/daily-review'); setMobileMenuOpen(false) }}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
+                                        <TrendingUp className="w-4 h-4" />短线复盘
                                     </button>
                                 </div>
                             )}
