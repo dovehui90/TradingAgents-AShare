@@ -2,29 +2,77 @@
 
 本模块使用 iwencai-cli 通过 Playwright 驱动 Chrome 访问问财网页，
 无需 API Key，免费获取涨停原因类别等数据。
+
+缓存策略：同一天的数据只获取一次，缓存到本地文件。
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import logging
 from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# 缓存目录
+_CACHE_DIR = os.path.expanduser("~/.duanxian-agents/cache/iwencai")
 
-def fetch_zt_reasons_via_cli(date: str) -> Tuple[Dict[str, str], Optional[str]]:
+
+def _get_cache_path(date: str) -> str:
+    """获取缓存文件路径"""
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+    return os.path.join(_CACHE_DIR, f"{date}.json")
+
+
+def _load_cache(date: str) -> Optional[Dict[str, str]]:
+    """从缓存加载数据"""
+    cache_path = _get_cache_path(date)
+    if not os.path.exists(cache_path):
+        return None
+
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict) and "reasons" in data:
+                return data["reasons"]
+    except Exception as e:
+        logger.warning(f"读取缓存失败: {e}")
+
+    return None
+
+
+def _save_cache(date: str, reasons: Dict[str, str]) -> None:
+    """保存数据到缓存"""
+    cache_path = _get_cache_path(date)
+    try:
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump({"reasons": reasons, "date": date}, f, ensure_ascii=False, indent=2)
+        logger.info(f"已缓存 {len(reasons)} 只股票的涨停原因到 {cache_path}")
+    except Exception as e:
+        logger.warning(f"保存缓存失败: {e}")
+
+
+def fetch_zt_reasons_via_cli(date: str, force_refresh: bool = False) -> Tuple[Dict[str, str], Optional[str]]:
     """通过 iwencai-cli 获取涨停原因类别
 
     Args:
         date: 日期，格式为 'YYYYMMDD'
+        force_refresh: 是否强制刷新缓存
 
     Returns:
         Tuple[Dict[str, str], Optional[str]]:
             - 第一个元素: {股票代码前6位: 涨停原因} 的字典
             - 第二个元素: 错误信息，成功时为 None
     """
+    # 尝试从缓存加载
+    if not force_refresh:
+        cached = _load_cache(date)
+        if cached:
+            logger.info(f"从缓存加载 {len(cached)} 只股票的涨停原因")
+            return cached, None
+
     try:
         # 构造查询语句
         year = date[:4]
@@ -84,6 +132,9 @@ def fetch_zt_reasons_via_cli(date: str) -> Tuple[Dict[str, str], Optional[str]]:
 
         if not reasons:
             return {}, "未找到涨停原因数据"
+
+        # 保存到缓存
+        _save_cache(date, reasons)
 
         logger.info(f"成功获取 {len(reasons)} 只股票的涨停原因")
         return reasons, None
