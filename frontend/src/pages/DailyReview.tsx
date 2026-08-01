@@ -109,8 +109,11 @@ export default function DailyReview() {
   // 运行复盘
   const handleRunReview = async () => {
     try {
+      // 乐观更新：立即显示运行状态，避免按钮状态延迟
+      setStatus({ running: true, last_date: null, error: null })
       await api.post('/v1/review/run', {})
-      // 开始轮询状态
+      // 立刻检查一次状态，再开始轮询
+      await loadStatus()
       const interval = setInterval(async () => {
         await loadStatus()
         const currentStatus = await api.get('/v1/review/status') as ReviewStatus
@@ -121,6 +124,7 @@ export default function DailyReview() {
       }, 3000)
     } catch (err) {
       console.error('运行复盘失败:', err)
+      setStatus({ running: false, last_date: null, error: '启动复盘失败，请重试' })
     }
   }
 
