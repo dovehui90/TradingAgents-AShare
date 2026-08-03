@@ -107,11 +107,8 @@ def _report_version_stats() -> None:
 
     def _send():
         try:
-            requests.post(
-                "https://app.510168.xyz/api/version-stats",
-                json={"v": APP_VERSION, "nonce": uuid.uuid4().hex},
-                timeout=30,
-            )
+            # 自部署实例：跳过版本统计上报
+            pass
         except Exception as e:
             logger.warning(f"[operation] failed: {e}", exc_info=True)
 

@@ -274,7 +274,7 @@ export default function Login() {
                         GitHub
                     </a>
                     {' '}&middot;{' '}
-                    <a href="https://app.510168.xyz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300">
+                    <a href={window.location.origin} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300">
                         官网
                     </a>
                 </p>

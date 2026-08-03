@@ -18,15 +18,6 @@ import Screener from './pages/Screener'
 import DailyReview from './pages/DailyReview'
 import { useAuthStore } from './stores/authStore'
 
-const ONLINE_HOST = 'app.510168.xyz'
-const isOnline = typeof window !== 'undefined' && window.location.hostname === ONLINE_HOST
-
-function ExternalRedirect({ to, fallback }: { to: string; fallback: JSX.Element }) {
-  if (isOnline) return fallback
-  window.location.href = to
-  return null
-}
-
 function useIsMobile() {
   const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   useEffect(() => {
@@ -68,8 +59,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/sponsor" element={<ExternalRedirect to={`https://${ONLINE_HOST}/sponsor`} fallback={<Sponsor />} />} />
-        <Route path="/thanks" element={<ExternalRedirect to={`https://${ONLINE_HOST}/thanks`} fallback={<Thanks />} />} />
+        <Route path="/sponsor" element={<Sponsor />} />
+        <Route path="/thanks" element={<Thanks />} />
         <Route
           path="*"
           element={
