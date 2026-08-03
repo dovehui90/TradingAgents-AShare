@@ -462,7 +462,13 @@ async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTask
             _project_dir = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
             _sys.path.insert(0, _project_dir)
             from vibe_main import run as vibe_run
+            from duanxian import review_store
             result, pre = vibe_run(trade_date)
+            # 落盘
+            try:
+                review_store.save(review_store.serialize(result, trade_date, pre["warnings"]), trade_date)
+            except Exception:
+                pass
             with _review_lock:
                 _review_state["last_result"] = result
                 _review_state["last_date"] = trade_date
