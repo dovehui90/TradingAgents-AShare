@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import re
+import requests
 
 import traceback
 from contextlib import asynccontextmanager
