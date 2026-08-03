@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Newspaper, RefreshCw, AlertCircle, Bell, Eye, Briefcase, Lightbulb, TrendingUp, DollarSign, BarChart3, Activity, Zap, Landmark } from 'lucide-react'
 import DapanDianJin from '@/components/DapanDianJin'
 import OpportunityBoard from '@/components/OpportunityBoard'
@@ -22,6 +22,7 @@ export default function Briefing() {
     const [yangYinHistory, setYangYinHistory] = useState<YangYinHistoryPoint[]>([])
     const [goldFingerHistory, setGoldFingerHistory] = useState<GoldFingerPoint[]>([])
     const [redGreenBgHistory, setRedGreenBgHistory] = useState<RedGreenBgPoint[]>([])
+    const briefingPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     useEffect(() => {
         api.listBriefings(60).then(res => {
@@ -88,16 +89,73 @@ export default function Briefing() {
     }, [])
 
     useEffect(() => {
+        // Clear any existing poll
+        if (briefingPollRef.current) {
+            clearInterval(briefingPollRef.current)
+            briefingPollRef.current = null
+        }
+
+        let cancelled = false
         setLoading(true)
         setError(null)
         setBriefing(null)
+
+        const pollUntilComplete = () => {
+            briefingPollRef.current = setInterval(async () => {
+                try {
+                    const result = await api.getBriefing(selectedDate)
+                    if (cancelled) return
+                    if (result.status === 'completed') {
+                        clearInterval(briefingPollRef.current!)
+                        briefingPollRef.current = null
+                        setBriefing(result)
+                        setLoading(false)
+                    } else if (result.status === 'failed') {
+                        clearInterval(briefingPollRef.current!)
+                        briefingPollRef.current = null
+                        setBriefing(result)
+                        setLoading(false)
+                        setError(result.error || '生成失败')
+                    }
+                    // Keep polling for 'running' / 'pending'
+                } catch {
+                    // Keep polling on network errors
+                }
+            }, 3000)
+        }
+
         api.getBriefing(selectedDate)
-            .then(setBriefing)
-            .catch(err => setError(err.message))
-            .finally(() => setLoading(false))
+            .then(result => {
+                if (cancelled) return
+                if (result.status === 'running' || result.status === 'pending') {
+                    setBriefing(result)
+                    setLoading(false)
+                    pollUntilComplete()
+                } else {
+                    setBriefing(result)
+                    setLoading(false)
+                }
+            })
+            .catch(err => {
+                if (!cancelled) setError(err.message)
+                setLoading(false)
+            })
+
+        return () => {
+            cancelled = true
+            if (briefingPollRef.current) {
+                clearInterval(briefingPollRef.current)
+                briefingPollRef.current = null
+            }
+        }
     }, [selectedDate])
 
     const handleRegenerate = async () => {
+        // Clear any existing poll
+        if (briefingPollRef.current) {
+            clearInterval(briefingPollRef.current)
+            briefingPollRef.current = null
+        }
         setLoading(true)
         setError(null)
         try {
@@ -171,8 +229,16 @@ export default function Briefing() {
                 </div>
             )}
 
+            {/* Running — server still generating, auto-polling */}
+            {!loading && briefing && (briefing.status === 'running' || briefing.status === 'pending') && (
+                <div className="flex items-center justify-center py-20">
+                    <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                    <span className="ml-3 text-slate-500">盘前速递生成中，正在自动等待完成...</span>
+                </div>
+            )}
+
             {/* Error */}
-            {error && !loading && (
+            {error && !loading && (briefing?.status !== 'running' && briefing?.status !== 'pending') && (
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/30">
                     <AlertCircle className="mr-2 inline h-4 w-4" />
                     {error}
