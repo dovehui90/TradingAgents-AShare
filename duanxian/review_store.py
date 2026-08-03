@@ -189,4 +189,14 @@ def serialize(final: dict, date: str, extra_warnings: list[str] | None = None) -
         "macro_sector": macro,
         "reflection": reflection.latest_reflection(),   # 反思闭环：上期命中回看
         "analysts": analysts,
+        # 保留原始字段，兼容前端直接从文件读取
+        "sentiment_report": final.get("sentiment_report", ""),
+        "capital_report": final.get("capital_report", ""),
+        "theme_report": final.get("theme_report", ""),
+        "dragon_tiger_report": final.get("dragon_tiger_report", ""),
+        "leader_report": final.get("leader_report", ""),
+        "macro_sector_report": final.get("macro_sector_report", ""),
+        "tomorrow_focus": final.get("tomorrow_focus", ""),
+        "focus_struct": final.get("focus_struct"),
+        "past_context": final.get("past_context", ""),
     }
