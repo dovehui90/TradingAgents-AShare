@@ -86,9 +86,12 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
     const parseAndDispatch = (event: StreamEvent) => {
         const { event: eventName, data } = event
         switch (eventName) {
-            case 'job.ready':
+            case 'job.ready': {
                 setIsConnected(true)
+                const readyJobId = String(data.job_id || '')
+                if (readyJobId) setCurrentJobId(readyJobId)
                 break
+            }
             case 'job.created': {
                 const jobId = String(data.job_id || '')
                 const sym = String(data.symbol || '')
@@ -229,6 +232,47 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
         } catch {}
     }
 
+    const recoverInterruptedJob = async () => {
+        const { currentJobId } = useAnalysisStore.getState()
+        if (!currentJobId) return false
+
+        for (let attempt = 0; attempt < 60; attempt += 1) {
+            try {
+                const status = await api.getJobStatus(currentJobId)
+
+                if (status.status === 'completed') {
+                    const result = await api.getJobResult(currentJobId)
+                    setReportAndStructuredData(
+                        (result.result || null) as AnalysisReport | null,
+                        {
+                            riskItems: (result as any).risk_items,
+                            keyMetrics: (result as any).key_metrics,
+                            confidence: (result as any).confidence as number | null,
+                            targetPrice: (result as any).target_price as number | null,
+                            stopLoss: (result as any).stop_loss_price as number | null,
+                        },
+                    )
+                    setAnalysisRunState('completed')
+                    setIsAnalyzing(false)
+                    setIsConnected(false)
+                    return true
+                }
+
+                if (status.status === 'failed') {
+                    setAnalysisRunState('failed', status.error || '分析失败')
+                    setIsAnalyzing(false)
+                    setIsConnected(false)
+                    return true
+                }
+            } catch {
+                // 轮询中忽略网络错误
+            }
+            await new Promise(resolve => setTimeout(resolve, 3000))
+        }
+
+        return false
+    }
+
     const handleStartAnalysis = async () => {
         const finalPrompt = prompt.trim() || `分析 ${symbol} 今日走势`
         const customPrompt = localStorage.getItem('ta-custom-prompt')?.trim() || ''
@@ -244,8 +288,19 @@ export default function AnalysisConsole({ symbol, onShowReport, onOpenDebate, se
 
         try {
             await streamChat(fullPrompt)
-        } catch {
-            setAnalysisRunState('failed', '分析请求失败，请重试')
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'unknown error'
+            const shouldRecover = /network|fetch|stream|sse|body/i.test(errorMessage)
+            if (shouldRecover) {
+                const recovered = await recoverInterruptedJob()
+                if (!recovered) {
+                    setAnalysisRunState('failed', '分析请求中断，请重试')
+                }
+            } else {
+                setAnalysisRunState('failed', '分析请求失败，请重试')
+            }
+            setIsAnalyzing(false)
+            setIsConnected(false)
         } finally {
             setStreaming(false)
         }

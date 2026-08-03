@@ -193,7 +193,7 @@ export default function ChatCopilotPanel({ onSymbolDetected, onShowReport, initi
 
         pushSystem(`分析流中断，正在回查任务状态：${currentJobId}`)
 
-        for (let attempt = 0; attempt < 8; attempt += 1) {
+        for (let attempt = 0; attempt < 60; attempt += 1) {
             const status = await api.getJobStatus(currentJobId)
 
             if (status.status === 'completed') {
@@ -236,7 +236,7 @@ export default function ChatCopilotPanel({ onSymbolDetected, onShowReport, initi
                 return true
             }
 
-            await sleep(1500)
+            await sleep(3000)
         }
 
         return false
@@ -272,13 +272,16 @@ export default function ChatCopilotPanel({ onSymbolDetected, onShowReport, initi
     const parseAndDispatch = (event: StreamEvent) => {
         const { event: eventName, data } = event
         switch (eventName) {
-            case 'job.ready':
+            case 'job.ready': {
                 setIsConnected(true)
+                const readyJobId = String(data.job_id || '')
+                if (readyJobId) setCurrentJobId(readyJobId)
                 // 把 typing indicator 换成"解析中"提示，告知用户正在识别标的
                 if (typingIndicatorIdRef.current) {
                     setMessageContent(typingIndicatorIdRef.current, '__parsing__')
                 }
                 break
+            }
             case 'job.created': {
                 const jobId = String(data.job_id || '')
                 const symbol = String(data.symbol || '')
