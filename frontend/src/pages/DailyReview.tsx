@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Activity, Play, RefreshCw, TrendingUp, AlertTriangle, CheckCircle, Clock, Loader2 } from 'lucide-react'
 import { api } from '@/services/api'
 
@@ -60,6 +60,7 @@ export default function DailyReview() {
   const [chatQuestion, setChatQuestion] = useState('')
   const [chatAnswer, setChatAnswer] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const reviewPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // 加载最新复盘数据
   const loadReview = useCallback(async () => {
@@ -103,7 +104,13 @@ export default function DailyReview() {
 
     // 轮询状态
     const statusInterval = setInterval(loadStatus, 5000)
-    return () => clearInterval(statusInterval)
+    return () => {
+      clearInterval(statusInterval)
+      if (reviewPollRef.current) {
+        clearInterval(reviewPollRef.current)
+        reviewPollRef.current = null
+      }
+    }
   }, [loadReview, loadStatus, loadOverseas])
 
   // 运行复盘
@@ -114,11 +121,14 @@ export default function DailyReview() {
       await api.post('/v1/review/run', {})
       // 立刻检查一次状态，再开始轮询
       await loadStatus()
-      const interval = setInterval(async () => {
+      // 清除旧轮询，避免泄漏
+      if (reviewPollRef.current) clearInterval(reviewPollRef.current)
+      reviewPollRef.current = setInterval(async () => {
         await loadStatus()
         const currentStatus = await api.get('/v1/review/status') as ReviewStatus
         if (!currentStatus.running) {
-          clearInterval(interval)
+          clearInterval(reviewPollRef.current!)
+          reviewPollRef.current = null
           await loadReview()
         }
       }, 3000)
