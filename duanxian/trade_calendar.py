@@ -77,6 +77,12 @@ def trade_dates_ending_at(end_date: str, n: int = 10) -> list[str]:
         datetime.datetime.strptime(end_date, "%Y-%m-%d") - datetime.timedelta(days=n * 3 + 16)
     ).strftime("%Y-%m-%d")
     dates = [d for d in _ref_dates(start, end_date) if d <= end_date]
+    # 已收盘的今天，但 akshare 历史 K 线数据源还来不及更新（收盘后约 1h 内）
+    # 此时 _ref_dates 没有今天，但实时行情已确认。手动补上，避免情绪周期等
+    # 依赖交易日窗口的计算退化成前一天的结果。
+    settled = latest_session()
+    if settled and end_date == settled and (not dates or dates[-1] != settled):
+        dates.append(settled)
     # 未收盘的今天不算「已定稿」，与 last_trade_dates 口径保持一致
     if dates and dates[-1] == china_today() and not is_a_share_closed():
         dates = dates[:-1]
