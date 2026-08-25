@@ -1,9 +1,9 @@
-"""LLM 配置 —— 兼容主系统 TA_* 环境变量和 MiMo 配置。
+"""LLM 配置 —— 统一读取主系统 DEFAULT_CONFIG，兼容 MiMo 环境变量回退。
 
-优先级：
-1. 环境变量 MIMO_* 或 TA_*
-2. ~/.config/mimo/mimo.env 文件
-3. 主系统 .env 文件中的 TA_* 变量
+优先级（make_llm 的 config 参数 > DEFAULT_CONFIG > 环境变量回退）：
+1. 调用方传入的 config dict（来自设置页 UserLLMConfigDB）
+2. tradingagents.default_config.DEFAULT_CONFIG（读 TA_* 环境变量）
+3. ~/.config/mimo/mimo.env 文件（兜底兼容）
 
 quick 档 = deepseek-v4-flash（快，跑分析师这种高频节点）
 deep  档 = deepseek-v4-pro（推理模型，准，跑综合裁判这种收敛节点）
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any, Optional
 
 from dotenv import dotenv_values
 from langchain_openai import ChatOpenAI
@@ -26,8 +27,14 @@ _PROJECT_ENV = Path(__file__).parent.parent / ".env"
 
 _CREDS: dict[str, str] | None = None
 
-# quick / deep 两档模型名。deep 优先用环境里的 MIMO_MODEL（默认 pro）。
-QUICK_MODEL = "deepseek-v4-flash"
+
+def _get_default(key: str, fallback: str = "") -> str:
+    """从 DEFAULT_CONFIG 读取默认值，确保与主系统一致。"""
+    try:
+        from tradingagents.default_config import DEFAULT_CONFIG
+        return DEFAULT_CONFIG.get(key, fallback)
+    except ImportError:
+        return fallback
 
 
 def _ensure_mimo_loaded() -> None:
@@ -80,35 +87,41 @@ def _ensure_mimo_loaded() -> None:
     _CREDS = creds
 
 
-def make_llm(deep: bool = False, temperature: float = 0.6):
+def make_llm(deep: bool = False, temperature: float = 0.6, config: Optional[dict[str, Any]] = None):
     """构造复盘用的 LLM
 
     Args:
         deep: 是否使用深度模型（用于裁判）
         temperature: 温度参数
+        config: 可选的统一配置 dict（来自设置页 UserLLMConfigDB），
+                优先级高于 DEFAULT_CONFIG 和环境变量
     """
     kind = cli_llm.wanted_kind()
     if kind:
         return cli_llm.make_cli_llm(deep=deep)
 
-    _ensure_mimo_loaded()
-    assert _CREDS is not None
-
-    base_url = _CREDS.get("MIMO_BASE_URL") or "https://api.deepseek.com/v1"
-    api_key = _CREDS["MIMO_API_KEY"]
-
-    # 根据 API 提供商选择模型
-    if deep:
-        # 深度模型：优先用配置的，否则根据 base_url 判断
-        model = _CREDS.get("MIMO_MODEL")
-        if not model:
-            if "deepseek" in base_url.lower():
-                model = "deepseek-v4-pro"
-            else:
-                model = "mimo-v2.5-pro"
+    # 优先使用传入的 config（设置页配置），否则用 DEFAULT_CONFIG
+    if config:
+        base_url = config.get("backend_url") or _get_default("backend_url", "https://api.deepseek.com/v1")
+        api_key = config.get("api_key") or ""
+        if deep:
+            model = config.get("deep_think_llm") or _get_default("deep_think_llm", "deepseek-v4-pro")
+        else:
+            model = config.get("quick_think_llm") or _get_default("quick_think_llm", "deepseek-v4-flash")
     else:
-        # 快速模型
-        model = QUICK_MODEL
+        # 回退到 DEFAULT_CONFIG（读 TA_* 环境变量）
+        _ensure_mimo_loaded()
+        assert _CREDS is not None
+
+        base_url = _CREDS.get("MIMO_BASE_URL") or _get_default("backend_url", "https://api.deepseek.com/v1")
+        api_key = _CREDS["MIMO_API_KEY"]
+
+        if deep:
+            model = _CREDS.get("MIMO_MODEL")
+            if not model:
+                model = _get_default("deep_think_llm", "deepseek-v4-pro")
+        else:
+            model = _get_default("quick_think_llm", "deepseek-v4-flash")
 
     return ChatOpenAI(
         model=model,

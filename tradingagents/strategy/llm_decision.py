@@ -393,22 +393,17 @@ def run_decision(
 
 
 def _create_default_client():
-    """从环境变量创建默认LLM客户端，返回 LangChain ChatModel 实例"""
-    try:
-        from dotenv import load_dotenv
-        for env_path in [".env", "../.env", "../../.env"]:
-            if os.path.exists(env_path):
-                load_dotenv(env_path, override=True)
-                break
-    except ImportError:
-        pass
+    """从 DEFAULT_CONFIG 创建默认LLM客户端，返回 LangChain ChatModel 实例。
 
+    优先使用 DEFAULT_CONFIG（读 TA_* 环境变量），确保与主系统配置一致。
+    """
+    from tradingagents.default_config import DEFAULT_CONFIG
     from tradingagents.llm_clients.factory import create_llm_client
 
-    provider = os.environ.get("TA_LLM_PROVIDER", "deepseek")
-    model = os.environ.get("TA_LLM_DEEP", "deepseek-v4-pro")
-    base_url = os.environ.get("TA_BASE_URL", "https://api.deepseek.com/v1")
-    api_key = os.environ.get("TA_API_KEY", "")
+    provider = DEFAULT_CONFIG.get("llm_provider", "deepseek")
+    model = DEFAULT_CONFIG.get("deep_think_llm", "deepseek-v4-pro")
+    base_url = DEFAULT_CONFIG.get("backend_url", "https://api.deepseek.com/v1")
+    api_key = DEFAULT_CONFIG.get("api_key", "")
 
     client = create_llm_client(
         provider=provider,

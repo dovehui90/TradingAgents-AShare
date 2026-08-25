@@ -423,7 +423,7 @@ class ReviewChatRequest(BaseModel):
     trade_date: Optional[str] = None
 
 @app.post("/v1/review/run")
-async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTasks):
+async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTasks, http_request: Request):
     """触发每日复盘（异步执行）
 
     非交易日自动使用上一个交易日的数据。
@@ -451,6 +451,18 @@ async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTask
         _review_state["running"] = True
         _review_state["error"] = None
 
+    # 从请求中提取用户ID
+    user_id = None
+    try:
+        auth_header = http_request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            payload = auth_service.decode_access_token(token)
+            if payload:
+                user_id = payload.get("sub")
+    except Exception:
+        pass
+
     def _run():
         try:
             # 动态导入避免循环依赖
@@ -460,7 +472,9 @@ async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTask
             _sys.path.insert(0, _project_dir)
             from vibe_main import run as vibe_run
             from duanxian import review_store
-            result, pre = vibe_run(trade_date)
+            # 构建统一配置（读取用户设置页配置）
+            merged_config = _build_runtime_config({}, user_id=user_id)
+            result, pre = vibe_run(trade_date, config=merged_config)
             # 落盘
             try:
                 review_store.save(review_store.serialize(result, trade_date, pre["warnings"]), trade_date)
@@ -531,8 +545,15 @@ async def get_review_dates():
     return {"dates": _list_review_dates()}
 
 @app.post("/v1/review/chat")
-async def review_chat(request: ReviewChatRequest):
+async def review_chat(request: ReviewChatRequest, http_request: Request):
     """复盘对话"""
+    # 确保项目根目录在 sys.path 中
+    import sys as _sys
+    import os as _os
+    _project_dir = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _project_dir not in _sys.path:
+        _sys.path.insert(0, _project_dir)
+
     from duanxian.util import china_today
     from duanxian.config import make_llm
     from langchain_core.messages import HumanMessage, SystemMessage
@@ -559,8 +580,22 @@ async def review_chat(request: ReviewChatRequest):
 
 请基于以上数据回答用户问题。"""
 
+    # 从请求中提取用户ID，构建统一配置
+    user_id = None
     try:
-        llm = make_llm()
+        auth_header = http_request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            payload = auth_service.decode_access_token(token)
+            if payload:
+                user_id = payload.get("sub")
+    except Exception:
+        pass
+
+    merged_config = _build_runtime_config({}, user_id=user_id)
+
+    try:
+        llm = make_llm(config=merged_config)
         response = llm.invoke([
             SystemMessage(content=context),
             HumanMessage(content=request.question),
@@ -988,9 +1023,15 @@ def _build_runtime_config(overrides: Dict[str, Any], user_id: Optional[str] = No
     with _config_override_lock:
         if _global_config_overrides:
             config = _deep_merge(config, dict(_global_config_overrides))
-    
+
     # Fetch user specific overrides from DB (pass db to reuse caller's session)
     user_overrides = _user_config_overrides(user_id, db=db)
+    if user_id and user_overrides:
+        logger.info(f"[config] 用户 {user_id} 配置: provider={user_overrides.get('llm_provider')}, quick={user_overrides.get('quick_think_llm')}, deep={user_overrides.get('deep_think_llm')}")
+    elif user_id:
+        logger.info(f"[config] 用户 {user_id} 无自定义配置，使用默认")
+    else:
+        logger.info(f"[config] 无用户上下文，使用默认配置")
 
     # ── Critical: Filter out empty strings before merging ──
     # This prevents an empty DB field from wiping out an Env Var default.

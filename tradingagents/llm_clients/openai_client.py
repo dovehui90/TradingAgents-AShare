@@ -36,6 +36,10 @@ class UnifiedChatOpenAI(ChatOpenAI):
         if self._is_moonshot_model(model, base_url):
             kwargs["temperature"] = 1
 
+        # 3. stream_chunk_timeout 不是所有提供商都支持，移除避免报错
+        #    这个参数是 LangChain 特定的，但会被传递到底层 OpenAI 客户端
+        kwargs.pop("stream_chunk_timeout", None)
+
         super().__init__(**kwargs)
 
     def invoke(self, input: Any, config: Any = None, **kwargs: Any) -> Any:
@@ -96,26 +100,29 @@ class OpenAIClient(BaseLLMClient):
         # 3. 流式块超时：默认 300 秒（覆盖 LangChain 的 120秒默认值）
         llm_kwargs["stream_chunk_timeout"] = self.kwargs.get("stream_chunk_timeout", 300.0)
         
-        target_url = self.base_url or "https://api.openai.com/v1"
-        if self.provider == "xai": target_url = "https://api.x.ai/v1"
-        elif self.provider == "openrouter": target_url = "https://openrouter.ai/api/v1"
-        elif self.provider == "ollama": target_url = "http://localhost:11434/v1"
-        
+        # Provider-specific default URLs (only used if user didn't provide base_url)
+        _PROVIDER_DEFAULTS = {
+            "xai": "https://api.x.ai/v1",
+            "openrouter": "https://openrouter.ai/api/v1",
+            "ollama": "http://localhost:11434/v1",
+        }
+        # User-provided base_url takes priority; fall back to provider default
+        target_url = self.base_url or _PROVIDER_DEFAULTS.get(self.provider) or "https://api.openai.com/v1"
+
         print(f"[LLM Client] Init {self.provider} ({self.model}) at {target_url} (Retries=0, Timeout={llm_kwargs['timeout']}s)")
 
-        if self.provider == "xai":
-            llm_kwargs["base_url"] = "https://api.x.ai/v1"
+        # Set base_url (user-provided or provider default)
+        llm_kwargs["base_url"] = target_url
+
+        # API key: user-provided via kwargs takes priority; fall back to provider-specific env vars
+        if self.provider == "xai" and "api_key" not in self.kwargs:
             api_key = os.environ.get("XAI_API_KEY")
             if api_key: llm_kwargs["api_key"] = api_key
-        elif self.provider == "openrouter":
-            llm_kwargs["base_url"] = "https://openrouter.ai/api/v1"
+        elif self.provider == "openrouter" and "api_key" not in self.kwargs:
             api_key = os.environ.get("OPENROUTER_API_KEY")
             if api_key: llm_kwargs["api_key"] = api_key
-        elif self.provider == "ollama":
-            llm_kwargs["base_url"] = "http://localhost:11434/v1"
+        elif self.provider == "ollama" and "api_key" not in self.kwargs:
             llm_kwargs["api_key"] = "ollama"
-        elif self.base_url:
-            llm_kwargs["base_url"] = self.base_url
 
         # Pass remaining keys
         for key in ("api_key", "callbacks", "reasoning_effort"):

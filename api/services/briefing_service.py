@@ -1989,13 +1989,34 @@ async def _generate_trading_advice(
         }
 
 
-async def _call_briefing_llm(prompt: str) -> str:
-    """Call LLM for briefing sub-reports. Returns cleaned text content."""
+async def _call_briefing_llm(prompt: str, user_id: Optional[str] = None, db: Optional[Session] = None) -> str:
+    """Call LLM for briefing sub-reports. Returns cleaned text content.
+
+    优先读取用户设置页配置（UserLLMConfigDB），回退到 DEFAULT_CONFIG。
+    """
     from tradingagents.default_config import DEFAULT_CONFIG
     provider = DEFAULT_CONFIG["llm_provider"]
     model = DEFAULT_CONFIG["quick_think_llm"]
     base_url = DEFAULT_CONFIG["backend_url"]
     api_key = DEFAULT_CONFIG["api_key"]
+
+    # 读取用户设置页配置
+    if user_id and db:
+        llm_config = db.query(UserLLMConfigDB).filter(UserLLMConfigDB.user_id == user_id).first()
+        if llm_config:
+            provider = llm_config.llm_provider or provider
+            model = llm_config.quick_think_llm or llm_config.deep_think_llm or model
+            base_url = llm_config.backend_url or base_url
+            if llm_config.api_key_encrypted:
+                from api.services.auth_service import decrypt_secret
+                db_api_key = decrypt_secret(llm_config.api_key_encrypted)
+                if db_api_key:
+                    api_key = db_api_key
+            logger.info(f"[briefing] 使用用户配置: provider={provider}, model={model}, base_url={base_url}")
+        else:
+            logger.info(f"[briefing] 用户无配置，使用默认: provider={provider}, model={model}")
+    else:
+        logger.info(f"[briefing] 无用户上下文，使用默认: provider={provider}, model={model}")
 
     provider_map = {"deepseek": "openai", "zhipu": "openai", "moonshot": "openai"}
     mapped_provider = provider_map.get(provider.lower(), provider.lower())
@@ -2016,7 +2037,7 @@ async def _call_briefing_llm(prompt: str) -> str:
     return content
 
 
-async def _generate_opportunity_report(market_data: dict, top_news: list) -> dict:
+async def _generate_opportunity_report(market_data: dict, top_news: list, user_id: Optional[str] = None, db: Optional[Session] = None) -> dict:
     """Generate pre-market opportunity report: concept mining + leader stock prediction."""
 
     # Build US sector performance summary
@@ -2076,7 +2097,7 @@ async def _generate_opportunity_report(market_data: dict, top_news: list) -> dic
         sector_fund_flow=sff_summary,
     )
 
-    content = await _call_briefing_llm(prompt)
+    content = await _call_briefing_llm(prompt, user_id=user_id, db=db)
     try:
         import json
         parsed = json.loads(content)
@@ -2085,7 +2106,7 @@ async def _generate_opportunity_report(market_data: dict, top_news: list) -> dic
         return {"raw_content": content, "热点预测": [], "综述": "AI解析失败，请查看原始内容"}
 
 
-async def _generate_sentiment_report(market_data: dict) -> dict:
+async def _generate_sentiment_report(market_data: dict, user_id: Optional[str] = None, db: Optional[Session] = None) -> dict:
     """Generate overnight global market sentiment recap briefing (300 chars max)."""
 
     # US indices
@@ -2140,7 +2161,7 @@ async def _generate_sentiment_report(market_data: dict) -> dict:
         commodities=commodities_str,
     )
 
-    content = await _call_briefing_llm(prompt)
+    content = await _call_briefing_llm(prompt, user_id=user_id, db=db)
     try:
         import json
         parsed = json.loads(content)
@@ -2149,7 +2170,7 @@ async def _generate_sentiment_report(market_data: dict) -> dict:
         return {"raw_content": content, "核心结论": "AI解析失败，请查看原始内容"}
 
 
-async def _generate_news_briefing(market_data: dict, top_news: list) -> dict:
+async def _generate_news_briefing(market_data: dict, top_news: list, user_id: Optional[str] = None, db: Optional[Session] = None) -> dict:
     """Generate top-3 market-moving news briefing from past 12h global financial news."""
 
     gn_lines = []
@@ -2178,7 +2199,7 @@ async def _generate_news_briefing(market_data: dict, top_news: list) -> dict:
         announcements=announcements_str,
     )
 
-    content = await _call_briefing_llm(prompt)
+    content = await _call_briefing_llm(prompt, user_id=user_id, db=db)
     try:
         import json
         parsed = json.loads(content)
@@ -2297,9 +2318,9 @@ async def generate_briefing(db: Session, user_id: str, date_str: str, force: boo
         )
 
         # Phase 4: LLM generate 3 new briefing panels in parallel
-        opp_task = _generate_opportunity_report(market_data, top_news)
-        sent_task = _generate_sentiment_report(market_data)
-        news_brief_task = _generate_news_briefing(market_data, top_news)
+        opp_task = _generate_opportunity_report(market_data, top_news, user_id=user_id, db=db)
+        sent_task = _generate_sentiment_report(market_data, user_id=user_id, db=db)
+        news_brief_task = _generate_news_briefing(market_data, top_news, user_id=user_id, db=db)
 
         opportunity_report, sentiment_report, news_briefing = await asyncio.gather(
             opp_task, sent_task, news_brief_task, return_exceptions=True,

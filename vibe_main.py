@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 import time
+from typing import Any, Optional
 
 from duanxian import preflight, reflection, review_store
 from duanxian.llm_errors import LlmConfigError
@@ -32,8 +33,12 @@ def initial_state(trade_date: str) -> dict:
     }
 
 
-def run(trade_date: str) -> tuple[dict, dict]:
+def run(trade_date: str, config: Optional[dict[str, Any]] = None) -> tuple[dict, dict]:
     """跑一场复盘。返回 (图的产物, 体检结果)。
+
+    Args:
+        trade_date: 交易日 YYYY-MM-DD
+        config: 可选的统一配置 dict（来自设置页 UserLLMConfigDB）
 
     ⚠️ 体检结果必须**跟着返回**：落盘要把它的 warnings 带上，而那行在 `main()` 里。
     只在这里赋值给局部变量的话，`main()` 用它就是 NameError —— 而且是在
@@ -46,7 +51,7 @@ def run(trade_date: str) -> tuple[dict, dict]:
     for w in pre["warnings"]:
         print(f"⚠️ {w}")
 
-    graph = build_review_graph()
+    graph = build_review_graph(config=config)
     return graph.invoke(initial_state(trade_date), {"recursion_limit": 50}), pre
 
 

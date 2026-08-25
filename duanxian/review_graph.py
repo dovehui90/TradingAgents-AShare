@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Any, Optional
+
 from langgraph.graph import END, START, StateGraph
 
 from .config import make_llm
@@ -25,8 +27,11 @@ def _join_analysts(state: dict) -> dict:
     return {}
 
 
-def build_review_graph():
+def build_review_graph(config: Optional[dict[str, Any]] = None):
     """构建复盘图。
+
+    Args:
+        config: 可选的统一配置 dict（来自设置页 UserLLMConfigDB）
 
     优化后的执行流程：
     1. START → 5个分析师（并行执行）
@@ -34,8 +39,8 @@ def build_review_graph():
     3. 复盘裁判 → 综合所有报告
     4. END
     """
-    quick = make_llm(deep=False)   # 五个分析师
-    deep = make_llm(deep=True)     # 复盘裁判
+    quick = make_llm(deep=False, config=config)   # 五个分析师
+    deep = make_llm(deep=True, config=config)     # 复盘裁判
 
     g = StateGraph(DuanxianReviewState)
 

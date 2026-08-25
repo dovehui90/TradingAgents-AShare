@@ -112,7 +112,7 @@ def extract_structured_data(
         from tradingagents.llm_clients import create_llm_client
 
         client = create_llm_client(
-            provider=config.get("llm_provider", "openai"),
+            provider=config.get("llm_provider", "deepseek"),
             model=config.get("quick_think_llm", "deepseek-v4-flash"),
             base_url=config.get("backend_url"),
             api_key=config.get("api_key"),

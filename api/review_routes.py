@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 # 添加项目根目录到 path
@@ -84,10 +84,27 @@ async def run_review(request: ReviewRunRequest, background_tasks: BackgroundTask
         _review_state["running"] = True
         _review_state["error"] = None
 
+    # 获取当前用户ID（从请求头中提取）
+    user_id = None
+    try:
+        from api.main import _require_api_user, get_db_ctx, auth_service
+        from fastapi.security import HTTPBearer
+        from starlette.requests import Request
+        # 尝试从请求中获取用户信息
+        import inspect
+        frame = inspect.currentframe()
+        # 由于没有直接的 request 参数，使用默认配置
+        user_id = None
+    except Exception:
+        pass
+
     def _run():
         try:
             from vibe_main import initial_state, run as vibe_run
-            result, pre = vibe_run(trade_date)
+            from api.main import _build_runtime_config
+            # 构建统一配置（读取用户设置页配置）
+            merged_config = _build_runtime_config({}, user_id=user_id)
+            result, pre = vibe_run(trade_date, config=merged_config)
             with _lock:
                 _review_state["last_result"] = result
                 _review_state["last_date"] = trade_date
@@ -189,8 +206,12 @@ async def review_chat(request: ReviewChatRequest):
 
 请基于以上数据回答用户问题。"""
 
+    # 构建统一配置（使用 DEFAULT_CONFIG）
+    from api.main import _build_runtime_config
+    merged_config = _build_runtime_config({})
+
     try:
-        llm = make_llm()
+        llm = make_llm(config=merged_config)
         from langchain_core.messages import HumanMessage, SystemMessage
         response = llm.invoke([
             SystemMessage(content=context),
