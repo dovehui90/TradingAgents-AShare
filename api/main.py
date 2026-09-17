@@ -269,6 +269,9 @@ async def lifespan(app: FastAPI):
     import threading as _th
     _th.Thread(target=_build_concept_cache, daemon=True).start()
 
+    # Pre-warm screener K-line cache in background (avoid stalling screener requests)
+    _th.Thread(target=_warm_screener_cache, daemon=True).start()
+
     # 自动检测源码变更 → 重建衍生数据（阳谱/金银手指/红绿背景）
     try:
         from tradingagents.yang_yin.auto_rebuild import check_and_rebuild
@@ -3352,8 +3355,55 @@ def _build_concept_cache():
         _os.environ['NO_PROXY'] = old_no_proxy
         _os.environ['no_proxy'] = old_no_proxy_lower
 
-def _compute_screener_signals(code: str) -> Optional[dict]:
-    """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow)."""
+
+def _warm_screener_cache():
+    """Background task: pre-warm screener K-line cache for all A-share candidates.
+
+    Runs at startup (daemon thread) so screener requests only ever read local
+    parquet caches and never stall on slow realtime fetches.
+    """
+    import logging
+    _log = logging.getLogger(__name__).info
+    from tradingagents.screener.cache import build_screener_cache, cached_symbol_count
+
+    stock_map = _get_reverse_stock_map_cached_only()
+    if not stock_map:
+        _log("[ScreenerCache] Stock map not warmed yet; skip warm.")
+        return
+
+    # 候选 A 股（与 stock_screener Phase 1 一致：剔除非6位代码、非A股前缀、科创板688、ST）
+    codes: list[str] = []
+    for sym in stock_map:
+        code_part = sym.split(".")[0]
+        if len(code_part) != 6 or not code_part.isdigit():
+            continue
+        if not code_part.startswith(("0", "3", "6")):
+            continue
+        if code_part.startswith("688"):
+            continue
+        name = stock_map.get(sym, "")
+        if "ST" in name.upper():
+            continue
+        codes.append(_normalize_symbol(sym))
+
+    if not codes:
+        _log("[ScreenerCache] No A-share candidates found; skip warm.")
+        return
+
+    _log(f"[ScreenerCache] Warming cache for {len(codes)} candidates (currently {cached_symbol_count()} cached)...")
+    try:
+        build_screener_cache(codes, max_workers=8)
+        _log(f"[ScreenerCache] Warm done: {cached_symbol_count()} cached.")
+    except Exception as e:
+        _log(f"[ScreenerCache] Warm failed: {e}")
+
+
+def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Optional[dict]:
+    """Compute all indicator signals for one stock from pipeline cache (fast) or API (slow).
+
+    fetch_if_missing=False（默认，screener 用）：只读本地缓存，缓存缺失直接跳过，
+    绝不在请求内触发慢速实时抓取；缺的缓存交给后台预热线程补齐。
+    """
     import numpy as _np
     from tradingagents.indicators.niuxiong_line import (
         calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
@@ -3366,8 +3416,10 @@ def _compute_screener_signals(code: str) -> Optional[dict]:
     # Use screener cache (standalone, does not touch 大盘点金)
     try:
         from tradingagents.screener.cache import get_kline
-        df = get_kline(symbol, days=250)
+        df = get_kline(symbol, days=250, fetch_if_missing=fetch_if_missing)
     except Exception:
+        if not fetch_if_missing:
+            return None
         try:
             from tradingagents.indicators import fetch_realtime_data
             df = fetch_realtime_data(symbol, days=250, period="daily")
@@ -3635,13 +3687,12 @@ def stock_screener(
         except Exception as e:
             logger.debug(f"[row lookup] failed: {e}", exc_info=True)
 
-    # ── Phase 3.5: Warm screener cache if cold ──
+    # ── Phase 3.5: Warm screener cache in background if cold ──
     from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
     if cached_symbol_count() < 100:
-        # First run: build cache for all candidates
-        cache_symbols = codes
-        logger.info(f"[screener] Cold cache, warming {len(cache_symbols)} stocks...")
-        build_screener_cache(cache_symbols, max_workers=8)
+        logger.info(f"[screener] Cold cache, warming {len(codes)} stocks in background...")
+        import threading as _th
+        _th.Thread(target=build_screener_cache, args=(list(codes),), kwargs={"max_workers": 8}, daemon=True).start()
 
     # ── Phase 4: Parallel compute indicators (all eligible stocks) ──
     max_compute = len(codes)

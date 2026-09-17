@@ -38,8 +38,12 @@ def _is_stale(path: Path) -> bool:
     return age > _CACHE_TTL_NIGHT
 
 
-def get_kline(symbol: str, days: int = 250) -> Optional[pd.DataFrame]:
-    """Get K-line data from cache, or fetch + cache if stale or missing."""
+def get_kline(symbol: str, days: int = 250, fetch_if_missing: bool = True) -> Optional[pd.DataFrame]:
+    """Get K-line data from cache, or fetch + cache if stale or missing.
+
+    fetch_if_missing=False 时只读缓存，缓存缺失/过期直接返回 None，绝不触发网络抓取。
+    （screener 用它，避免冷缓存时请求被慢速实时抓取拖垮。）
+    """
     path = _cache_path(symbol)
 
     if not _is_stale(path):
@@ -49,6 +53,10 @@ def get_kline(symbol: str, days: int = 250) -> Optional[pd.DataFrame]:
                 return df.tail(days)
         except Exception as e:
             logger.warning(f"[file read] failed: {e}", exc_info=True)
+
+    if not fetch_if_missing:
+        return None
+
     # Fetch fresh data
     from tradingagents.indicators import fetch_realtime_data
 
@@ -83,7 +91,7 @@ def build_screener_cache(symbols: list[str], max_workers: int = 8):
                     updated += 1
             except Exception as e:
                 logger.debug(f"[operation] failed: {e}", exc_info=True)
-            logger.info(f"Screener cache updated: {updated}/{len(symbols)} stocks")
+    logger.info(f"Screener cache updated: {updated}/{len(symbols)} stocks")
     return updated
 
 
