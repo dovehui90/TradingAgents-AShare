@@ -3392,7 +3392,9 @@ def _warm_screener_cache():
 
     _log(f"[ScreenerCache] Warming cache for {len(codes)} candidates (currently {cached_symbol_count()} cached)...")
     try:
-        build_screener_cache(codes, max_workers=8)
+        # 限速：tushare adj_factor 限流 200次/分钟，2 并发约 60-120次/min 在配额内
+        # （8 并发会瞬间打爆配额 → 限流刷屏 + 反复重试，反而拖垮 screener 请求）
+        build_screener_cache(codes, max_workers=2)
         _log(f"[ScreenerCache] Warm done: {cached_symbol_count()} cached.")
     except Exception as e:
         _log(f"[ScreenerCache] Warm failed: {e}")
@@ -3692,7 +3694,7 @@ def stock_screener(
     if cached_symbol_count() < 100:
         logger.info(f"[screener] Cold cache, warming {len(codes)} stocks in background...")
         import threading as _th
-        _th.Thread(target=build_screener_cache, args=(list(codes),), kwargs={"max_workers": 8}, daemon=True).start()
+        _th.Thread(target=build_screener_cache, args=(list(codes),), kwargs={"max_workers": 2}, daemon=True).start()
 
     # ── Phase 4: Parallel compute indicators (all eligible stocks) ──
     max_compute = len(codes)
