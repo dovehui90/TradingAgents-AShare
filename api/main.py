@@ -630,6 +630,7 @@ logger.info("✓ Vibe-Astock 复盘路由已加载")
 # ── A-share stock name → code cache ──────────────────────────────────────────
 _cn_stock_map: Optional[Dict[str, str]] = None  # name -> "XXXXXX.SH/SZ"
 _cn_stock_reverse_map: Optional[Dict[str, str]] = None  # code -> name
+_cn_a_stock_symbols: Optional[set] = None  # 纯 A 股 symbol 集合（不含 ETF/场外基金）
 _cn_stock_map_lock = Lock()
 
 
@@ -679,7 +680,7 @@ def _load_cn_stock_map() -> Dict[str, str]:
     Uses akshare stock_info_a_code_name (static list, no anti-crawl) for A-shares,
     plus fund_name_em for ETFs/funds.
     """
-    global _cn_stock_map, _cn_stock_reverse_map, _cn_stock_map_loaded_at
+    global _cn_stock_map, _cn_stock_reverse_map, _cn_a_stock_symbols, _cn_stock_map_loaded_at
     import time as _time
     now = _time.time()
     if _cn_stock_map is not None:
@@ -687,6 +688,7 @@ def _load_cn_stock_map() -> Dict[str, str]:
         if (now - _cn_stock_map_loaded_at) > ttl:
             _cn_stock_map = None  # expire cache
             _cn_stock_reverse_map = None
+            _cn_a_stock_symbols = None
     if _cn_stock_map is not None:
         return _cn_stock_map
     with _cn_stock_map_lock:
@@ -705,6 +707,7 @@ def _load_cn_stock_map() -> Dict[str, str]:
                 if name and code:
                     result[name] = _normalize_symbol(code)
             stock_count = len(result)
+            _cn_a_stock_symbols = set(result.values())  # 纯股票快照（加载 ETF/基金之前）
             # ETF / funds
             fund_count = 0
             try:
@@ -730,6 +733,7 @@ def _load_cn_stock_map() -> Dict[str, str]:
             if _cn_stock_map is None:
                 _cn_stock_map = {}
                 _cn_stock_reverse_map = {}
+                _cn_a_stock_symbols = set()
             # Set _loaded_at so we don't retry on every request; use a short
             # cooldown (5 min) instead of the full 7-day TTL for empty cache.
             _cn_stock_map_loaded_at = now
@@ -752,6 +756,16 @@ def _get_reverse_stock_map_cached_only() -> Dict[str, str]:
     if _cn_stock_map is None or _cn_stock_reverse_map is None:
         return {}
     return dict(_cn_stock_reverse_map)
+
+
+def _get_a_stock_symbols() -> set:
+    """Return 纯 A 股 symbol 集合（不含 ETF/场外基金）。
+
+    冷缓存时触发一次加载；加载失败返回空集合（调用方退化为空候选）。
+    """
+    if _cn_a_stock_symbols is None:
+        _load_cn_stock_map()
+    return set(_cn_a_stock_symbols or ())
 
 
 # ── Board (concept / industry) name → symbol cache ─────────────────────────
@@ -3367,19 +3381,15 @@ def _warm_screener_cache():
     from tradingagents.screener.cache import build_screener_cache, cached_symbol_count
 
     stock_map = _get_reverse_stock_map_cached_only()
-    if not stock_map:
-        _log("[ScreenerCache] Stock map not warmed yet; skip warm.")
+    a_stock_symbols = _get_a_stock_symbols()
+    if not a_stock_symbols:
+        _log("[ScreenerCache] A-share symbol set not available; skip warm.")
         return
 
-    # 候选 A 股（与 stock_screener Phase 1 一致：剔除非6位代码、非A股前缀、科创板688、ST）
+    # 候选 A 股：纯股票集合，剔除科创板 688 和 ST
     codes: list[str] = []
-    for sym in stock_map:
-        code_part = sym.split(".")[0]
-        if len(code_part) != 6 or not code_part.isdigit():
-            continue
-        if not code_part.startswith(("0", "3", "6")):
-            continue
-        if code_part.startswith("688"):
+    for sym in a_stock_symbols:
+        if sym.startswith("688"):
             continue
         name = stock_map.get(sym, "")
         if "ST" in name.upper():
@@ -3614,14 +3624,10 @@ def stock_screener(
     stock_map = _get_reverse_stock_map_cached_only()
 
     # ── Phase 1: Build candidate pool (A-shares only) ──
+    a_stock_symbols = _get_a_stock_symbols()
     codes: list[str] = []
-    for sym in stock_map:
-        code_part = sym.split(".")[0]
-        if len(code_part) != 6 or not code_part.isdigit():
-            continue
-        if not (code_part.startswith(("0", "3", "6"))):
-            continue
-        if code_part.startswith("688"):
+    for sym in a_stock_symbols:
+        if sym.startswith("688"):
             continue
         name = stock_map.get(sym, "")
         if "ST" in name.upper():
