@@ -3405,9 +3405,42 @@ def _warm_screener_cache():
         # 限速：tushare adj_factor 限流 200次/分钟，2 并发约 60-120次/min 在配额内
         # （8 并发会瞬间打爆配额 → 限流刷屏 + 反复重试，反而拖垮 screener 请求）
         build_screener_cache(codes, max_workers=2)
-        _log(f"[ScreenerCache] Warm done: {cached_symbol_count()} cached.")
+        _log(f"[ScreenerCache] K-line warm done: {cached_symbol_count()} cached.")
     except Exception as e:
-        _log(f"[ScreenerCache] Warm failed: {e}")
+        _log(f"[ScreenerCache] K-line warm failed: {e}")
+
+    # K 线缓存就绪后，预计算全量指标结果（请求读缓存秒回）
+    _warm_signal_cache(codes)
+
+
+def _warm_signal_cache(codes: list[str]):
+    """后台预计算全量指标结果并缓存（请求内不现算，直接读 signals.json）。"""
+    import logging
+    _log = logging.getLogger(__name__).info
+    from tradingagents.screener.cache import save_signal_cache, load_signal_cache
+
+    if load_signal_cache() is not None:
+        _log("[ScreenerCache] Signal cache already fresh, skip precompute.")
+        return
+
+    _log(f"[ScreenerCache] Precomputing signals for {len(codes)} stocks (background)...")
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    rows: list[dict] = []
+    try:
+        # 2 并发：指标计算 CPU 密集（2 核），缺 K 线时走 tushare（限流 200/min）
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(_compute_screener_signals, s, True) for s in codes]
+            for fut in as_completed(futures):
+                try:
+                    r = fut.result(timeout=90)
+                    if r is not None:
+                        rows.append(r)
+                except Exception:
+                    pass
+        save_signal_cache(rows)
+        _log(f"[ScreenerCache] Signal precompute done: {len(rows)} stocks.")
+    except Exception as e:
+        _log(f"[ScreenerCache] Signal precompute failed: {e}")
 
 
 def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Optional[dict]:
@@ -3702,32 +3735,28 @@ def stock_screener(
         import threading as _th
         _th.Thread(target=build_screener_cache, args=(list(codes),), kwargs={"max_workers": 2}, daemon=True).start()
 
-    # ── Phase 4: Parallel compute indicators (all eligible stocks) ──
-    max_compute = len(codes)
-    compute_codes = codes[:max_compute]
+    # ── Phase 4: Read precomputed signals from cache (fast path) ──
+    from tradingagents.screener.cache import load_signal_cache
+    cached_rows = load_signal_cache()
     precomputed: list[dict] = []
-    with ThreadPoolExecutor(max_workers=12) as pool:
-        future_map = {pool.submit(_compute_screener_signals, c): c for c in compute_codes}
-        for fut in as_completed(future_map):
-            try:
-                r = fut.result(timeout=30)
-                if r is None:
-                    continue
-                sym = r["symbol"]
-                r["name"] = stock_map.get(sym, sym)
-                # Prefer price/change from parquet data, fallback to spot API
-                if r.get("price") is None:
-                    sp = spot_price.get(sym)
-                    r["price"] = sp[0] if sp else None
-                if r.get("change_pct") is None:
-                    sp2 = spot_price.get(sym)
-                    r["change_pct"] = sp2[1] if sp2 else None
-                code6 = sym.split(".")[0]
-                mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
-                r["market_cap"] = round(mcap_wan / 10000, 2) if mcap_wan else None
-                precomputed.append(r)
-            except Exception as e:
-                logger.debug(f"[r lookup] failed: {e}", exc_info=True)
+    if cached_rows is not None:
+        for r in cached_rows:
+            sym = r.get("symbol")
+            if not sym:
+                continue
+            r["name"] = stock_map.get(sym, sym)
+            # Prefer price/change from parquet data, fallback to spot API
+            if r.get("price") is None:
+                sp = spot_price.get(sym)
+                r["price"] = sp[0] if sp else None
+            if r.get("change_pct") is None:
+                sp2 = spot_price.get(sym)
+                r["change_pct"] = sp2[1] if sp2 else None
+            code6 = sym.split(".")[0]
+            mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
+            r["market_cap"] = round(mcap_wan / 10000, 2) if mcap_wan else None
+            precomputed.append(r)
+    # 缓存未就绪（后台预热中）：precomputed 为空，快速返回，避免请求内重算超时
 
     # ── Populate concepts from screener cache (built in background at startup) ──
     from tradingagents.screener.cache import load_concept_map

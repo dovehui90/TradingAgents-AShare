@@ -133,3 +133,32 @@ def save_concept_map(concept_map: dict[str, list[str]]):
     with open(_CONCEPT_MAP_PATH, "w", encoding='utf-8') as f:
         json.dump(concept_map, f, ensure_ascii=False)
     logger.info(f"Concept map saved: {len(concept_map)} stocks")
+
+
+# ── 指标结果缓存（预计算，避免请求内重算全量指标）──
+
+_SIGNAL_CACHE_PATH = CACHE_DIR / "signals.json"
+
+
+def save_signal_cache(rows: list[dict]):
+    """把预计算好的全量指标结果存成单个 json 文件。"""
+    import json
+    with open(_SIGNAL_CACHE_PATH, "w", encoding='utf-8') as f:
+        json.dump(rows, f, ensure_ascii=False)
+    logger.info(f"Signal cache saved: {len(rows)} stocks")
+
+
+def load_signal_cache() -> Optional[list[dict]]:
+    """读预计算的指标结果；过期（超过 24h，即非当天）返回 None。"""
+    if not _SIGNAL_CACHE_PATH.exists():
+        return None
+    age = time.time() - _SIGNAL_CACHE_PATH.stat().st_mtime
+    if age > 86400:  # 24h TTL（指标随收盘价每天变化，每日重算一次）
+        return None
+    try:
+        import json
+        with open(_SIGNAL_CACHE_PATH, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"[signal cache read] failed: {e}", exc_info=True)
+        return None
