@@ -3638,13 +3638,13 @@ def stock_screener(
     # ── Phase 3.5: Warm screener cache if cold ──
     from tradingagents.screener.cache import cached_symbol_count, build_screener_cache
     if cached_symbol_count() < 100:
-        # First run: build cache for all candidates (background-sync, limit to 500)
-        cache_symbols = codes[:500]
+        # First run: build cache for all candidates
+        cache_symbols = codes
         logger.info(f"[screener] Cold cache, warming {len(cache_symbols)} stocks...")
         build_screener_cache(cache_symbols, max_workers=8)
 
-    # ── Phase 4: Parallel compute indicators (max 500 stocks) ──
-    max_compute = min(len(codes), 500)
+    # ── Phase 4: Parallel compute indicators (all eligible stocks) ──
+    max_compute = len(codes)
     compute_codes = codes[:max_compute]
     precomputed: list[dict] = []
     with ThreadPoolExecutor(max_workers=12) as pool:
