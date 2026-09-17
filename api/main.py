@@ -3400,7 +3400,10 @@ def _warm_screener_cache():
         _log("[ScreenerCache] No A-share candidates found; skip warm.")
         return
 
-    _log(f"[ScreenerCache] Warming cache for {len(codes)} candidates (currently {cached_symbol_count()} cached)...")
+    # 1. 先预计算指标（只算有 K 线缓存的，快速生成 signal 缓存，请求秒回）
+    _warm_signal_cache(codes)
+
+    # 2. 后台补 K 线缓存（慢，为下次预热补全，不影响本次 signal 缓存）
     try:
         # 限速：tushare adj_factor 限流 200次/分钟，2 并发约 60-120次/min 在配额内
         # （8 并发会瞬间打爆配额 → 限流刷屏 + 反复重试，反而拖垮 screener 请求）
@@ -3409,12 +3412,13 @@ def _warm_screener_cache():
     except Exception as e:
         _log(f"[ScreenerCache] K-line warm failed: {e}")
 
-    # K 线缓存就绪后，预计算全量指标结果（请求读缓存秒回）
-    _warm_signal_cache(codes)
-
 
 def _warm_signal_cache(codes: list[str]):
-    """后台预计算全量指标结果并缓存（请求内不现算，直接读 signals.json）。"""
+    """后台预计算指标结果并缓存（请求内不现算，直接读 signals.json）。
+
+    只算有 K 线缓存的股票（fetch_if_missing=False），避免被 tushare 限流拖慢；
+    缺 K 线的股票由 build_screener_cache 补缓存，下次预热再覆盖。
+    """
     import logging
     _log = logging.getLogger(__name__).info
     from tradingagents.screener.cache import save_signal_cache, load_signal_cache
@@ -3423,13 +3427,13 @@ def _warm_signal_cache(codes: list[str]):
         _log("[ScreenerCache] Signal cache already fresh, skip precompute.")
         return
 
-    _log(f"[ScreenerCache] Precomputing signals for {len(codes)} stocks (background)...")
+    _log(f"[ScreenerCache] Precomputing signals for {len(codes)} stocks (background, cache-only)...")
     from concurrent.futures import ThreadPoolExecutor, as_completed
     rows: list[dict] = []
     try:
-        # 2 并发：指标计算 CPU 密集（2 核），缺 K 线时走 tushare（限流 200/min）
+        # 2 并发：指标计算 CPU 密集（2 核）；fetch_if_missing=False 避免 tushare 限流
         with ThreadPoolExecutor(max_workers=2) as pool:
-            futures = [pool.submit(_compute_screener_signals, s, True) for s in codes]
+            futures = [pool.submit(_compute_screener_signals, s, False) for s in codes]
             for fut in as_completed(futures):
                 try:
                     r = fut.result(timeout=90)
