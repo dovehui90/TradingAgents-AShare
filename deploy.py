@@ -8,6 +8,7 @@
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import tarfile
@@ -27,6 +28,13 @@ BACKEND_PORT = 8088
 KILL_TERM_TIMEOUT = 10   # SIGTERM 后等待秒数
 KILL_FORCE_TIMEOUT = 5   # 再次等待后仍存活才 SIGKILL
 
+# ---- 超时保护（防止网络抖动/远程命令阻塞导致部署脚本永久卡死）----
+SSH_CONNECT_TIMEOUT = 30    # SSH 建立连接超时（秒）
+SSH_CMD_TIMEOUT = 120       # 远程命令执行超时（秒）
+SSH_KILL_TIMEOUT = 180      # 后端清理脚本超时（内部含多段 sleep，秒）
+SSH_PIP_TIMEOUT = 600       # pip install 超时（秒，依赖安装可能较慢）
+SSH_SFTP_TIMEOUT = 300      # SFTP 上传超时（秒）
+
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(PROJECT_DIR, ".deploy_state.json")
 
@@ -41,6 +49,15 @@ def load_state():
 def save_state(state):
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
+
+
+def run_remote(ssh_client, cmd, timeout=SSH_CMD_TIMEOUT):
+    """带超时执行远程命令，返回 (stdout, stderr) 字符串。
+
+    超时抛 socket.timeout，由 main 的统一异常处理兜底，避免脚本永久挂起。
+    """
+    stdin, stdout, stderr = ssh_client.exec_command(cmd, timeout=timeout)
+    return stdout.read().decode(), stderr.read().decode()
 
 
 def git_changed_dirs(last_commit):
@@ -103,19 +120,17 @@ def upload_frontend(ssh_client):
 
         # 2. 用独立 SFTP 连接上传，传完即关，确保数据刷盘
         sftp = ssh_client.open_sftp()
+        sftp.get_channel().settimeout(SSH_SFTP_TIMEOUT)
         sftp.put(tmp_path, remote_tar)
         sftp.close()
 
         # 3. 解压（此时 SFTP 已关闭，数据已落地）
         remote_dest = REMOTE_DIR + "/frontend"
-        stdin, stdout, stderr = ssh_client.exec_command(
+        out, err = run_remote(ssh_client,
             f"rm -rf {remote_dest}/dist && "
             f"tar -xzf {remote_tar} -C {remote_dest} && "
             f"rm {remote_tar} && "
-            f"echo OK"
-        )
-        out = stdout.read().decode()
-        err = stderr.read().decode()
+            f"echo OK")
         if "OK" not in out:
             print(f"  [FAIL] 解压失败\n  stdout: {out}\n  stderr: {err}")
             sys.exit(1)
@@ -133,24 +148,23 @@ def server_reset_code(ssh_client):
     ).stdout.strip()
     remote_ref = f"origin/{current_branch}" if current_branch else "origin/main"
     print(f"  部署分支: {remote_ref}")
-    stdin, stdout, stderr = ssh_client.exec_command(
+    out, _ = run_remote(ssh_client,
         f"cd {REMOTE_DIR} && "
         f"git fetch origin && "
-        f"git reset --hard {remote_ref} 2>&1"
-    )
-    out = stdout.read().decode().strip()
+        f"git reset --hard {remote_ref} 2>&1")
+    out = out.strip()
     print("  git: " + out.replace("\n", "\n  git: "))
 
 
 def install_dependencies(ssh_client):
     """安装 Python 依赖"""
     print("  安装依赖...")
-    stdin, stdout, stderr = ssh_client.exec_command(
+    out, err = run_remote(ssh_client,
         f"cd {REMOTE_DIR} && "
-        f"/usr/local/bin/python3.10 -m pip install -r requirements.txt --quiet 2>&1"
-    )
-    out = stdout.read().decode().strip()
-    err = stderr.read().decode().strip()
+        f"/usr/local/bin/python3.10 -m pip install -r requirements.txt --quiet 2>&1",
+        timeout=SSH_PIP_TIMEOUT)
+    out = out.strip()
+    err = err.strip()
     if out:
         print(f"    {out[-200:]}")
     if err and "error" in err.lower():
@@ -252,9 +266,9 @@ echo "PORT_STUCK"
 exit 1
 '''
 
-    stdin, stdout, stderr = ssh_client.exec_command(kill_script)
-    out = stdout.read().decode().strip()
-    err = stderr.read().decode().strip()
+    out, err = run_remote(ssh_client, kill_script, timeout=SSH_KILL_TIMEOUT)
+    out = out.strip()
+    err = err.strip()
 
     for line in out.split("\n"):
         line = line.strip()
@@ -295,28 +309,25 @@ exit 1
 def start_backend(ssh_client):
     """启动后端服务（启动前验证端口已释放）"""
     # 启动前再次确认端口空闲
-    stdin, stdout, stderr = ssh_client.exec_command(
-        f"ss -tlnp 2>/dev/null | grep ':{BACKEND_PORT} ' | wc -l"
-    )
-    in_use = stdout.read().decode().strip()
+    in_use, _ = run_remote(ssh_client,
+        f"ss -tlnp 2>/dev/null | grep ':{BACKEND_PORT} ' | wc -l")
+    in_use = in_use.strip()
     if in_use != "0":
         print(f"  [FAIL] 端口 {BACKEND_PORT} 仍被占用，无法启动后端")
         sys.exit(1)
 
     print("  启动后端...")
-    ssh_client.exec_command(
+    run_remote(ssh_client,
         f"cd {REMOTE_DIR} && "
         f"nohup /usr/local/bin/python3.10 -m uvicorn api.main:app "
         f"--host 0.0.0.0 --port {BACKEND_PORT} --log-level warning "
-        f"> logs/backend.log 2>&1 &"
-    )
+        f"> logs/backend.log 2>&1 &")
     time.sleep(1)
 
     # 验证进程已启动
-    stdin, stdout, stderr = ssh_client.exec_command(
-        f"pgrep -f 'uvicorn api.main' | wc -l"
-    )
-    count = stdout.read().decode().strip()
+    count, _ = run_remote(ssh_client,
+        f"pgrep -f 'uvicorn api.main' | wc -l")
+    count = count.strip()
     if count == "0":
         print("  [FAIL] 后端进程启动失败，检查 logs/backend.log")
         sys.exit(1)
@@ -365,15 +376,15 @@ def setup_nginx(ssh_client):
 }
 '''
     sftp = ssh_client.open_sftp()
+    sftp.get_channel().settimeout(SSH_SFTP_TIMEOUT)
     with sftp.open("/etc/nginx/conf.d/tradingagents.conf", "w") as f:
         f.write(nginx_conf)
     sftp.close()
 
     # 测试并重载 nginx
-    stdin, stdout, stderr = ssh_client.exec_command("nginx -t 2>&1")
-    test_out = stdout.read().decode()
+    test_out, _ = run_remote(ssh_client, "nginx -t 2>&1")
     if "successful" in test_out:
-        ssh_client.exec_command("nginx -s reload 2>/dev/null || systemctl restart nginx")
+        run_remote(ssh_client, "nginx -s reload 2>/dev/null || systemctl restart nginx")
         print("  [OK] nginx 配置已更新")
     else:
         print(f"  [WARN] nginx 配置测试失败: {test_out}")
@@ -480,7 +491,18 @@ def main():
     print(">>> 连接服务器...")
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(SERVER, username=USER, password=PASSWORD)
+    try:
+        client.connect(
+            SERVER, username=USER, password=PASSWORD,
+            timeout=SSH_CONNECT_TIMEOUT,
+            banner_timeout=SSH_CONNECT_TIMEOUT,
+            auth_timeout=SSH_CONNECT_TIMEOUT,
+        )
+    except (socket.timeout, paramiko.SSHException, EOFError, OSError) as e:
+        print(f"[FAIL] 无法连接服务器 {SERVER}: {e}")
+        print("  请检查网络与服务器状态后重试。")
+        sys.exit(1)
+
     sftp = client.open_sftp()
 
     try:
@@ -497,9 +519,19 @@ def main():
             install_dependencies(client)
             start_backend(client)
 
+    except (socket.timeout, paramiko.SSHException, EOFError, OSError) as e:
+        print(f"\n[FAIL] 部署中断（连接/命令超时或网络异常）: {e}")
+        print("  生产服务可能处于旧版本或部分更新状态，请登录服务器检查后重试。")
+        sys.exit(1)
     finally:
-        sftp.close()
-        client.close()
+        try:
+            sftp.close()
+        except Exception:
+            pass
+        try:
+            client.close()
+        except Exception:
+            pass
 
     # ---- 5. 健康检查 ----
     if need_backend:
