@@ -14,9 +14,13 @@ function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
     }
     if (f.gs_signal) {
         const gs = r.gs_status
-        if (f.gs_signal === 'G_zone' && gs !== 'G' && gs !== 'G_zone') return false
-        else if (f.gs_signal === 'S_zone' && gs !== 'S' && gs !== 'S_zone') return false
-        else if (gs !== f.gs_signal) return false
+        if (f.gs_signal === 'G_zone') {
+            if (gs !== 'G' && gs !== 'G_zone') return false
+        } else if (f.gs_signal === 'S_zone') {
+            if (gs !== 'S' && gs !== 'S_zone') return false
+        } else if (gs !== f.gs_signal) {
+            return false
+        }
     }
     if (f.orbit_status && f.orbit_status.length > 0) {
         if (!r.orbit_status || !f.orbit_status.includes(r.orbit_status)) return false
