@@ -24,6 +24,7 @@ USER = "root"
 PASSWORD = "Qq121918="
 REMOTE_DIR = "/opt/tradingagents"
 BACKEND_DIRS = ["api", "tradingagents", "scheduler"]
+DEP_FILES = {"requirements.txt", "pyproject.toml", "uv.lock"}  # 变化时才需要重装依赖
 BACKEND_PORT = 8088
 KILL_TERM_TIMEOUT = 10   # SIGTERM 后等待秒数
 KILL_FORCE_TIMEOUT = 5   # 再次等待后仍存活才 SIGKILL
@@ -61,24 +62,28 @@ def run_remote(ssh_client, cmd, timeout=SSH_CMD_TIMEOUT):
 
 
 def git_changed_dirs(last_commit):
-    """对比 last_commit..HEAD，判断哪些目录有变更"""
+    """对比 last_commit..HEAD，判断前端/后端/依赖是否有变更"""
     if not last_commit:
-        return {"frontend": True, "backend": True}
+        return {"frontend": True, "backend": True, "deps": True}
 
     result = subprocess.run(
         f"git diff --name-only {last_commit} HEAD",
         capture_output=True, shell=True, cwd=PROJECT_DIR, text=True,
     )
     if result.returncode != 0:
-        return {"frontend": True, "backend": True}
+        return {"frontend": True, "backend": True, "deps": True}
 
     files = [f for f in result.stdout.strip().split("\n") if f]
-    changed = {"frontend": False, "backend": False}
+    changed = {"frontend": False, "backend": False, "deps": False}
     for f in files:
         if f.startswith("frontend/"):
             changed["frontend"] = True
-        elif any(f.startswith(d + "/") for d in BACKEND_DIRS) or f == "pyproject.toml":
+        elif any(f.startswith(d + "/") for d in BACKEND_DIRS):
             changed["backend"] = True
+        if f in DEP_FILES:
+            changed["deps"] = True
+            if f == "pyproject.toml":
+                changed["backend"] = True  # pyproject 也可能影响运行，保守重部署
     return changed
 
 
@@ -464,11 +469,14 @@ def verify_nginx():
 
 
 def main():
+    skip_deps = "--skip-deps" in sys.argv  # 手动强制跳过依赖安装
+
     # ---- 1. 变更检测 ----
     state = load_state()
     changes = git_changed_dirs(state.get("last_commit"))
     need_frontend = changes["frontend"]
     need_backend = changes["backend"]
+    need_deps = changes.get("deps", False) and not skip_deps
 
     if not need_frontend and not need_backend:
         print("[SKIP] 无文件变更，跳过部署")
@@ -516,7 +524,10 @@ def main():
             print(">>> 服务器更新代码...")
             kill_backend(client)
             server_reset_code(client)
-            install_dependencies(client)
+            if need_deps:
+                install_dependencies(client)
+            else:
+                print("  依赖未变更，跳过安装")
             start_backend(client)
 
     except (socket.timeout, paramiko.SSHException, EOFError, OSError) as e:
