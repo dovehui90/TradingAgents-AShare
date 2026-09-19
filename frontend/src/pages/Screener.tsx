@@ -6,6 +6,8 @@ import { api } from '@/services/api'
 import { useScreenerStore } from '@/stores/screenerStore'
 import type { ScreenerFilter, ScreenerResultItem } from '@/types'
 
+const GS_ORDER: Record<string, number> = { G: 0, G_zone: 1, S: 2, S_zone: 3 }
+
 function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
     if (f.position_zones && f.position_zones.length > 0) {
         if (!r.position_zone || !f.position_zones.includes(r.position_zone)) return false
@@ -41,7 +43,9 @@ export default function Screener() {
     const [error, setError] = useState('')
 
     const filteredResults = useMemo(() => {
-        return allResults.filter(r => matchFilter(r, storeFilter))
+        return allResults
+            .filter(r => matchFilter(r, storeFilter))
+            .sort((a, b) => (GS_ORDER[a.gs_status ?? ''] ?? 4) - (GS_ORDER[b.gs_status ?? ''] ?? 4))
     }, [allResults, storeFilter])
 
     const handleSearch = async () => {
