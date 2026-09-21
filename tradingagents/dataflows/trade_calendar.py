@@ -92,6 +92,32 @@ def previous_cn_trading_day(date_str: str) -> str:
             return cur.strftime("%Y-%m-%d")
 
 
+def latest_cn_trading_day(date_str: str) -> str:
+    """返回 <= date_str 的最近一个交易日（含当日）。
+
+    与 previous_cn_trading_day（严格取前一日）不同：若 date_str 本身是交易日则返回当日。
+    用于选股神器历史回看的日期对齐。
+    """
+    d = _parse_date(date_str)
+    dates, _ = _load_cn_trade_dates()
+    if dates:
+        lo, hi = 0, len(dates)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if dates[mid] <= d:
+                lo = mid + 1
+            else:
+                hi = mid
+        idx = lo - 1  # 最后一个 <= d
+        if idx >= 0:
+            return dates[idx].strftime("%Y-%m-%d")
+    # 降级：仅周末回退（不含节假日）
+    cur = d
+    while cur.weekday() >= 5:
+        cur = cur.fromordinal(cur.toordinal() - 1)
+    return cur.strftime("%Y-%m-%d")
+
+
 def cn_market_phase(now: datetime | None = None) -> str:
     now_dt = now or now_cn()
     if now_dt.tzinfo is None:
