@@ -3676,13 +3676,14 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
     if len(nx) < 2:
         return []
 
-    # 日期：优先 "date" 列，否则 datetime index；两者都没有（损坏缓存）则跳过
-    if "date" in df.columns:
-        date_s = pd.to_datetime(df["date"], errors="coerce")
+    # 日期：兼容 "date"/"index" 列名（git 历史里旧版本代码把日期列写成了 index）与 DatetimeIndex
+    date_col = "date" if "date" in df.columns else ("index" if "index" in df.columns else None)
+    if date_col is not None:
+        date_s = pd.to_datetime(df[date_col], errors="coerce")
     elif isinstance(df.index, pd.DatetimeIndex):
         date_s = pd.to_datetime(df.index)
     else:
-        return []
+        return []  # 无日期信息（损坏缓存），跳过
     if date_s.isna().all():
         return []
     dates = date_s.dt.strftime("%Y-%m-%d").tolist()
