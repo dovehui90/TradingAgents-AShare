@@ -3638,6 +3638,10 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
     return result
 
 
+# 历史回看保留的交易日数（2核3.6G无swap，全量250天累积 dict 会 OOM，先降到60天）
+_SIGNAL_HISTORY_DAYS = 60
+
+
 def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
     """从 K 线缓存计算单只股票的逐日全维度信号历史。
 
@@ -3678,7 +3682,7 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
     else:
         dates = pd.to_datetime(nx.index).strftime("%Y-%m-%d").tolist()
 
-    return derive_daily_signals(
+    rows = derive_daily_signals(
         dates=dates,
         close=nx["close"].values,
         decision_line=nx["decision_line"].values,
@@ -3691,6 +3695,8 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
         radar_wave=radar["radar_wave"].values,
         symbol=symbol,
     )
+    # 只保留最近 N 个交易日：2核3.6G服务器无swap，全量250天累积 dict 会 OOM
+    return rows[-_SIGNAL_HISTORY_DAYS:]
 
 
 def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
