@@ -25,14 +25,10 @@ PASSWORD = "Qq121918="
 REMOTE_DIR = "/opt/tradingagents"
 BACKEND_DIRS = ["api", "tradingagents", "scheduler"]
 DEP_FILES = {"requirements.txt", "pyproject.toml", "uv.lock"}  # 变化时才需要重装依赖
-BACKEND_PORT = 8088
-KILL_TERM_TIMEOUT = 10   # SIGTERM 后等待秒数
-KILL_FORCE_TIMEOUT = 5   # 再次等待后仍存活才 SIGKILL
 
 # ---- 超时保护（防止网络抖动/远程命令阻塞导致部署脚本永久卡死）----
 SSH_CONNECT_TIMEOUT = 30    # SSH 建立连接超时（秒）
 SSH_CMD_TIMEOUT = 120       # 远程命令执行超时（秒）
-SSH_KILL_TIMEOUT = 180      # 后端清理脚本超时（内部含多段 sleep，秒）
 SSH_PIP_TIMEOUT = 600       # pip install 超时（秒，依赖安装可能较慢）
 SSH_SFTP_TIMEOUT = 300      # SFTP 上传超时（秒）
 
@@ -177,166 +173,22 @@ def install_dependencies(ssh_client):
     print("  [OK] 依赖安装完成")
 
 
-def kill_backend(ssh_client):
-    """停止后端服务 — 三级强制清理 + 端口验证
+def restart_backend(ssh_client):
+    """通过 systemd 重启后端（tradingagents.service 托管）。
 
-    Phase 1: pkill SIGTERM → 等 10s → 检查
-    Phase 2: 仍存活 → 再等 5s → 检查
-    Phase 3: 仍存活 → pkill -9 SIGKILL → 验证端口释放
+    生产后端由 systemd 管理（Restart=always），手动 kill + nohup 会与之冲突，
+    造成 10 秒一次的自毁死循环；正确做法是 systemctl restart 回归单实例。
     """
-    print("  停止后端...")
-
-    kill_script = f'''#!/bin/bash
-set -e
-PORT={BACKEND_PORT}
-TERM_TIMEOUT={KILL_TERM_TIMEOUT}
-FORCE_TIMEOUT={KILL_FORCE_TIMEOUT}
-
-# ---- 查找占用端口的 PID ----
-PIDS=$(ss -tlnp 2>/dev/null | grep ":$PORT " | grep -oP 'pid=\\K[0-9]+' | sort -u)
-if [ -z "$PIDS" ]; then
-    PIDS=$(pgrep -f 'uvicorn api.main' 2>/dev/null || true)
-fi
-
-if [ -z "$PIDS" ]; then
-    echo "PORT_FREE"
-    exit 0
-fi
-
-echo "FOUND_PIDS $PIDS"
-
-# ---- Phase 1: SIGTERM ----
-for pid in $PIDS; do
-    kill -TERM "$pid" 2>/dev/null || true
-done
-
-# 等待并检测
-for i in $(seq 1 $TERM_TIMEOUT); do
-    sleep 1
-    ALIVE=""
-    for pid in $PIDS; do
-        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
-    done
-    if [ -z "$ALIVE" ]; then
-        echo "TERM_OK"
-        break
-    fi
-    PIDS="$ALIVE"
-done
-
-# ---- Phase 2: 额外等待（进程可能在 flush 数据） ----
-if [ -n "$PIDS" ]; then
-    echo "WAITING $PIDS"
-    sleep $FORCE_TIMEOUT
-    ALIVE=""
-    for pid in $PIDS; do
-        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
-    done
-    if [ -z "$ALIVE" ]; then
-        echo "WAIT_OK"
-        PIDS=""
-    else
-        PIDS="$ALIVE"
-    fi
-fi
-
-# ---- Phase 3: SIGKILL 兜底 ----
-if [ -n "$PIDS" ]; then
-    echo "FORCE_KILL $PIDS"
-    for pid in $PIDS; do
-        kill -9 "$pid" 2>/dev/null || true
-    done
-    sleep 2
-    ALIVE=""
-    for pid in $PIDS; do
-        kill -0 "$pid" 2>/dev/null && ALIVE="$ALIVE $pid"
-    done
-    if [ -n "$ALIVE" ]; then
-        echo "STUCK $ALIVE"
-        exit 1
-    fi
-    echo "FORCE_OK"
-fi
-
-# ---- 验证端口已释放 ----
-for i in $(seq 1 6); do
-    IN_USE=$(ss -tlnp 2>/dev/null | grep ":$PORT " | wc -l)
-    if [ "$IN_USE" -eq 0 ]; then
-        echo "PORT_FREE"
-        exit 0
-    fi
-    sleep 0.5
-done
-echo "PORT_STUCK"
-exit 1
-'''
-
-    out, err = run_remote(ssh_client, kill_script, timeout=SSH_KILL_TIMEOUT)
+    print("  重启后端 (systemctl restart tradingagents.service)...")
+    out, err = run_remote(ssh_client,
+        "systemctl restart tradingagents.service && echo RESTART_OK",
+        timeout=SSH_CMD_TIMEOUT)
     out = out.strip()
     err = err.strip()
-
-    for line in out.split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        if "FOUND_PIDS" in line:
-            print(f"    发现进程: {line.replace('FOUND_PIDS ', '')}")
-        elif "TERM_OK" in line:
-            print("    [OK] SIGTERM 优雅关闭成功")
-        elif "WAITING" in line:
-            print(f"    等待进程flush: {line.replace('WAITING ', '')}")
-        elif "WAIT_OK" in line:
-            print("    [OK] 进程在等待后退出")
-        elif "FORCE_KILL" in line:
-            print(f"    [WARN] 强制终止: {line.replace('FORCE_KILL ', '')}")
-        elif "FORCE_OK" in line:
-            print("    [OK] 强制终止完成")
-        elif "PORT_FREE" in line:
-            print(f"    [OK] 端口 {BACKEND_PORT} 已释放")
-        elif "STUCK" in line:
-            pids = line.replace("STUCK ", "")
-            print(f"    [FAIL] 进程无法终止! PID: {pids}")
-            print(f"    请手动登录服务器执行: kill -9 {pids}")
-        elif "PORT_STUCK" in line:
-            print(f"    [FAIL] 端口 {BACKEND_PORT} 仍被占用，进程清理失败!")
-
-    if err:
-        print(f"    [WARN] stderr: {err}")
-
-    if "STUCK" in out or "PORT_STUCK" in out:
-        print("  [ABORT] 端口清理失败，取消部署以保护数据安全")
+    if "RESTART_OK" not in out:
+        print(f"  [FAIL] systemd 重启失败\n  stdout: {out}\n  stderr: {err}")
         sys.exit(1)
-
-    if "PORT_FREE" in out:
-        return True
-
-
-def start_backend(ssh_client):
-    """启动后端服务（启动前验证端口已释放）"""
-    # 启动前再次确认端口空闲
-    in_use, _ = run_remote(ssh_client,
-        f"ss -tlnp 2>/dev/null | grep ':{BACKEND_PORT} ' | wc -l")
-    in_use = in_use.strip()
-    if in_use != "0":
-        print(f"  [FAIL] 端口 {BACKEND_PORT} 仍被占用，无法启动后端")
-        sys.exit(1)
-
-    print("  启动后端...")
-    run_remote(ssh_client,
-        f"cd {REMOTE_DIR} && "
-        f"nohup /usr/local/bin/python3.10 -m uvicorn api.main:app "
-        f"--host 0.0.0.0 --port {BACKEND_PORT} --log-level warning "
-        f"> logs/backend.log 2>&1 &")
-    time.sleep(1)
-
-    # 验证进程已启动
-    count, _ = run_remote(ssh_client,
-        f"pgrep -f 'uvicorn api.main' | wc -l")
-    count = count.strip()
-    if count == "0":
-        print("  [FAIL] 后端进程启动失败，检查 logs/backend.log")
-        sys.exit(1)
-    print(f"  [OK] 后端进程已启动 (PID数: {count})")
+    print("  [OK] systemd 已重启后端")
 
 
 def setup_nginx(ssh_client):
@@ -522,13 +374,12 @@ def main():
         # ---- 4b. 后端部署 ----
         if need_backend:
             print(">>> 服务器更新代码...")
-            kill_backend(client)
             server_reset_code(client)
             if need_deps:
                 install_dependencies(client)
             else:
                 print("  依赖未变更，跳过安装")
-            start_backend(client)
+            restart_backend(client)
 
     except (socket.timeout, paramiko.SSHException, EOFError, OSError) as e:
         print(f"\n[FAIL] 部署中断（连接/命令超时或网络异常）: {e}")
