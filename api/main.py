@@ -3403,8 +3403,8 @@ def _warm_screener_cache():
     # 1. 先预计算指标（只算有 K 线缓存的，快速生成 signal 缓存，请求秒回）
     _warm_signal_cache(codes)
 
-    # 1.5 预计算逐日位置历史（按交易日分文件，供历史回看）
-    _warm_position_history(codes)
+    # 1.5 预计算逐日全维度信号历史（按交易日分文件，供历史回看）
+    _warm_signal_history(codes)
 
     # 2. 后台补 K 线缓存（慢，为下次预热补全，不影响本次 signal 缓存）
     try:
@@ -3450,21 +3450,21 @@ def _warm_signal_cache(codes: list[str]):
         _log(f"[ScreenerCache] Signal precompute failed: {e}")
 
 
-def _warm_position_history(codes: list[str]):
-    """后台预计算逐日位置历史，按交易日分文件落盘（供历史回看）。
+def _warm_signal_history(codes: list[str]):
+    """后台预计算逐日全维度信号历史，按交易日分文件落盘（供历史回看）。
 
     与 _warm_signal_cache 一样 2 并发 + fetch_if_missing=False，只算有 K 线缓存的股票。
     """
     import logging
     _log = logging.getLogger(__name__).info
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from tradingagents.screener.cache import save_position_history
+    from tradingagents.screener.cache import save_signal_history
 
-    _log(f"[PositionHistory] Precomputing position history for {len(codes)} stocks (background)...")
+    _log(f"[SignalHistory] Precomputing signal history for {len(codes)} stocks (background)...")
     rows: list = []
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
-            futures = [pool.submit(_compute_position_history, s, False) for s in codes]
+            futures = [pool.submit(_compute_signal_history, s, False) for s in codes]
             for fut in as_completed(futures):
                 try:
                     r = fut.result(timeout=90)
@@ -3472,10 +3472,10 @@ def _warm_position_history(codes: list[str]):
                         rows.extend(r)
                 except Exception:
                     pass
-        save_position_history(rows)
-        _log(f"[PositionHistory] Position history done: {len(rows)} rows.")
+        save_signal_history(rows)
+        _log(f"[SignalHistory] Signal history done: {len(rows)} rows.")
     except Exception as e:
-        _log(f"[PositionHistory] Position history failed: {e}")
+        _log(f"[SignalHistory] Signal history failed: {e}")
 
 
 def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Optional[dict]:
@@ -3638,15 +3638,18 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
     return result
 
 
-def _compute_position_history(code: str, fetch_if_missing: bool = False) -> list:
-    """从 K 线缓存计算单只股票的逐日位置历史（position_zone + position_transition）。
+def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
+    """从 K 线缓存计算单只股票的逐日全维度信号历史。
 
     与 _compute_screener_signals 一样只读本地缓存（fetch_if_missing=False），
     缓存缺失返回空列表，由后台预热线程补齐。
     """
-    from tradingagents.indicators.position_index import (
-        calculate_position_index, extract_position_history,
+    from tradingagents.indicators.niuxiong_line import (
+        calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
     )
+    from tradingagents.indicators.position_index import calculate_position_index
+    from tradingagents.indicators.trend_strength import calculate_trend_strength
+    from tradingagents.indicators.signal_history import derive_daily_signals
 
     symbol = _normalize_symbol(code)
     try:
@@ -3659,10 +3662,35 @@ def _compute_position_history(code: str, fetch_if_missing: bool = False) -> list
         return []
 
     df = df.sort_index()
+
+    nx = calculate_niuxiong_line(df.copy())
     pos = calculate_position_index(df.copy())
-    if len(pos) < 2:
+    gs = calculate_gs_strategy(df.copy())
+    ts = calculate_trend_strength(df.copy())
+    radar = calculate_radar_indicator(df.copy().reset_index(drop=True))
+
+    if len(nx) < 2:
         return []
-    return extract_position_history(pos, symbol)
+
+    # 日期：优先 "date" 列（缓存命中），否则回退 index
+    if "date" in nx.columns:
+        dates = pd.to_datetime(nx["date"]).dt.strftime("%Y-%m-%d").tolist()
+    else:
+        dates = pd.to_datetime(nx.index).strftime("%Y-%m-%d").tolist()
+
+    return derive_daily_signals(
+        dates=dates,
+        close=nx["close"].values,
+        decision_line=nx["decision_line"].values,
+        bull_line=nx["bull_line"].values,
+        orbit_line=nx["orbit_line"].values,
+        zones=pos["zone"].astype(str).tolist(),
+        gs_buy=gs["gs_buy"].fillna(False).astype(bool).tolist(),
+        gs_sell=gs["gs_sell"].fillna(False).astype(bool).tolist(),
+        trend_strength=ts["trend_strength"].fillna(0).values,
+        radar_wave=radar["radar_wave"].values,
+        symbol=symbol,
+    )
 
 
 def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
@@ -3838,15 +3866,20 @@ def stock_screener(
         concepts = concept_map.get(r["symbol"], []) if concept_map else []
         r["concepts"] = ", ".join(concepts[:5]) if concepts else None
 
-    # ── 历史日期：覆盖位置指标（position_zone / position_transition）──
-    from tradingagents.screener.cache import load_position_history
+    # ── 历史日期：覆盖所有维度的信号 ──
+    from tradingagents.screener.cache import load_signal_history
     if precomputed and f.date:
-        hist = load_position_history(f.date)
+        hist = load_signal_history(f.date)
         if hist:
-            pmap = {r["symbol"]: (r["position_zone"], r["position_transition"]) for r in hist}
+            hmap = {r["symbol"]: r for r in hist}
             for r in precomputed:
-                if r["symbol"] in pmap:
-                    r["position_zone"], r["position_transition"] = pmap[r["symbol"]]
+                h = hmap.get(r["symbol"])
+                if h:
+                    for field in ("price", "change_pct", "position_zone", "position_transition",
+                                  "decision_status", "bull_status", "orbit_status",
+                                  "gs_status", "trend_status", "radar_wave"):
+                        if field in h:
+                            r[field] = h[field]
 
     elapsed_ms = int((time.monotonic() - t0) * 1000)
 

@@ -124,37 +124,3 @@ def get_position_signal(df: pd.DataFrame) -> dict:
         "zone": zone,
         "signal": signal,
     }
-
-
-def extract_position_history(pos: pd.DataFrame, symbol: str) -> list:
-    """
-    从 calculate_position_index 的结果中抽取逐日位置历史（供选股神器历史回看）。
-
-    calculate_position_index 本就返回全序列（每根 K 线一个 zone），本函数把相邻
-    两天的 zone 转成 position_transition，逐日产出。首日无前一日，跳过。
-
-    Args:
-        pos: calculate_position_index 返回的 DataFrame，需含 zone 列；
-            日期取自 "date" 列，无该列时回退用 index。
-        symbol: 股票代码，原样写入每行。
-
-    Returns:
-        [{date, symbol, position_zone, position_transition}, ...]，每日一行。
-    """
-    # 日期：优先 "date" 列（缓存命中路径），否则回退 index（实时抓取路径）
-    if "date" in pos.columns:
-        dates = pd.to_datetime(pos["date"]).dt.strftime("%Y-%m-%d").tolist()
-    else:
-        dates = pd.to_datetime(pos.index).strftime("%Y-%m-%d").tolist()
-
-    zones = pos["zone"].astype(str).tolist()
-    rows = []
-    for i in range(1, len(pos)):
-        transition = get_position_transition(zones[i - 1], zones[i])
-        rows.append({
-            "date": dates[i],
-            "symbol": symbol,
-            "position_zone": zones[i],
-            "position_transition": transition,
-        })
-    return rows
