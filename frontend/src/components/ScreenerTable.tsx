@@ -12,6 +12,14 @@ const POSITION_COLORS: Record<string, string> = {
     overbought: 'text-red-600', high: 'text-orange-500', neutral: 'text-slate-400',
     low: 'text-blue-500', oversold: 'text-green-600',
 }
+const POSITION_TRANSITION_ARROWS: Record<string, string> = {
+    low_to_oversold: '↓',   // 偏低转超卖：跌破20线，继续走弱
+    oversold_to_low: '↑',   // 超卖转偏低：上穿20线，超卖反弹
+}
+const POSITION_TRANSITION_LABELS: Record<string, string> = {
+    low_to_oversold: '偏低转超卖',
+    oversold_to_low: '超卖转偏低',
+}
 const GS_LABELS: Record<string, string> = {
     G: 'G↗', S: 'S↘', G_zone: 'G区', S_zone: 'S区',
 }
@@ -114,6 +122,11 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                                     <td className="px-3 py-2 text-right text-xs">{fmtMcap(r.market_cap)}</td>
                                     <td className={`px-3 py-2 text-center text-xs ${POSITION_COLORS[r.position_zone || ''] || ''}`}>
                                         {POSITION_LABELS[r.position_zone || ''] || '-'}
+                                        {r.position_transition && (
+                                            <span className="ml-0.5" title={POSITION_TRANSITION_LABELS[r.position_transition] || ''}>
+                                                {POSITION_TRANSITION_ARROWS[r.position_transition] || ''}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className={`px-3 py-2 text-center text-xs font-medium ${GS_COLORS[r.gs_status || ''] || ''}`}>
                                         {GS_LABELS[r.gs_status || ''] || '-'}

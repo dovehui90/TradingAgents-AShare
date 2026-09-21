@@ -7,6 +7,8 @@ const POSITION_OPTIONS = [
     { value: 'neutral', label: '中性' },
     { value: 'low', label: '偏低' },
     { value: 'oversold', label: '超卖' },
+    { value: 'low_to_oversold', label: '偏低转超卖' },
+    { value: 'oversold_to_low', label: '超卖转偏低' },
 ]
 const GS_OPTIONS = ['G', 'S', 'G_zone', 'S_zone'] as const
 const GS_LABELS: Record<string, string> = {

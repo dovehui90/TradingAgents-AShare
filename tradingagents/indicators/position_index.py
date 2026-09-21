@@ -5,6 +5,8 @@
 公式来源：通达信风险控制指标
 """
 
+from typing import Optional
+
 import pandas as pd
 import numpy as np
 
@@ -59,6 +61,28 @@ def calculate_position_index(
     result['zone'] = result['position_index'].apply(get_zone)
 
     return result
+
+
+def get_position_transition(prev_zone: Optional[str], cur_zone: Optional[str]) -> Optional[str]:
+    """
+    判断位置指标单日档位转变（前一日 → 当日）。
+
+    与 calculate_position_index 的 zone 定义联动：
+    - 偏低转超卖：前一日 low(20~40) → 当日 oversold(<20)，跌破 20 线继续走弱
+    - 超卖转偏低：前一日 oversold(<20) → 当日 low(20~40)，上穿 20 线超卖反弹
+
+    Args:
+        prev_zone: 前一日档位
+        cur_zone: 当日档位
+
+    Returns:
+        'low_to_oversold' / 'oversold_to_low'，无该转变返回 None
+    """
+    if cur_zone == 'oversold' and prev_zone == 'low':
+        return 'low_to_oversold'
+    if cur_zone == 'low' and prev_zone == 'oversold':
+        return 'oversold_to_low'
+    return None
 
 
 def get_position_signal(df: pd.DataFrame) -> dict:

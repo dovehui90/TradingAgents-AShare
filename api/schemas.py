@@ -305,7 +305,7 @@ class ScreenerFilter(BaseModel):
     market_cap_min: Optional[float] = None          # 亿
     market_cap_max: Optional[float] = None          # 亿
     board_symbols: Optional[List[str]] = None        # 概念板块代码列表
-    position_zones: Optional[List[str]] = None       # overbought/high/neutral/low/oversold
+    position_zones: Optional[List[str]] = None       # overbought/high/neutral/low/oversold/low_to_oversold/oversold_to_low
     gs_signal: Optional[str] = None                  # G / S / G_zone / S_zone
     orbit_status: Optional[List[str]] = None         # cross_up / above2 / cross_down / below2
     decision_status: Optional[str] = None             # above / below
@@ -324,6 +324,7 @@ class ScreenerResultItem(BaseModel):
     change_pct: Optional[float] = None
     market_cap: Optional[float] = None               # 亿
     position_zone: Optional[str] = None
+    position_transition: Optional[str] = None        # low_to_oversold(偏低转超卖)/oversold_to_low(超卖转偏低)
     gs_status: Optional[str] = None
     orbit_status: Optional[str] = None
     decision_status: Optional[str] = None

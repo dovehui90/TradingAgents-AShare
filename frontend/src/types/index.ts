@@ -1360,6 +1360,7 @@ export interface ScreenerResultItem {
     change_pct: number | null
     market_cap: number | null
     position_zone: string | null
+    position_transition: string | null
     gs_status: string | null
     orbit_status: string | null
     decision_status: string | null

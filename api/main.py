@@ -3458,7 +3458,7 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
         calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
     )
     from tradingagents.indicators.trend_strength import calculate_trend_strength
-    from tradingagents.indicators.position_index import calculate_position_index
+    from tradingagents.indicators.position_index import calculate_position_index, get_position_transition
 
     symbol = _normalize_symbol(code)
 
@@ -3534,6 +3534,15 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
         if len(pos) >= 1:
             zone = pos.iloc[-1].get("zone")
             result["position_zone"] = str(zone) if zone else None
+            # 单日档位转变（前一日 → 当日）
+            if len(pos) >= 2:
+                prev_zone = pos.iloc[-2].get("zone")
+                transition = get_position_transition(
+                    str(prev_zone) if prev_zone else None,
+                    str(zone) if zone else None,
+                )
+                if transition:
+                    result["position_transition"] = transition
     except Exception as e:
         logger.debug(f"[operation] failed: {e}", exc_info=True)
 
@@ -3600,10 +3609,11 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
 
 def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
     """Check if a single stock result matches all non‑empty filter conditions."""
-    # Position zones (multi-select OR)
+    # Position zones (multi-select OR; 静态档位或单日转变命中任一即通过)
     if f.position_zones:
         pz = item.get("position_zone")
-        if pz not in f.position_zones:
+        pt = item.get("position_transition")
+        if pz not in f.position_zones and pt not in f.position_zones:
             return False
 
     # GS signal

@@ -10,7 +10,9 @@ const GS_ORDER: Record<string, number> = { G: 0, G_zone: 1, S: 2, S_zone: 3 }
 
 function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
     if (f.position_zones && f.position_zones.length > 0) {
-        if (!r.position_zone || !f.position_zones.includes(r.position_zone)) return false
+        const hit = (r.position_zone && f.position_zones.includes(r.position_zone))
+            || (r.position_transition && f.position_zones.includes(r.position_transition))
+        if (!hit) return false
     }
     if (f.gs_signal) {
         const gs = r.gs_status
