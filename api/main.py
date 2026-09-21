@@ -3676,11 +3676,16 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
     if len(nx) < 2:
         return []
 
-    # 日期：优先 "date" 列（缓存命中），否则回退 index
-    if "date" in nx.columns:
-        dates = pd.to_datetime(nx["date"]).dt.strftime("%Y-%m-%d").tolist()
+    # 日期：优先 "date" 列，否则 datetime index；两者都没有（损坏缓存）则跳过
+    if "date" in df.columns:
+        date_s = pd.to_datetime(df["date"], errors="coerce")
+    elif isinstance(df.index, pd.DatetimeIndex):
+        date_s = pd.to_datetime(df.index)
     else:
-        dates = pd.to_datetime(nx.index).strftime("%Y-%m-%d").tolist()
+        return []
+    if date_s.isna().all():
+        return []
+    dates = date_s.dt.strftime("%Y-%m-%d").tolist()
 
     rows = derive_daily_signals(
         dates=dates,
