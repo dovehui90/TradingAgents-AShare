@@ -1341,6 +1341,7 @@ export interface ScreenerFilter {
     market_cap_min?: number | null
     market_cap_max?: number | null
     board_symbols?: string[]
+    markets?: string[]
     position_zones?: string[]
     gs_signal?: string
     orbit_status?: string[]

@@ -633,6 +633,10 @@ _cn_stock_reverse_map: Optional[Dict[str, str]] = None  # code -> name
 _cn_a_stock_symbols: Optional[set] = None  # 纯 A 股 symbol 集合（不含 ETF/场外基金）
 _cn_stock_map_lock = Lock()
 
+# 选股神器候选池代码前缀白名单：主板 + 创业板 + 科创板。
+# 自动排除 B 股(900/200)、北交所(920/8/4) 等不属于这三个板块的代码。
+_AS_MARKET_PREFIX = frozenset({'600', '601', '603', '605', '000', '001', '002', '003', '300', '301', '688'})
+
 
 def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -3386,10 +3390,11 @@ def _warm_screener_cache():
         _log("[ScreenerCache] A-share symbol set not available; skip warm.")
         return
 
-    # 候选 A 股：纯股票集合，剔除科创板 688 和 ST
+    # 候选 A 股：只保留主板/创业板/科创板前缀（自动剔除 B 股 900/200、北交所 920/8/4）和 ST
     codes: list[str] = []
     for sym in a_stock_symbols:
-        if sym.startswith("688"):
+        code6 = sym.split('.')[0] if '.' in sym else sym
+        if len(code6) != 6 or code6[:3] not in _AS_MARKET_PREFIX:
             continue
         name = stock_map.get(sym, "")
         if "ST" in name.upper():
@@ -3772,7 +3777,8 @@ def stock_screener(
     a_stock_symbols = _get_a_stock_symbols()
     codes: list[str] = []
     for sym in a_stock_symbols:
-        if sym.startswith("688"):
+        code6 = sym.split('.')[0] if '.' in sym else sym
+        if len(code6) != 6 or code6[:3] not in _AS_MARKET_PREFIX:
             continue
         name = stock_map.get(sym, "")
         if "ST" in name.upper():

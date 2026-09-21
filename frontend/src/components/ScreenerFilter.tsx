@@ -1,6 +1,11 @@
 import { Search, X, RotateCcw } from 'lucide-react'
 import type { ScreenerFilter as SFilter } from '@/types'
 
+const MARKET_OPTIONS = [
+    { value: 'main', label: '主板' },
+    { value: 'chinext', label: '创业板' },
+    { value: 'star', label: '科创板' },
+]
 const POSITION_OPTIONS = [
     { value: 'overbought', label: '超买' },
     { value: 'high', label: '偏高' },
@@ -43,7 +48,7 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
     const up = (s: string) => onChange({ ...filter, [s]: undefined })
     const set = (k: string, v: any) => onChange({ ...filter, [k]: v })
 
-    const toggleMulti = (key: 'position_zones' | 'orbit_status', val: string) => {
+    const toggleMulti = (key: 'markets' | 'position_zones' | 'orbit_status', val: string) => {
         const cur = (filter[key] as string[]) || []
         const next = cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val]
         set(key, next.length ? next : undefined)
@@ -70,6 +75,22 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
                 <input type="date" value={filter.date || ''}
                     onChange={e => set('date', e.target.value || undefined)}
                     className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm" />
+            </div>
+
+            {/* Market */}
+            <div>
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">市场</label>
+                    {filter.markets?.length ? <X className="w-3 h-3 text-slate-400 cursor-pointer" onClick={() => up('markets')} /> : null}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                    {MARKET_OPTIONS.map(o => {
+                        const active = (filter.markets || []).includes(o.value)
+                        return <button key={o.value}
+                            className={`text-xs px-2 py-1 rounded-full border ${active ? 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}
+                            onClick={() => toggleMulti('markets', o.value)}>{o.label}</button>
+                    })}
+                </div>
             </div>
 
             {/* Market Cap */}

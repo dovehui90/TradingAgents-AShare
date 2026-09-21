@@ -8,7 +8,23 @@ import type { ScreenerFilter, ScreenerResultItem } from '@/types'
 
 const GS_ORDER: Record<string, number> = { G: 0, G_zone: 1, S: 2, S_zone: 3 }
 
+const CHINEXT_PREFIX = ['300', '301']
+const STAR_PREFIX = ['688']
+const MAIN_PREFIX = ['600', '601', '603', '605', '000', '001', '002', '003']
+
+function marketOf(symbol: string): string {
+    const code = (symbol || '').split('.')[0]
+    const p = code.slice(0, 3)
+    if (CHINEXT_PREFIX.includes(p)) return 'chinext'
+    if (STAR_PREFIX.includes(p)) return 'star'
+    if (MAIN_PREFIX.includes(p)) return 'main'
+    return 'other'
+}
+
 function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
+    if (f.markets && f.markets.length > 0) {
+        if (!f.markets.includes(marketOf(r.symbol))) return false
+    }
     if (f.position_zones && f.position_zones.length > 0) {
         const hit = (r.position_zone && f.position_zones.includes(r.position_zone))
             || (r.position_transition && f.position_zones.includes(r.position_transition))
