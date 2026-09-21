@@ -162,3 +162,44 @@ def load_signal_cache() -> Optional[list[dict]]:
     except Exception as e:
         logger.warning(f"[signal cache read] failed: {e}", exc_info=True)
         return None
+
+
+# ── 位置历史（按交易日分文件，供选股神器历史回看）──
+
+_POSITION_HISTORY_DIR = CACHE_DIR / "position_history"
+
+
+def save_position_history(rows: list[dict]):
+    """把逐日位置历史按交易日分文件存成 parquet（每天一个文件，约 4757 行）。
+
+    rows: [{date, symbol, position_zone, position_transition}, ...]
+    """
+    if not rows:
+        return
+    import pandas as pd
+    _POSITION_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows)
+    # None → ""，避免 parquet 往返把「无转变」变成 NaN
+    df["position_transition"] = df["position_transition"].fillna("").astype(str)
+    for date, grp in df.groupby("date"):
+        out = grp.drop(columns=["date"]).reset_index(drop=True)
+        out.to_parquet(_POSITION_HISTORY_DIR / f"{date}.parquet", index=False)
+    logger.info(f"Position history saved: {len(rows)} rows across {df['date'].nunique()} dates")
+
+
+def load_position_history(date_str: str) -> Optional[list[dict]]:
+    """读取某交易日的位置历史。返回 [{symbol, position_zone, position_transition}]，缺失返回 None。"""
+    import pandas as pd
+    path = _POSITION_HISTORY_DIR / f"{date_str}.parquet"
+    if not path.exists():
+        return None
+    try:
+        df = pd.read_parquet(str(path))
+    except Exception as e:
+        logger.warning(f"[position history read] failed: {e}", exc_info=True)
+        return None
+    records = df.to_dict("records")
+    for r in records:
+        if r.get("position_transition") == "":
+            r["position_transition"] = None
+    return records

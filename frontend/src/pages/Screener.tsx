@@ -63,6 +63,9 @@ export default function Screener() {
         setError('')
         try {
             const req: ScreenerFilter = {}
+            if (storeFilter.date) {
+                req.date = storeFilter.date
+            }
             if (storeFilter.market_cap_min != null || storeFilter.market_cap_max != null) {
                 req.market_cap_min = storeFilter.market_cap_min
                 req.market_cap_max = storeFilter.market_cap_max

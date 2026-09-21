@@ -3403,6 +3403,9 @@ def _warm_screener_cache():
     # 1. 先预计算指标（只算有 K 线缓存的，快速生成 signal 缓存，请求秒回）
     _warm_signal_cache(codes)
 
+    # 1.5 预计算逐日位置历史（按交易日分文件，供历史回看）
+    _warm_position_history(codes)
+
     # 2. 后台补 K 线缓存（慢，为下次预热补全，不影响本次 signal 缓存）
     try:
         # 限速：tushare adj_factor 限流 200次/分钟，2 并发约 60-120次/min 在配额内
@@ -3445,6 +3448,34 @@ def _warm_signal_cache(codes: list[str]):
         _log(f"[ScreenerCache] Signal precompute done: {len(rows)} stocks.")
     except Exception as e:
         _log(f"[ScreenerCache] Signal precompute failed: {e}")
+
+
+def _warm_position_history(codes: list[str]):
+    """后台预计算逐日位置历史，按交易日分文件落盘（供历史回看）。
+
+    与 _warm_signal_cache 一样 2 并发 + fetch_if_missing=False，只算有 K 线缓存的股票。
+    """
+    import logging
+    _log = logging.getLogger(__name__).info
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from tradingagents.screener.cache import save_position_history
+
+    _log(f"[PositionHistory] Precomputing position history for {len(codes)} stocks (background)...")
+    rows: list = []
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(_compute_position_history, s, False) for s in codes]
+            for fut in as_completed(futures):
+                try:
+                    r = fut.result(timeout=90)
+                    if r:
+                        rows.extend(r)
+                except Exception:
+                    pass
+        save_position_history(rows)
+        _log(f"[PositionHistory] Position history done: {len(rows)} rows.")
+    except Exception as e:
+        _log(f"[PositionHistory] Position history failed: {e}")
 
 
 def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Optional[dict]:
@@ -3605,6 +3636,33 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
         logger.debug(f"[operation] failed: {e}", exc_info=True)
 
     return result
+
+
+def _compute_position_history(code: str, fetch_if_missing: bool = False) -> list:
+    """从 K 线缓存计算单只股票的逐日位置历史（position_zone + position_transition）。
+
+    与 _compute_screener_signals 一样只读本地缓存（fetch_if_missing=False），
+    缓存缺失返回空列表，由后台预热线程补齐。
+    """
+    from tradingagents.indicators.position_index import (
+        calculate_position_index, extract_position_history,
+    )
+
+    symbol = _normalize_symbol(code)
+    try:
+        from tradingagents.screener.cache import get_kline
+        df = get_kline(symbol, days=250, fetch_if_missing=fetch_if_missing)
+    except Exception:
+        return []
+
+    if df is None or df.empty:
+        return []
+
+    df = df.sort_index()
+    pos = calculate_position_index(df.copy())
+    if len(pos) < 2:
+        return []
+    return extract_position_history(pos, symbol)
 
 
 def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
@@ -3779,6 +3837,16 @@ def stock_screener(
     for r in precomputed:
         concepts = concept_map.get(r["symbol"], []) if concept_map else []
         r["concepts"] = ", ".join(concepts[:5]) if concepts else None
+
+    # ── 历史日期：覆盖位置指标（position_zone / position_transition）──
+    from tradingagents.screener.cache import load_position_history
+    if precomputed and f.date:
+        hist = load_position_history(f.date)
+        if hist:
+            pmap = {r["symbol"]: (r["position_zone"], r["position_transition"]) for r in hist}
+            for r in precomputed:
+                if r["symbol"] in pmap:
+                    r["position_zone"], r["position_transition"] = pmap[r["symbol"]]
 
     elapsed_ms = int((time.monotonic() - t0) * 1000)
 
