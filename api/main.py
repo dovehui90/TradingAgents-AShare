@@ -3434,9 +3434,7 @@ def run_screener_post_market_update() -> bool:
     """
     import logging
     _log = logging.getLogger(__name__).info
-    from tradingagents.screener.cache import (
-        build_screener_cache, cached_symbol_count, _SIGNAL_CACHE_PATH,
-    )
+    from tradingagents.screener.cache import build_screener_cache, cached_symbol_count
 
     codes = _get_screener_candidate_codes()
     if not codes:
@@ -3452,32 +3450,28 @@ def run_screener_post_market_update() -> bool:
     except Exception as e:
         _log(f"[ScreenerPostMarket] K 线重抓失败: {e}")
 
-    # 2. 删除 signals.json，强制重算（绕过 24h 新鲜度检查）
-    try:
-        if _SIGNAL_CACHE_PATH.exists():
-            _SIGNAL_CACHE_PATH.unlink()
-    except Exception as e:
-        _log(f"[ScreenerPostMarket] 删除 signals.json 失败: {e}")
-
-    # 3. 重算 signals + 信号历史
-    _warm_signal_cache(codes)
+    # 2. 强制重算 signals + 信号历史（force 绕过 24h 新鲜度检查；不删文件，
+    #    原子替换，避免重算窗口期内 signals.json 缺失 → 请求返回空）
+    _warm_signal_cache(codes, force=True)
     _warm_signal_history(codes)
 
     _log("[ScreenerPostMarket] 盘后重算完成")
     return True
 
 
-def _warm_signal_cache(codes: list[str]):
+def _warm_signal_cache(codes: list[str], force: bool = False):
     """后台预计算指标结果并缓存（请求内不现算，直接读 signals.json）。
 
     只算有 K 线缓存的股票（fetch_if_missing=False），避免被 tushare 限流拖慢；
     缺 K 线的股票由 build_screener_cache 补缓存，下次预热再覆盖。
+
+    force=True 时跳过 24h 新鲜度检查强制重算（盘后重算用）。
     """
     import logging
     _log = logging.getLogger(__name__).info
     from tradingagents.screener.cache import save_signal_cache, load_signal_cache
 
-    if load_signal_cache() is not None:
+    if not force and load_signal_cache() is not None:
         _log("[ScreenerCache] Signal cache already fresh, skip precompute.")
         return
 

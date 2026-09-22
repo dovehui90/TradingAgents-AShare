@@ -161,10 +161,17 @@ _SIGNAL_CACHE_PATH = CACHE_DIR / "signals.json"
 
 
 def save_signal_cache(rows: list[dict]):
-    """把预计算好的全量指标结果存成单个 json 文件。"""
+    """把预计算好的全量指标结果存成单个 json 文件。
+
+    原子写：先写临时文件再 os.replace，避免重算过程中 signals.json 被删/写一半，
+    导致请求窗口期内读到空文件（选股神器无数据）。
+    """
     import json
-    with open(_SIGNAL_CACHE_PATH, "w", encoding='utf-8') as f:
+    import os
+    tmp_path = _SIGNAL_CACHE_PATH.with_suffix(".json.tmp")
+    with open(tmp_path, "w", encoding='utf-8') as f:
         json.dump(rows, f, ensure_ascii=False)
+    os.replace(tmp_path, _SIGNAL_CACHE_PATH)
     logger.info(f"Signal cache saved: {len(rows)} stocks")
 
 
