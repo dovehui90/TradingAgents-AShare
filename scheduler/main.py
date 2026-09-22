@@ -358,7 +358,10 @@ def _recover_stale_tasks():
                     )
                     .all()
                 )
-                completed_by_id = {r.id: r.created_at for r in rows}
+                completed_by_id = {
+                    r.id: (r.created_at.strftime("%Y-%m-%d") if r.created_at else "")
+                    for r in rows
+                }
 
             recovered_count = 0
             reset_count = 0
