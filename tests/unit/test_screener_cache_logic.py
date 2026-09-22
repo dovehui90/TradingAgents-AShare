@@ -94,6 +94,42 @@ class TestIsStale:
         # After market close, TTL is 86400s, so 7201s old → not stale
         assert _is_stale(path) is False
 
+    @freeze_time("2026-07-15 07:33:00")  # 周三早上（未开盘）
+    def test_overnight_close_data_not_stale_in_morning(self, cache_dir):
+        """隔夜收盘数据在次日早上不应被误判过期（旧 bug：早上全量重抓）。"""
+        from tradingagents.screener.cache import _is_stale
+
+        path = cache_dir / "test.parquet"
+        path.write_text("dummy")
+        # 落盘时间 = 昨日（周二）16:00 收盘后，距今 15h33m
+        old_time = time.time() - (15 * 3600 + 33 * 60)
+        os.utime(str(path), (old_time, old_time))
+        assert _is_stale(path) is False
+
+    @freeze_time("2026-07-20 07:33:00")  # 周一早上（未开盘）
+    def test_friday_close_data_not_stale_monday_morning(self, cache_dir):
+        """周五收盘数据在周一早上不应被误判过期（跨周末）。"""
+        from tradingagents.screener.cache import _is_stale
+
+        path = cache_dir / "test.parquet"
+        path.write_text("dummy")
+        # 落盘时间 = 上周五 16:00 收盘后，距今 2 天 15h33m
+        old_time = time.time() - (2 * 86400 + 15 * 3600 + 33 * 60)
+        os.utime(str(path), (old_time, old_time))
+        assert _is_stale(path) is False
+
+    @freeze_time("2026-07-16 16:00:00")  # 周四收盘后
+    def test_stale_after_next_trading_day_close(self, cache_dir):
+        """下一个交易日收盘后，上一收盘数据应过期（有新收盘价了）。"""
+        from tradingagents.screener.cache import _is_stale
+
+        path = cache_dir / "test.parquet"
+        path.write_text("dummy")
+        # 落盘时间 = 昨日（周三）16:00 收盘后，距今 24h（已过今日收盘）
+        old_time = time.time() - 86400
+        os.utime(str(path), (old_time, old_time))
+        assert _is_stale(path) is True
+
 
 class TestConceptMapCache:
     """load_concept_map() / save_concept_map() tests."""

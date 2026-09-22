@@ -3,7 +3,7 @@
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "screener_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-# 缓存有效期：收盘前盘中数据2小时，收盘后数据到明日开盘前
+# 缓存有效期：盘中数据 2 小时过期（盘中价持续变动）
 _CACHE_TTL_DAY = 7200   # 2 hours during trading
-_CACHE_TTL_NIGHT = 86400  # 24 hours after close
+# 收盘判定时间点（含 45 分钟缓冲，避免收盘后数据源尚未更新时误判）
+_MARKET_CLOSE = dt_time(15, 45)
 
 
 def _cache_path(symbol: str) -> Path:
@@ -27,15 +28,34 @@ def _cache_path(symbol: str) -> Path:
 
 
 def _is_stale(path: Path) -> bool:
-    """Check if cache is stale based on modification time and market hours."""
+    """判断缓存是否过期。
+
+    核心修复：按「落盘时间」而非「当前时间」决定用哪套过期规则——
+    - 盘中落盘（当日 15:45 前）：盘中价，2 小时过期；
+    - 收盘后落盘（当日 15:45 后）：最终收盘价，有效到下一个交易日收盘前。
+
+    旧实现用「当前时间 < 15:45」决定 TTL，导致早上未开盘时把隔夜收盘数据
+    误判为盘中 2 小时 → 每次早上重启都全量重抓（隔夜/周末数据本无需更新）。
+
+    注：这里的「交易日」仅按周末过滤（未接入节假日日历），长假首日仍会多抓一次，
+    属于无害的重复抓取（拿到的仍是上一收盘数据）。
+    """
     if not path.exists():
         return True
-    age = time.time() - path.stat().st_mtime
-    now = datetime.now()
-    market_close = now.replace(hour=15, minute=45, second=0, microsecond=0)
-    if now < market_close:
-        return age > _CACHE_TTL_DAY
-    return age > _CACHE_TTL_NIGHT
+
+    mtime = path.stat().st_mtime
+    mtime_dt = datetime.fromtimestamp(mtime)
+
+    # 盘中落盘 → 2 小时过期
+    if mtime_dt.time() < _MARKET_CLOSE:
+        return (time.time() - mtime) > _CACHE_TTL_DAY
+
+    # 收盘后落盘 → 有效到下一个交易日（跳过周末）收盘
+    next_td = mtime_dt.date() + timedelta(days=1)
+    while next_td.weekday() >= 5:  # 5=周六 6=周日
+        next_td += timedelta(days=1)
+    next_close = datetime.combine(next_td, _MARKET_CLOSE)
+    return datetime.now() >= next_close
 
 
 def get_kline(symbol: str, days: int = 250, fetch_if_missing: bool = True) -> Optional[pd.DataFrame]:
