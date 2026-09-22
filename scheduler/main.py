@@ -442,6 +442,10 @@ async def _startup():
     from scheduler.yang_yin_scheduler import yang_yin_loop
     _create_tracked_task(yang_yin_loop(), label="yang_yin_scheduler")
 
+    # 启动选股神器盘后重算（收盘后重算 signal 历史 + signals.json）
+    from scheduler.screener_scheduler import screener_post_market_loop
+    _create_tracked_task(screener_post_market_loop(), label="screener_post_market_scheduler")
+
     await _scheduler_loop()
 
 

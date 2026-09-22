@@ -3374,6 +3374,27 @@ def _build_concept_cache():
         _os.environ['no_proxy'] = old_no_proxy_lower
 
 
+def _get_screener_candidate_codes() -> list[str]:
+    """选股神器候选池：纯 A 股，只保留主板/创业板/科创板前缀，剔除 ST。
+
+    前缀白名单自动排除 B 股(900/200)、北交所(920/8/4)。
+    """
+    stock_map = _get_reverse_stock_map_cached_only()
+    a_stock_symbols = _get_a_stock_symbols()
+    if not a_stock_symbols:
+        return []
+    codes: list[str] = []
+    for sym in a_stock_symbols:
+        code6 = sym.split('.')[0] if '.' in sym else sym
+        if len(code6) != 6 or code6[:3] not in _AS_MARKET_PREFIX:
+            continue
+        name = stock_map.get(sym, "")
+        if "ST" in name.upper():
+            continue
+        codes.append(_normalize_symbol(sym))
+    return codes
+
+
 def _warm_screener_cache():
     """Background task: pre-warm screener K-line cache for all A-share candidates.
 
@@ -3384,23 +3405,7 @@ def _warm_screener_cache():
     _log = logging.getLogger(__name__).info
     from tradingagents.screener.cache import build_screener_cache, cached_symbol_count
 
-    stock_map = _get_reverse_stock_map_cached_only()
-    a_stock_symbols = _get_a_stock_symbols()
-    if not a_stock_symbols:
-        _log("[ScreenerCache] A-share symbol set not available; skip warm.")
-        return
-
-    # 候选 A 股：只保留主板/创业板/科创板前缀（自动剔除 B 股 900/200、北交所 920/8/4）和 ST
-    codes: list[str] = []
-    for sym in a_stock_symbols:
-        code6 = sym.split('.')[0] if '.' in sym else sym
-        if len(code6) != 6 or code6[:3] not in _AS_MARKET_PREFIX:
-            continue
-        name = stock_map.get(sym, "")
-        if "ST" in name.upper():
-            continue
-        codes.append(_normalize_symbol(sym))
-
+    codes = _get_screener_candidate_codes()
     if not codes:
         _log("[ScreenerCache] No A-share candidates found; skip warm.")
         return
@@ -3419,6 +3424,47 @@ def _warm_screener_cache():
         _log(f"[ScreenerCache] K-line warm done: {cached_symbol_count()} cached.")
     except Exception as e:
         _log(f"[ScreenerCache] K-line warm failed: {e}")
+
+
+def run_screener_post_market_update() -> bool:
+    """盘后重算选股神器信号（供 scheduler 在收盘后调用）。
+
+    与启动预热不同：先重抓今日收盘 K 线，再强制重算 signals.json + 信号历史。
+    否则选股神器只在启动时算一次，收盘后仍是昨日数据（前端选当天却看到昨日）。
+    """
+    import logging
+    _log = logging.getLogger(__name__).info
+    from tradingagents.screener.cache import (
+        build_screener_cache, cached_symbol_count, _SIGNAL_CACHE_PATH,
+    )
+
+    codes = _get_screener_candidate_codes()
+    if not codes:
+        _log("[ScreenerPostMarket] 无候选股票，跳过")
+        return False
+
+    _log(f"[ScreenerPostMarket] 开始盘后重算：{len(codes)} 只")
+
+    # 1. 先重抓今日 K 线（拿到收盘价；盘中抓的数据收盘后会被判过期）
+    try:
+        build_screener_cache(codes, max_workers=2)
+        _log(f"[ScreenerPostMarket] K 线重抓完成: {cached_symbol_count()} cached")
+    except Exception as e:
+        _log(f"[ScreenerPostMarket] K 线重抓失败: {e}")
+
+    # 2. 删除 signals.json，强制重算（绕过 24h 新鲜度检查）
+    try:
+        if _SIGNAL_CACHE_PATH.exists():
+            _SIGNAL_CACHE_PATH.unlink()
+    except Exception as e:
+        _log(f"[ScreenerPostMarket] 删除 signals.json 失败: {e}")
+
+    # 3. 重算 signals + 信号历史
+    _warm_signal_cache(codes)
+    _warm_signal_history(codes)
+
+    _log("[ScreenerPostMarket] 盘后重算完成")
+    return True
 
 
 def _warm_signal_cache(codes: list[str]):
