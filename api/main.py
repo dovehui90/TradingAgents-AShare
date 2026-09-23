@@ -3828,7 +3828,7 @@ def stock_screener(
     total_candidates = len(codes)
 
     # ── Phase 2: Warm market cap cache ──
-    if not _mcap_cache:
+    if not _screener_mcap_cache:
         try:
             import tushare as _ts, os as _os
             _ts.set_token(_os.environ.get("TUSHARE_TOKEN", "23651a8611b00bf491c7378d81d0bc6265543153530194be989e6ada"))
@@ -3841,7 +3841,7 @@ def stock_screener(
                     df = pro.daily_basic(trade_date=date_try, fields='ts_code,circ_mv')
                     if df is not None and not df.empty:
                         for _, row in df.iterrows():
-                            _mcap_cache[row['ts_code']] = float(row['circ_mv'])
+                            _screener_mcap_cache[row['ts_code']] = float(row['circ_mv'])
                         break
                 except Exception:
                     continue
@@ -3853,7 +3853,7 @@ def stock_screener(
         filtered: list[str] = []
         for sym in codes:
             code6 = sym.split(".")[0]
-            mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
+            mcap_wan = _screener_mcap_cache.get(code6, _screener_mcap_cache.get(sym))
             if mcap_wan is None:
                 filtered.append(sym)
                 continue
@@ -3911,7 +3911,7 @@ def stock_screener(
                 sp2 = spot_price.get(sym)
                 r["change_pct"] = sp2[1] if sp2 else None
             code6 = sym.split(".")[0]
-            mcap_wan = _mcap_cache.get(code6, _mcap_cache.get(sym))
+            mcap_wan = _screener_mcap_cache.get(code6, _screener_mcap_cache.get(sym))
             r["market_cap"] = round(mcap_wan / 10000, 2) if mcap_wan else None
             precomputed.append(r)
     # 缓存未就绪（后台预热中）：precomputed 为空，快速返回，避免请求内重算超时
@@ -4314,6 +4314,10 @@ _board_constituents_cache: Dict[str, tuple] = {}   # symbol -> (timestamp, data)
 _BOARD_CONS_TTL = 86400 * 10  # 10 days for stock list (rarely changes)
 _mcap_cache: Dict[str, float] = {}
 _mcap_ts: float = 0
+# 选股神器自己的流通市值缓存（key 带后缀 .SH/.SZ，值单位万元）。
+# 不能与上面的 _mcap_cache 共用：BoardCons 会用「6位代码 + 亿元」格式整体重置它，
+# 导致选股神器读到的市值被 ÷10000 两次 → 全变 0。
+_screener_mcap_cache: Dict[str, float] = {}
 
 def _fetch_board_constituents(board_symbol: str) -> tuple[str, pd.DataFrame]:
     """Fetch constituent stocks for a board.
