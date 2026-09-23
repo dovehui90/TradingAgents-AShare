@@ -25,6 +25,8 @@ function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
     if (f.markets && f.markets.length > 0) {
         if (!f.markets.includes(marketOf(r.symbol))) return false
     }
+    if (f.market_cap_min != null && (r.market_cap == null || r.market_cap < f.market_cap_min)) return false
+    if (f.market_cap_max != null && (r.market_cap == null || r.market_cap > f.market_cap_max)) return false
     if (f.position_zones && f.position_zones.length > 0) {
         const hit = (r.position_zone && f.position_zones.includes(r.position_zone))
             || (r.position_transition && f.position_zones.includes(r.position_transition))
