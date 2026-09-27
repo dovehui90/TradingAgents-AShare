@@ -3,7 +3,7 @@
 import logging
 import os
 import time
-from datetime import datetime, time as dt_time, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -27,6 +27,25 @@ def _cache_path(symbol: str) -> Path:
     return CACHE_DIR / f"{code}_{suffix}.parquet"
 
 
+def _next_trading_day(d: date) -> date:
+    """返回严格晚于 d 的下一个交易日。
+
+    用真实交易日历（is_cn_trading_day），覆盖周末与长假（春节/国庆约 7-8 个交易日）；
+    日历加载失败时降级为仅周末过滤。
+    """
+    from tradingagents.dataflows.trade_calendar import is_cn_trading_day
+
+    cur = d + timedelta(days=1)
+    for _ in range(30):  # 30 天上界，覆盖最长连续休市
+        if is_cn_trading_day(cur.strftime("%Y-%m-%d")):
+            return cur
+        cur += timedelta(days=1)
+    # 降级：仅周末过滤
+    while cur.weekday() >= 5:
+        cur += timedelta(days=1)
+    return cur
+
+
 def _is_stale(path: Path) -> bool:
     """判断缓存是否过期。
 
@@ -37,8 +56,8 @@ def _is_stale(path: Path) -> bool:
     旧实现用「当前时间 < 15:45」决定 TTL，导致早上未开盘时把隔夜收盘数据
     误判为盘中 2 小时 → 每次早上重启都全量重抓（隔夜/周末数据本无需更新）。
 
-    注：这里的「交易日」仅按周末过滤（未接入节假日日历），长假首日仍会多抓一次，
-    属于无害的重复抓取（拿到的仍是上一收盘数据）。
+    「下一个交易日」用真实交易日历（_next_trading_day），长假期间收盘后落盘的
+    缓存不会被误判过期 → 不再触发长假首日的全量重复抓取。
     """
     if not path.exists():
         return True
@@ -50,10 +69,8 @@ def _is_stale(path: Path) -> bool:
     if mtime_dt.time() < _MARKET_CLOSE:
         return (time.time() - mtime) > _CACHE_TTL_DAY
 
-    # 收盘后落盘 → 有效到下一个交易日（跳过周末）收盘
-    next_td = mtime_dt.date() + timedelta(days=1)
-    while next_td.weekday() >= 5:  # 5=周六 6=周日
-        next_td += timedelta(days=1)
+    # 收盘后落盘 → 有效到下一个交易日（跳过周末+长假）收盘
+    next_td = _next_trading_day(mtime_dt.date())
     next_close = datetime.combine(next_td, _MARKET_CLOSE)
     return datetime.now() >= next_close
 
@@ -159,6 +176,10 @@ def save_concept_map(concept_map: dict[str, list[str]]):
 
 _SIGNAL_CACHE_PATH = CACHE_DIR / "signals.json"
 
+# 信号缓存过期时间：与 scheduler/screener_scheduler.py 盘后 17:00 重算对齐，
+# 加 30 分钟缓冲，等重算完成后再判过期，避免重算窗口期内被误判为无数据。
+_SIGNAL_RECOMPUTE_TIME = dt_time(17, 30)
+
 
 def save_signal_cache(rows: list[dict]):
     """把预计算好的全量指标结果存成单个 json 文件。
@@ -175,12 +196,41 @@ def save_signal_cache(rows: list[dict]):
     logger.info(f"Signal cache saved: {len(rows)} stocks")
 
 
+def _is_signal_cache_stale(path: Path) -> bool:
+    """信号快照（signals.json）过期判定。
+
+    核心规则：只有在「出现了更新的交易日数据」时才判过期，其余情况一律返回缓存——
+    - 非交易日（周末/长假）：永不判过期，直接显示最近一次盘后重算（上一交易日）的数据；
+    - 交易日：当天盘后重算（17:30）之前仍用旧数据；已过重算时间但缓存还没更新到当天，才判过期。
+
+    旧实现用 24h TTL，周五盘后写入的信号周末/长假超过 24h 被误判过期 → 选股神器无数据。
+    """
+    if not path.exists():
+        return True
+
+    from tradingagents.dataflows.trade_calendar import is_cn_trading_day, cn_today_str
+
+    today = cn_today_str()
+    # 非交易日：缓存永不判过期，直接显示上一个交易日数据
+    if not is_cn_trading_day(today):
+        return False
+
+    # 交易日：缓存已更新到当天（盘后重算过）→ 不判过期
+    mtime_date = datetime.fromtimestamp(path.stat().st_mtime).date()
+    if mtime_date >= date.fromisoformat(today):
+        return False
+
+    # 当天还没到盘后重算时间 → 旧数据仍是最新可用，先用着
+    if datetime.now().time() < _SIGNAL_RECOMPUTE_TIME:
+        return False
+
+    # 已过盘后重算时间但缓存没更新到当天 → 过期（触发重算）
+    return True
+
+
 def load_signal_cache() -> Optional[list[dict]]:
-    """读预计算的指标结果；过期（超过 24h，即非当天）返回 None。"""
-    if not _SIGNAL_CACHE_PATH.exists():
-        return None
-    age = time.time() - _SIGNAL_CACHE_PATH.stat().st_mtime
-    if age > 86400:  # 24h TTL（指标随收盘价每天变化，每日重算一次）
+    """读预计算的指标结果；过期（出现更新的交易日数据且未重算）返回 None。"""
+    if _is_signal_cache_stale(_SIGNAL_CACHE_PATH):
         return None
     try:
         import json
@@ -201,8 +251,18 @@ _SIGNAL_STRING_FIELDS = [
 ]
 
 
-def save_signal_history(rows: list[dict]):
+def signal_history_dates() -> set[str]:
+    """返回已存在的信号历史文件日期集合（YYYY-MM-DD），用于判断增量 vs 回填。"""
+    if not _SIGNAL_HISTORY_DIR.exists():
+        return set()
+    return {p.stem for p in _SIGNAL_HISTORY_DIR.glob("*.parquet")}
+
+
+def save_signal_history(rows: list[dict], skip_existing: bool = True):
     """把逐日全维度信号按交易日分文件存成 parquet（每天一个文件，约 4757 行）。
+
+    skip_existing=True（默认）：已存在的日期文件跳过不重写 —— 历史信号是点-in-time
+    的（历史值不随新增交易日变化），增量模式下只需写新日期，避免每天重写 60 个文件。
 
     rows: [{date, symbol, price, change_pct, position_zone, position_transition,
             decision_status, bull_status, orbit_status, gs_status, trend_status,
@@ -217,10 +277,21 @@ def save_signal_history(rows: list[dict]):
     for f in _SIGNAL_STRING_FIELDS:
         if f in df.columns:
             df[f] = df[f].fillna("").astype(str)
+    written = 0
     for date, grp in df.groupby("date"):
+        path = _SIGNAL_HISTORY_DIR / f"{date}.parquet"
+        if skip_existing and path.exists():
+            continue
         out = grp.drop(columns=["date"]).reset_index(drop=True)
-        out.to_parquet(_SIGNAL_HISTORY_DIR / f"{date}.parquet", index=False)
-    logger.info(f"Signal history saved: {len(rows)} rows across {df['date'].nunique()} dates")
+        # 原子写：先写 tmp 再 os.replace，避免写一半崩溃留下损坏/半截文件
+        tmp_path = path.with_name(path.name + ".tmp")
+        out.to_parquet(tmp_path, index=False)
+        os.replace(tmp_path, path)
+        written += 1
+    logger.info(
+        f"Signal history saved: {len(rows)} rows across {df['date'].nunique()} dates "
+        f"(written={written}, skipped={df['date'].nunique() - written})"
+    )
 
 
 def load_signal_history(date_str: str) -> Optional[list[dict]]:

@@ -129,3 +129,85 @@ class TestSignalHistoryStorage:
 
         # 缺失日期返回 None
         assert cache_mod.load_signal_history("1999-01-01") is None
+
+
+class TestIncrementalSlice:
+    """增量切片核心正确性：切最后 65 根求出的末日信号 == 全量末日信号。"""
+
+    LOOKBACK = 65
+
+    def _full_and_sliced_last(self, args, max_days=1):
+        full = derive_daily_signals(**args)
+        n = len(args["dates"])
+        s = max(0, n - (max_days + self.LOOKBACK))
+        sliced = {k: v[s:] for k, v in args.items() if k != "symbol"}
+        sliced["symbol"] = args["symbol"]
+        sl = derive_daily_signals(**sliced)
+        return full[-1], sl[-1]
+
+    def test_last_day_equals_full_at_gs_boundary(self):
+        # 200 根：bar0 发 G，bar139 发 S（距末日 60 根，正好在 gs 回溯边界内）
+        n = 200
+        dates = [f"2026-01-{i+1:02d}" for i in range(n)]
+        gs_buy = [True] + [False] * (n - 1)
+        gs_sell = [False] * n
+        gs_sell[139] = True
+        args = _make(
+            dates,
+            close=[10.0 + (i % 7) * 0.5 for i in range(n)],
+            zones=["low"] * n, gs_buy=gs_buy, gs_sell=gs_sell,
+            trend=[1.0 if i % 3 else -1.0 for i in range(n)],
+            radar=[0.5 + (i % 5) * 0.1 for i in range(n)],
+        )
+        full_last, sliced_last = self._full_and_sliced_last(args)
+        assert full_last == sliced_last
+        assert full_last["gs_status"] == "S_zone"  # 距 S 正好 60 根 → S_zone
+
+    def test_last_day_equals_full_varied(self):
+        # 多空/zone 多变的序列，验证切片等价（不依赖具体数值）
+        n = 150
+        dates = [f"2026-02-{i+1:02d}" for i in range(n)]
+        args = _make(
+            dates,
+            close=[10.0 + (i % 9) * 0.3 for i in range(n)],
+            zones=["low" if i % 4 == 0 else ("oversold" if i % 4 == 1
+                   else ("high" if i % 4 == 2 else "overbought")) for i in range(n)],
+            gs_buy=[i % 20 == 0 for i in range(n)],
+            gs_sell=[i % 23 == 0 for i in range(n)],
+            trend=[1.0 if i % 2 else -1.0 for i in range(n)],
+            radar=[0.5 + (i % 6) * 0.1 for i in range(n)],
+        )
+        full_last, sliced_last = self._full_and_sliced_last(args)
+        assert full_last == sliced_last
+
+
+class TestSignalHistoryIncremental:
+    """save_signal_history 增量写：skip_existing 不重写 + signal_history_dates。"""
+
+    def _row(self, date, symbol, price):
+        return {"date": date, "symbol": symbol, "price": price, "change_pct": 10.0,
+                "position_zone": "low", "position_transition": None, "decision_status": "above",
+                "bull_status": "above", "orbit_status": "cross_up", "gs_status": "G",
+                "trend_status": "red_hold", "radar_wave": 0.6}
+
+    def test_skip_existing_does_not_overwrite(self, tmp_path, monkeypatch):
+        from tradingagents.screener import cache as cache_mod
+        monkeypatch.setattr(cache_mod, "_SIGNAL_HISTORY_DIR", tmp_path)
+
+        cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 11.0)])
+        # 同日期第二次写（不同 price），skip_existing 应跳过 → 保留原值
+        cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 999.0)])
+        assert cache_mod.load_signal_history("2026-09-16")[0]["price"] == 11.0
+
+        # 新日期正常写入
+        cache_mod.save_signal_history([self._row("2026-09-17", "600089.SH", 12.0)])
+        assert cache_mod.load_signal_history("2026-09-17")[0]["price"] == 12.0
+        assert cache_mod.signal_history_dates() == {"2026-09-16", "2026-09-17"}
+
+    def test_force_rewrite_when_skip_disabled(self, tmp_path, monkeypatch):
+        from tradingagents.screener import cache as cache_mod
+        monkeypatch.setattr(cache_mod, "_SIGNAL_HISTORY_DIR", tmp_path)
+
+        cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 11.0)])
+        cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 999.0)], skip_existing=False)
+        assert cache_mod.load_signal_history("2026-09-16")[0]["price"] == 999.0

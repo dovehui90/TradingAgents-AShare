@@ -3499,17 +3499,33 @@ def _warm_signal_history(codes: list[str]):
     """后台预计算逐日全维度信号历史，按交易日分文件落盘（供历史回看）。
 
     与 _warm_signal_cache 一样 2 并发 + fetch_if_missing=False，只算有 K 线缓存的股票。
+    增量：已有历史且只缺最新 1 个交易日 → 只算最新一天；冷启动/断档 → 全量回填。
     """
     import logging
     _log = logging.getLogger(__name__).info
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from tradingagents.screener.cache import save_signal_history
+    from tradingagents.screener.cache import save_signal_history, signal_history_dates
+    from tradingagents.dataflows.trade_calendar import (
+        cn_today_str, latest_cn_trading_day, previous_cn_trading_day,
+    )
 
-    _log(f"[SignalHistory] Precomputing signal history for {len(codes)} stocks (background)...")
+    existing = signal_history_dates()
+    max_days: int | None = None  # None = 全量回填
+    if existing:
+        latest_td = latest_cn_trading_day(cn_today_str())
+        newest = max(existing)
+        if newest >= latest_td:
+            _log("[SignalHistory] 历史已最新，跳过重算。")
+            return
+        prev_td = previous_cn_trading_day(latest_td)
+        if newest >= prev_td:
+            max_days = 1  # 只缺最新一天 → 增量
+
+    _log(f"[SignalHistory] Precomputing signal history for {len(codes)} stocks (max_days={max_days})...")
     rows: list = []
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
-            futures = [pool.submit(_compute_signal_history, s, False) for s in codes]
+            futures = [pool.submit(_compute_signal_history, s, False, max_days) for s in codes]
             for fut in as_completed(futures):
                 try:
                     r = fut.result(timeout=90)
@@ -3685,13 +3701,19 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
 
 # 历史回看保留的交易日数（2核3.6G无swap，全量250天累积 dict 会 OOM，先降到60天）
 _SIGNAL_HISTORY_DAYS = 60
+# 增量切片回溯根数：60（gs 状态回溯上限）+ 5（趋势窗口）兜底，保证末日信号与全量一致
+_SIGNAL_HISTORY_GS_LOOKBACK = 65
 
 
-def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
+def _compute_signal_history(code: str, fetch_if_missing: bool = False, max_days: int | None = None) -> list:
     """从 K 线缓存计算单只股票的逐日全维度信号历史。
 
     与 _compute_screener_signals 一样只读本地缓存（fetch_if_missing=False），
     缓存缺失返回空列表，由后台预热线程补齐。
+
+    max_days=None：全量回填，保留最近 _SIGNAL_HISTORY_DAYS 个交易日；
+    max_days=N：增量，只算最近 N 个交易日（切最后 N+_SIGNAL_HISTORY_GS_LOOKBACK 根，
+    保证末日信号与全量一致，历史值点-in-time 不变）。
     """
     from tradingagents.indicators.niuxiong_line import (
         calculate_niuxiong_line, calculate_gs_strategy, calculate_radar_indicator,
@@ -3733,21 +3755,40 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False) -> list:
         return []
     dates = date_s.dt.strftime("%Y-%m-%d").tolist()
 
+    close_v = nx["close"].values
+    decision_v = nx["decision_line"].values
+    bull_v = nx["bull_line"].values
+    orbit_v = nx["orbit_line"].values
+    zones_v = pos["zone"].astype(str).tolist()
+    gs_buy_v = gs["gs_buy"].fillna(False).astype(bool).tolist()
+    gs_sell_v = gs["gs_sell"].fillna(False).astype(bool).tolist()
+    trend_v = ts["trend_strength"].fillna(0).values
+    radar_v = radar["radar_wave"].values
+
+    n = len(dates)
+    if max_days is None:
+        # 全量回填：算全部，只保留最近 N 个交易日（2核3.6G无swap，全量250天 dict 会 OOM）
+        max_days = _SIGNAL_HISTORY_DAYS
+        s = 0
+    else:
+        # 增量：只算最近 max_days 个交易日。切最后 max_days+LOOKBACK 根，
+        # LOOKBACK 覆盖 gs 状态 60 日回溯上限 + 5 日趋势窗口，保证末日信号与全量一致。
+        s = max(0, n - (max_days + _SIGNAL_HISTORY_GS_LOOKBACK))
+
     rows = derive_daily_signals(
-        dates=dates,
-        close=nx["close"].values,
-        decision_line=nx["decision_line"].values,
-        bull_line=nx["bull_line"].values,
-        orbit_line=nx["orbit_line"].values,
-        zones=pos["zone"].astype(str).tolist(),
-        gs_buy=gs["gs_buy"].fillna(False).astype(bool).tolist(),
-        gs_sell=gs["gs_sell"].fillna(False).astype(bool).tolist(),
-        trend_strength=ts["trend_strength"].fillna(0).values,
-        radar_wave=radar["radar_wave"].values,
+        dates=dates[s:],
+        close=close_v[s:],
+        decision_line=decision_v[s:],
+        bull_line=bull_v[s:],
+        orbit_line=orbit_v[s:],
+        zones=zones_v[s:],
+        gs_buy=gs_buy_v[s:],
+        gs_sell=gs_sell_v[s:],
+        trend_strength=trend_v[s:],
+        radar_wave=radar_v[s:],
         symbol=symbol,
     )
-    # 只保留最近 N 个交易日：2核3.6G服务器无swap，全量250天累积 dict 会 OOM
-    return rows[-_SIGNAL_HISTORY_DAYS:]
+    return rows[-max_days:]
 
 
 def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:

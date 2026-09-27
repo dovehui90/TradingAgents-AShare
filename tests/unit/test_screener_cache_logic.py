@@ -131,6 +131,54 @@ class TestIsStale:
         assert _is_stale(path) is True
 
 
+class TestIsStaleHoliday:
+    """长假期间 K 线缓存不应被判过期（_is_stale 改用真实交易日历）。"""
+
+    HOLIDAYS = {"2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06", "2026-10-07"}
+
+    @pytest.fixture(autouse=True)
+    def _mock_calendar(self, monkeypatch):
+        import tradingagents.dataflows.trade_calendar as tc
+
+        def fake_is_trading(d: str) -> bool:
+            dt = datetime.strptime(d, "%Y-%m-%d")
+            if dt.weekday() >= 5:  # 周末
+                return False
+            return d not in self.HOLIDAYS
+
+        monkeypatch.setattr(tc, "is_cn_trading_day", fake_is_trading)
+
+    def test_next_trading_day_skips_holiday(self, cache_dir):
+        from tradingagents.screener.cache import _next_trading_day
+
+        # 节前最后交易日 09-30（周三）→ 下一交易日应跳过国庆长假到 10-08（周四）
+        assert _next_trading_day(datetime(2026, 9, 30).date()) == datetime(2026, 10, 8).date()
+        # 普通周末：周五 09-25 → 周一 09-28
+        assert _next_trading_day(datetime(2026, 9, 25).date()) == datetime(2026, 9, 28).date()
+
+    @freeze_time("2026-10-03 12:00:00")  # 国庆长假中（周六）
+    def test_holiday_keeps_pre_holiday_close_cache_fresh(self, cache_dir):
+        from tradingagents.screener.cache import _is_stale
+
+        path = cache_dir / "test.parquet"
+        path.write_text("dummy")
+        # 落盘时间 = 09-30（节前最后交易日）17:05，长假中读取 → 不应过期
+        mtime = datetime(2026, 9, 30, 17, 5).timestamp()
+        os.utime(str(path), (mtime, mtime))
+        assert _is_stale(path) is False
+
+    @freeze_time("2026-10-08 16:00:00")  # 节后第一个交易日收盘后
+    def test_stale_after_holiday_first_trading_day_close(self, cache_dir):
+        from tradingagents.screener.cache import _is_stale
+
+        path = cache_dir / "test.parquet"
+        path.write_text("dummy")
+        mtime = datetime(2026, 9, 30, 17, 5).timestamp()
+        os.utime(str(path), (mtime, mtime))
+        # 10-08 已收盘（16:00 > 15:45），节前数据应过期
+        assert _is_stale(path) is True
+
+
 class TestConceptMapCache:
     """load_concept_map() / save_concept_map() tests."""
 
