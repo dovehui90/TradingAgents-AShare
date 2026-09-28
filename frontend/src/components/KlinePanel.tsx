@@ -29,10 +29,10 @@ interface KlinePanelProps {
 }
 
 function toDateText(date: Date): string {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+    // 用服务器时区（Asia/Shanghai = UTC+8，无夏令时）取「今天」。
+    // 不能用 getFullYear/getMonth/getDate（浏览器本地时区）——海外/时区落后时
+    // end_date 会比服务器少一天，今天的盘中柱被后端 date 范围过滤吞掉。
+    return new Date(date.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
 }
 
 function toChartTime(value: string, period: KlinePeriod): Time | null {
