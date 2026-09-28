@@ -6,7 +6,7 @@ Uses tmp_path for filesystem isolation and freezegun for time control.
 import json
 import os
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -235,3 +235,74 @@ class TestCachedSymbolCount:
         (cache_dir / "not_a_parquet.txt").write_text("dummy")
 
         assert cached_symbol_count() == 2
+
+
+class TestResolveScreenerDataDate:
+    """resolve_screener_data_date — 数据日期回退（方案A）。
+
+    核心诉求：日历上的最近交易日（latest_cn_trading_day 含当日）在当天 17:00
+    盘后重算前还没有当日信号数据，需回退到最近一个有数据的交易日，避免
+    data_date 显示当天却筛出前一交易日数据。
+    """
+
+    def _setup(self, monkeypatch, today, history_dates):
+        """mock 交易日历（纯工作日，忽略节假日）与信号历史日期集合。"""
+        import tradingagents.dataflows.trade_calendar as tc
+        import tradingagents.screener.cache as cache_mod
+
+        # 纯工作日日历：2026-09-01 ~ 2026-10-31
+        dates = []
+        d = date(2026, 9, 1)
+        end = date(2026, 10, 31)
+        while d <= end:
+            if d.weekday() < 5:
+                dates.append(d)
+            d += timedelta(days=1)
+        monkeypatch.setattr(tc, "_load_cn_trade_dates", lambda: (dates, set(dates)))
+        monkeypatch.setattr(tc, "cn_today_str", lambda: today)
+        monkeypatch.setattr(cache_mod, "signal_history_dates", lambda: history_dates)
+
+    def _resolve(self):
+        from tradingagents.screener.cache import resolve_screener_data_date
+        return resolve_screener_data_date
+
+    def test_default_latest_rollback_when_today_not_computed(self, monkeypatch):
+        # 周一(交易日)默认最新，但当天盘后重算未跑 → 回退到周五
+        self._setup(monkeypatch, today="2026-09-28", history_dates={"2026-09-25"})
+        assert self._resolve()(None) == "2026-09-25"
+
+    def test_default_latest_no_rollback_when_today_computed(self, monkeypatch):
+        self._setup(monkeypatch, today="2026-09-28",
+                    history_dates={"2026-09-25", "2026-09-28"})
+        assert self._resolve()(None) == "2026-09-28"
+
+    def test_weekend_default_returns_last_trading_day(self, monkeypatch):
+        # 周日默认最新 → 最近交易日=周五，周五有数据，不回退
+        self._setup(monkeypatch, today="2026-09-27", history_dates={"2026-09-25"})
+        assert self._resolve()(None) == "2026-09-25"
+
+    def test_explicit_past_date_not_rolled_back(self, monkeypatch):
+        # 明确选历史日期 → 原样返回，不做回退
+        self._setup(monkeypatch, today="2026-09-28",
+                    history_dates={"2026-09-25", "2026-09-21"})
+        assert self._resolve()("2026-09-21") == "2026-09-21"
+
+    def test_explicit_today_rollback_when_not_computed(self, monkeypatch):
+        # 明确选今天(交易日)但当天未重算 → 回退到上一交易日
+        self._setup(monkeypatch, today="2026-09-28", history_dates={"2026-09-25"})
+        assert self._resolve()("2026-09-28") == "2026-09-25"
+
+    def test_future_date_rolls_back_to_latest_available(self, monkeypatch):
+        # 选未来日期 → 对齐后无数据 → 回退到最近有数据的交易日
+        self._setup(monkeypatch, today="2026-09-28", history_dates={"2026-09-25"})
+        assert self._resolve()("2026-10-01") == "2026-09-25"
+
+    def test_empty_history_rolls_back_to_prev_trading_day(self, monkeypatch):
+        # 冷启动（无任何信号历史）→ 回退到上一交易日（数据本身也为空，仅日期诚实）
+        self._setup(monkeypatch, today="2026-09-28", history_dates=set())
+        assert self._resolve()(None) == "2026-09-25"
+
+    def test_multi_day_gap_rolls_to_latest_available(self, monkeypatch):
+        # 断档多日（周四/周五缺）→ 回退到最近有数据的周三，而非上一交易日周五
+        self._setup(monkeypatch, today="2026-09-28", history_dates={"2026-09-23"})
+        assert self._resolve()(None) == "2026-09-23"

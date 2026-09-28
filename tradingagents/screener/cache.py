@@ -316,3 +316,26 @@ def load_signal_history(date_str: str) -> Optional[list[dict]]:
             if isinstance(v, float) and math.isnan(v):
                 r[k] = None
     return records
+
+
+def resolve_screener_data_date(requested_date: Optional[str] = None) -> str:
+    """把请求日期对齐到「实际有信号数据的最近交易日」。
+
+    前端不传日期或选「最新日期」时，日历上的最近交易日（latest_cn_trading_day 含当日）
+    在当天 17:00 盘后重算前还没有当日信号数据。此时回退到最近一个有数据的交易日，
+    使 data_date 与实际筛选数据日期一致，避免「显示当天却筛出前一交易日数据」。
+
+    历史日期（< 今天）不受影响，仍按原逻辑对齐（交给既有覆盖逻辑 + 快照兜底）。
+    """
+    from tradingagents.dataflows.trade_calendar import (
+        cn_today_str, latest_cn_trading_day, previous_cn_trading_day,
+    )
+
+    available = signal_history_dates()
+    latest_td = latest_cn_trading_day(cn_today_str())
+    target = latest_cn_trading_day(requested_date) if requested_date else latest_td
+
+    # 只有目标日期是「今天或未来」且尚未重算（无信号历史文件）时才回退。
+    if target >= latest_td and target not in available:
+        return max(available) if available else previous_cn_trading_day(latest_td)
+    return target

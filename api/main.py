@@ -3843,14 +3843,12 @@ def stock_screener(
     db: Session = Depends(get_db),
 ):
     """多维选股筛选器。先按市值取全量股票预计算所有指标，返回全量结果供前端动态筛选。"""
-    from tradingagents.dataflows.trade_calendar import latest_cn_trading_day
+    from tradingagents.screener.cache import resolve_screener_data_date
 
     t0 = time.monotonic()
-    # Auto-adjust date to nearest trading day（含当日）
-    if f.date:
-        f.date = latest_cn_trading_day(f.date)
-    else:
-        f.date = latest_cn_trading_day(cn_today_str())
+    # 对齐到最近交易日（含当日）；若当天盘后重算未跑（无当日信号历史），
+    # 回退到上一交易日，使 data_date 与实际数据日期一致。
+    f.date = resolve_screener_data_date(f.date)
 
     stock_map = _get_reverse_stock_map_cached_only()
 
