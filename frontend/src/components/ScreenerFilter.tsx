@@ -139,6 +139,22 @@ export default function ScreenerFilter({ filter, onChange, onSearch, onClear, lo
                 </div>
             </div>
 
+            {/* Weekly GS Signal */}
+            <div>
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">周线GS</label>
+                    {filter.weekly_gs_signal ? <X className="w-3 h-3 text-slate-400 cursor-pointer" onClick={() => up('weekly_gs_signal')} /> : null}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                    {GS_OPTIONS.map(o => {
+                        const active = filter.weekly_gs_signal === o
+                        return <button key={o}
+                            className={`text-xs px-2 py-1 rounded-full border ${active ? 'bg-orange-100 border-orange-300 text-orange-700 dark:bg-orange-900 dark:text-orange-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}
+                            onClick={() => set('weekly_gs_signal', active ? undefined : o)}>{GS_LABELS[o]}</button>
+                    })}
+                </div>
+            </div>
+
             {/* Orbit */}
             <div>
                 <div className="flex items-center justify-between">

@@ -26,6 +26,9 @@ const GS_LABELS: Record<string, string> = {
 const GS_COLORS: Record<string, string> = {
     G: 'text-red-600', S: 'text-green-600', G_zone: 'text-red-400', S_zone: 'text-green-400',
 }
+const WEEKLY_GS_COLORS: Record<string, string> = {
+    G: 'text-purple-600', S: 'text-teal-600', G_zone: 'text-purple-400', S_zone: 'text-teal-400',
+}
 const ORBIT_LABELS: Record<string, string> = {
     cross_up: '刚站上', above2: '上方≥2', cross_down: '刚跌破', below2: '下方≥2',
 }
@@ -100,6 +103,7 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                                 <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">流通市值</th>
                                 <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">位置</th>
                                 <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">GS</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">周线GS</th>
                                 <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">轨道</th>
                                 <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">决策</th>
                                 <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">牛熊</th>
@@ -130,6 +134,9 @@ export default function ScreenerTable({ results, totalCandidates, totalFiltered,
                                     </td>
                                     <td className={`px-3 py-2 text-center text-xs font-medium ${GS_COLORS[r.gs_status || ''] || ''}`}>
                                         {GS_LABELS[r.gs_status || ''] || '-'}
+                                    </td>
+                                    <td className={`px-3 py-2 text-center text-xs font-medium ${WEEKLY_GS_COLORS[r.weekly_gs_status || ''] || ''}`}>
+                                        {GS_LABELS[r.weekly_gs_status || ''] || '-'}
                                     </td>
                                     <td className="px-3 py-2 text-center text-xs">{ORBIT_LABELS[r.orbit_status || ''] || '-'}</td>
                                     <td className="px-3 py-2 text-center text-xs">{DECISION_LABELS[r.decision_status || ''] || '-'}</td>

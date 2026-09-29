@@ -3551,6 +3551,9 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
     )
     from tradingagents.indicators.trend_strength import calculate_trend_strength
     from tradingagents.indicators.position_index import calculate_position_index, get_position_transition
+    from tradingagents.indicators.signal_history import (
+        derive_gs_states, WEEKLY_GS_ZONE_LOOKBACK,
+    )
 
     symbol = _normalize_symbol(code)
 
@@ -3663,6 +3666,21 @@ def _compute_screener_signals(code: str, fetch_if_missing: bool = False) -> Opti
     except Exception as e:
         logger.debug(f"[operation] failed: {e}", exc_info=True)
 
+    # ── Weekly GS Strategy (周线 GS：日线聚合周线后算，26 周回溯) ──
+    try:
+        weekly_df = _aggregate_daily_df(df, "weekly")
+        if len(weekly_df) >= 1:
+            weekly_df.index = pd.to_datetime(weekly_df.index)
+            gs_w = calculate_gs_strategy(weekly_df)
+            if len(gs_w) >= 1:
+                w_buy = gs_w["gs_buy"].fillna(False).astype(bool).tolist()
+                w_sell = gs_w["gs_sell"].fillna(False).astype(bool).tolist()
+                result["weekly_gs_status"] = derive_gs_states(
+                    w_buy, w_sell, zone_lookback=WEEKLY_GS_ZONE_LOOKBACK
+                )[-1]
+    except Exception as e:
+        logger.debug(f"[operation] failed: {e}", exc_info=True)
+
     # ── Trend Strength ──
     try:
         ts = calculate_trend_strength(df.copy())
@@ -3720,7 +3738,9 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False, max_days:
     )
     from tradingagents.indicators.position_index import calculate_position_index
     from tradingagents.indicators.trend_strength import calculate_trend_strength
-    from tradingagents.indicators.signal_history import derive_daily_signals
+    from tradingagents.indicators.signal_history import (
+        derive_daily_signals, derive_weekly_gs_status, WEEKLY_GS_ZONE_LOOKBACK,
+    )
 
     symbol = _normalize_symbol(code)
     try:
@@ -3788,6 +3808,28 @@ def _compute_signal_history(code: str, fetch_if_missing: bool = False, max_days:
         radar_wave=radar_v[s:],
         symbol=symbol,
     )
+
+    # 周线 GS：日线聚合周线后算，映射回每个交易日（同周各日共享该周状态）。
+    # 用全量 df 算（不随增量切片走），保证周线 zone 回溯 26 周与全量一致。
+    try:
+        weekly_df = _aggregate_daily_df(df, "weekly")
+        if len(weekly_df) >= 1:
+            weekly_df.index = pd.to_datetime(weekly_df.index)
+            gs_w = calculate_gs_strategy(weekly_df)
+            if len(gs_w) >= 1:
+                week_keys = [f"{d.isocalendar().year}-W{d.isocalendar().week:02d}"
+                             for d in weekly_df.index]
+                w_buy = gs_w["gs_buy"].fillna(False).astype(bool).tolist()
+                w_sell = gs_w["gs_sell"].fillna(False).astype(bool).tolist()
+                week_map = derive_weekly_gs_status(week_keys, w_buy, w_sell,
+                                                   WEEKLY_GS_ZONE_LOOKBACK)
+                for r in rows:
+                    d = pd.Timestamp(r["date"])
+                    wk = f"{d.isocalendar().year}-W{d.isocalendar().week:02d}"
+                    r["weekly_gs_status"] = week_map.get(wk)
+    except Exception as e:
+        logger.debug(f"[weekly gs] failed: {e}", exc_info=True)
+
     return rows[-max_days:]
 
 
@@ -3804,6 +3846,12 @@ def _match_screener_filters(item: dict, f: ScreenerFilter) -> bool:
     if f.gs_signal:
         gs = item.get("gs_status", "")
         if gs != f.gs_signal:
+            return False
+
+    # Weekly GS signal（周线维度，独立于日线 GS）
+    if f.weekly_gs_signal:
+        wgs = item.get("weekly_gs_status", "")
+        if wgs != f.weekly_gs_signal:
             return False
 
     # Orbit status (multi-select OR)

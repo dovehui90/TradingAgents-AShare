@@ -20,6 +20,42 @@ def _missing(v) -> bool:
         return False
 
 
+# 周线 GS 的 zone 回溯周数（日线用 60 根交易日，周线对应半年约 26 周）
+WEEKLY_GS_ZONE_LOOKBACK = 26
+
+
+def derive_gs_states(gs_buy, gs_sell, zone_lookback: int = 60) -> list:
+    """逐 bar 计算 GS 状态（G/S/G_zone/S_zone/None）。
+
+    与 derive_daily_signals 原先内联的 GS 判定逻辑一致，抽出供日线(60)/周线(26)共用。
+
+    Args:
+        gs_buy/gs_sell: 等长布尔序列（须已 fillna，不含 NaN）。
+        zone_lookback: 距最近一次 G/S 信号超过该 bar 数后，zone 归 None。
+
+    Returns:
+        等长的状态列表，bar i 的 GS 状态（G/S/G_zone/S_zone/None）。
+    """
+    states: list = []
+    last_sig = None
+    last_sig_age = 1_000_000
+    for i in range(len(gs_buy)):
+        if bool(gs_buy[i]):
+            states.append("G")
+            last_sig, last_sig_age = "G", 0
+        elif bool(gs_sell[i]):
+            states.append("S")
+            last_sig, last_sig_age = "S", 0
+        else:
+            last_sig_age += 1
+            states.append(
+                (last_sig + "_zone")
+                if (last_sig is not None and last_sig_age <= zone_lookback)
+                else None
+            )
+    return states
+
+
 def derive_daily_signals(
     dates,
     close,
@@ -52,14 +88,8 @@ def derive_daily_signals(
     n = len(dates)
     rows: list = []
 
-    # gs 最近信号跟踪（bar 0 不产出，但影响 bar 1 的 zone）
-    last_sig = None
-    last_sig_age = 1_000_000
-    if n > 0:
-        if bool(gs_buy[0]):
-            last_sig, last_sig_age = "G", 0
-        elif bool(gs_sell[0]):
-            last_sig, last_sig_age = "S", 0
+    # GS 状态机（日线 60 根回溯）：逐 bar 预计算，bar 0 不产出但影响后续 zone
+    gs_states = derive_gs_states(gs_buy, gs_sell, zone_lookback=60)
 
     for i in range(1, n):
         c = close[i]
@@ -101,15 +131,7 @@ def derive_daily_signals(
         transition = get_position_transition(prev_zone, zone)
 
         # GS 信号（G/S/G_zone/S_zone）
-        if bool(gs_buy[i]):
-            gs_status = "G"
-            last_sig, last_sig_age = "G", 0
-        elif bool(gs_sell[i]):
-            gs_status = "S"
-            last_sig, last_sig_age = "S", 0
-        else:
-            last_sig_age += 1
-            gs_status = (last_sig + "_zone") if (last_sig is not None and last_sig_age <= 60) else None
+        gs_status = gs_states[i]
 
         # 中线趋势（翻红/翻绿/持红/持绿）
         prev_trend = [v for v in trend_strength[max(0, i - 5):i] if not _missing(v)]
@@ -138,3 +160,21 @@ def derive_daily_signals(
             "radar_wave": rw,
         })
     return rows
+
+
+def derive_weekly_gs_status(week_keys, gs_buy, gs_sell,
+                            zone_lookback: int = WEEKLY_GS_ZONE_LOOKBACK) -> dict:
+    """周线 GS 状态按 ISO 周键返回 {week_key: status}。
+
+    供选股神器历史回看使用：先算周线 GS 状态机，再按 ISO 周键映射，让同周各日共享该周状态。
+
+    Args:
+        week_keys: 每个周 bar 的 ISO 周键（"YYYY-WNN"，与 _aggregate_daily_df 同口径），等长。
+        gs_buy/gs_sell: 等长布尔序列（周线 gs_buy/gs_sell，须已 fillna）。
+        zone_lookback: 周线 zone 回溯周数（默认 26）。
+
+    Returns:
+        {week_key: gs_status} 映射。
+    """
+    states = derive_gs_states(gs_buy, gs_sell, zone_lookback)
+    return {k: s for k, s in zip(week_keys, states)}

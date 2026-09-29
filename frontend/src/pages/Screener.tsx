@@ -42,6 +42,16 @@ function matchFilter(r: ScreenerResultItem, f: ScreenerFilter): boolean {
             return false
         }
     }
+    if (f.weekly_gs_signal) {
+        const wgs = r.weekly_gs_status
+        if (f.weekly_gs_signal === 'G_zone') {
+            if (wgs !== 'G' && wgs !== 'G_zone') return false
+        } else if (f.weekly_gs_signal === 'S_zone') {
+            if (wgs !== 'S' && wgs !== 'S_zone') return false
+        } else if (wgs !== f.weekly_gs_signal) {
+            return false
+        }
+    }
     if (f.orbit_status && f.orbit_status.length > 0) {
         if (!r.orbit_status || !f.orbit_status.includes(r.orbit_status)) return false
     }

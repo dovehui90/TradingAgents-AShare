@@ -1344,6 +1344,7 @@ export interface ScreenerFilter {
     markets?: string[]
     position_zones?: string[]
     gs_signal?: string
+    weekly_gs_signal?: string
     orbit_status?: string[]
     decision_status?: string
     bull_status?: string
@@ -1363,6 +1364,7 @@ export interface ScreenerResultItem {
     position_zone: string | null
     position_transition: string | null
     gs_status: string | null
+    weekly_gs_status: string | null
     orbit_status: string | null
     decision_status: string | null
     bull_status: string | null

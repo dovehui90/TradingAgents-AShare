@@ -1,6 +1,10 @@
 """Tests for signal_history.derive_daily_signals — 全维度逐日信号抽取。"""
 
-from tradingagents.indicators.signal_history import derive_daily_signals
+from tradingagents.indicators.signal_history import (
+    derive_daily_signals,
+    derive_gs_states,
+    derive_weekly_gs_status,
+)
 
 
 def _make(dates, close, **kw):
@@ -211,3 +215,62 @@ class TestSignalHistoryIncremental:
         cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 11.0)])
         cache_mod.save_signal_history([self._row("2026-09-16", "600089.SH", 999.0)], skip_existing=False)
         assert cache_mod.load_signal_history("2026-09-16")[0]["price"] == 999.0
+
+
+class TestDeriveGsStates:
+    """derive_gs_states — 抽出的 GS 状态机（日线 60 / 周线 26 共用）。"""
+
+    def test_buy_then_zone(self):
+        assert derive_gs_states(
+            [True, False, False], [False, False, False]
+        ) == ["G", "G_zone", "G_zone"]
+
+    def test_sell_then_zone(self):
+        assert derive_gs_states(
+            [False, False, False, False], [False, False, True, False]
+        ) == [None, None, "S", "S_zone"]
+
+    def test_most_recent_signal_wins(self):
+        assert derive_gs_states(
+            [True, False, False, False, False],
+            [False, False, False, True, False],
+        ) == ["G", "G_zone", "G_zone", "S", "S_zone"]
+
+    def test_zone_expires_after_lookback(self):
+        # 26 周回溯：bar0 发 G，bar1..26 仍是 G_zone，bar27 过期归 None
+        states = derive_gs_states([True] + [False] * 27, [False] * 28, zone_lookback=26)
+        assert states[0] == "G"
+        assert all(s == "G_zone" for s in states[1:27])
+        assert states[27] is None
+
+    def test_default_lookback_is_60(self):
+        # 默认 60：bar0 G，bar60 仍是 G_zone，bar61 过期
+        states = derive_gs_states([True] + [False] * 61, [False] * 62)
+        assert states[60] == "G_zone"
+        assert states[61] is None
+
+
+class TestDeriveWeeklyGsStatus:
+    """derive_weekly_gs_status — 周线 GS 状态按 ISO 周键返回。"""
+
+    def test_maps_week_keys_to_states(self):
+        result = derive_weekly_gs_status(
+            ["2026-W01", "2026-W02", "2026-W03"],
+            [True, False, False],
+            [False, False, False],
+        )
+        assert result == {
+            "2026-W01": "G",
+            "2026-W02": "G_zone",
+            "2026-W03": "G_zone",
+        }
+
+    def test_uses_26_week_lookback_by_default(self):
+        # W01 发 G，W27（age 26）仍 G_zone，W28（age 27）过期 None
+        weeks = [f"2026-W{i:02d}" for i in range(1, 29)]
+        result = derive_weekly_gs_status(
+            weeks, [True] + [False] * 27, [False] * 28
+        )
+        assert result["2026-W01"] == "G"
+        assert result["2026-W27"] == "G_zone"
+        assert result["2026-W28"] is None
