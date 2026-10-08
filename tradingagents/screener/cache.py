@@ -247,7 +247,7 @@ _SIGNAL_HISTORY_DIR = CACHE_DIR / "signal_history"
 
 _SIGNAL_STRING_FIELDS = [
     "position_zone", "position_transition", "decision_status",
-    "bull_status", "orbit_status", "gs_status", "trend_status",
+    "bull_status", "orbit_status", "gs_status", "weekly_gs_status", "trend_status",
 ]
 
 

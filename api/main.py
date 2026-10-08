@@ -4022,7 +4022,7 @@ def stock_screener(
                 if h:
                     for field in ("price", "change_pct", "position_zone", "position_transition",
                                   "decision_status", "bull_status", "orbit_status",
-                                  "gs_status", "trend_status", "radar_wave"):
+                                  "gs_status", "weekly_gs_status", "trend_status", "radar_wave"):
                         if field in h:
                             r[field] = h[field]
 

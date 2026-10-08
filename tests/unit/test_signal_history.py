@@ -106,11 +106,11 @@ class TestSignalHistoryStorage:
             {"date": "2026-09-16", "symbol": "600089.SH", "price": 11.0, "change_pct": 10.0,
              "position_zone": "low", "position_transition": "oversold_to_low",
              "decision_status": "above", "bull_status": "above", "orbit_status": "cross_up",
-             "gs_status": "G", "trend_status": "red_hold", "radar_wave": 0.6},
+             "gs_status": "G", "weekly_gs_status": "G_zone", "trend_status": "red_hold", "radar_wave": 0.6},
             {"date": "2026-09-16", "symbol": "000001.SZ", "price": None, "change_pct": None,
              "position_zone": "oversold", "position_transition": None,
              "decision_status": None, "bull_status": None, "orbit_status": None,
-             "gs_status": None, "trend_status": None, "radar_wave": None},
+             "gs_status": None, "weekly_gs_status": None, "trend_status": None, "radar_wave": None},
         ]
         cache_mod.save_signal_history(rows)
 
@@ -122,6 +122,7 @@ class TestSignalHistoryStorage:
         assert a["change_pct"] == 10.0
         assert a["position_transition"] == "oversold_to_low"
         assert a["gs_status"] == "G"
+        assert a["weekly_gs_status"] == "G_zone"
         assert a["radar_wave"] == 0.6
 
         b = by_symbol["000001.SZ"]
@@ -129,6 +130,7 @@ class TestSignalHistoryStorage:
         assert b["change_pct"] is None
         assert b["position_transition"] is None
         assert b["gs_status"] is None
+        assert b["weekly_gs_status"] is None
         assert b["radar_wave"] is None
 
         # 缺失日期返回 None
