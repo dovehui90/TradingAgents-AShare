@@ -678,6 +678,28 @@ _STOCK_MAP_TTL = 7 * 86400  # 7 days (successful load)
 _STOCK_MAP_FAIL_TTL = 300   # 5 minutes (failed load, retry sooner)
 
 
+def _clear_akshare_stock_list_cache(ak) -> None:
+    """清 akshare 股票列表接口的 lru_cache，强制重新拉取最新列表。
+
+    akshare 的 stock_info_a_code_name 及其底层 stock_info_*_name_code 都带
+    @lru_cache()（无 TTL 的进程级永久缓存）。进程启动后首次调用会把「当时的
+    股票列表」缓存进内存，之后调用永远命中旧缓存，导致进程启动后才上市的新股
+    即使项目级 TTL 过期重新加载也拿不到。重载前清掉这些缓存即可。
+    """
+    for _name in (
+        "stock_info_a_code_name",
+        "stock_info_sh_name_code",
+        "stock_info_sz_name_code",
+        "stock_info_bj_name_code",
+    ):
+        _fn = getattr(ak, _name, None)
+        if _fn is not None and hasattr(_fn, "cache_clear"):
+            try:
+                _fn.cache_clear()
+            except Exception:
+                pass
+
+
 def _load_cn_stock_map() -> Dict[str, str]:
     """Lazy-load and cache A-share stock + ETF/fund name→code mapping (7-day TTL).
 
@@ -687,59 +709,79 @@ def _load_cn_stock_map() -> Dict[str, str]:
     global _cn_stock_map, _cn_stock_reverse_map, _cn_a_stock_symbols, _cn_stock_map_loaded_at
     import time as _time
     now = _time.time()
+    need_reload = False
     if _cn_stock_map is not None:
         ttl = _STOCK_MAP_FAIL_TTL if (not _cn_stock_map) else _STOCK_MAP_TTL
         if (now - _cn_stock_map_loaded_at) > ttl:
-            _cn_stock_map = None  # expire cache
-            _cn_stock_reverse_map = None
-            _cn_a_stock_symbols = None
-    if _cn_stock_map is not None:
+            need_reload = True
+    else:
+        need_reload = True
+    if not need_reload:
         return _cn_stock_map
     with _cn_stock_map_lock:
+        # 双重检查：并发下可能已被其他线程重载
         if _cn_stock_map is not None:
             ttl = _STOCK_MAP_FAIL_TTL if (not _cn_stock_map) else _STOCK_MAP_TTL
             if (now - _cn_stock_map_loaded_at) <= ttl:
                 return _cn_stock_map
-        result: Dict[str, str] = {}
         try:
             import akshare as ak
-            # A-share stocks (static list, no anti-crawl issue)
+            _clear_akshare_stock_list_cache(ak)
             df = ak.stock_info_a_code_name()
+
+            # 本次拉取的最新列表（先单独构建，再增量合并进旧 map）
+            new_stock: Dict[str, str] = {}
             for _, row in df.iterrows():
                 name = str(row.get("name", "")).strip()
                 code = str(row.get("code", "")).strip()
                 if name and code:
-                    result[name] = _normalize_symbol(code)
-            stock_count = len(result)
-            _cn_a_stock_symbols = set(result.values())  # 纯股票快照（加载 ETF/基金之前）
-            # ETF / funds
-            fund_count = 0
+                    new_stock[name] = _normalize_symbol(code)
+            stock_count = len(new_stock)
+            new_symbols = set(new_stock.values())
+
+            new_fund: Dict[str, str] = {}
             try:
                 fund_df = ak.fund_name_em()
-                existing_codes = set(result.values())
+                existing_codes = set(new_symbols)
                 for _, row in fund_df.iterrows():
                     code = str(row.get("基金代码", "")).strip()
                     name = str(row.get("基金简称", "")).strip()
                     if name and code and len(code) == 6 and code.isdigit():
                         normalized = _normalize_symbol(code)
                         if normalized not in existing_codes:
-                            result[name] = normalized
+                            new_fund[name] = normalized
                             existing_codes.add(normalized)
-                fund_count = len(result) - stock_count
+                fund_count = len(new_fund)
             except Exception as fe:
+                fund_count = 0
                 _log(f"[StockMap] ETF/fund load skipped: {fe}")
-            _cn_stock_map = result
-            _cn_stock_reverse_map = {code: name for name, code in result.items()}
+
+            # 增量合并：旧条目原地不动，只补入新出现的 name/code
+            if _cn_stock_map is None:
+                _cn_stock_map = {}
+            if _cn_stock_reverse_map is None:
+                _cn_stock_reverse_map = {}
+            if _cn_a_stock_symbols is None:
+                _cn_a_stock_symbols = set()
+            added = 0
+            for name, code in {**new_stock, **new_fund}.items():
+                if name not in _cn_stock_map:
+                    _cn_stock_map[name] = code
+                    added += 1
+            for name, code in _cn_stock_map.items():
+                _cn_stock_reverse_map.setdefault(code, name)
+            _cn_a_stock_symbols.update(new_symbols)
+
             _cn_stock_map_loaded_at = now
-            _log(f"[StockMap] Loaded {stock_count} stocks + {fund_count} ETFs/funds = {len(result)} total.")
+            _log(f"[StockMap] Incremental merge: +{added} new entries (total {len(_cn_stock_map)}), stocks={stock_count}, funds={fund_count}.")
         except Exception as e:
             _log(f"[StockMap] Failed to load: {e}")
+            # 保留旧 map（不整体置空）；仅从未加载成功时才初始化为空
             if _cn_stock_map is None:
                 _cn_stock_map = {}
                 _cn_stock_reverse_map = {}
                 _cn_a_stock_symbols = set()
-            # Set _loaded_at so we don't retry on every request; use a short
-            # cooldown (5 min) instead of the full 7-day TTL for empty cache.
+            # 失败也更新 loaded_at，走 5 分钟短 TTL 重试，避免每个请求都重试
             _cn_stock_map_loaded_at = now
     return _cn_stock_map
 
