@@ -182,12 +182,12 @@ class TestIsStaleHoliday:
 class TestConceptMapCache:
     """load_concept_map() / save_concept_map() tests."""
 
-    def test_load_returns_none_for_missing_file(self, cache_dir):
-        """When concept_map.json doesn't exist, load_concept_map returns None."""
+    def test_load_returns_empty_for_missing_file(self, cache_dir):
+        """When concept_map.json doesn't exist, load_concept_map returns empty dict."""
         from tradingagents.screener.cache import load_concept_map
 
         result = load_concept_map()
-        assert result is None
+        assert result == {}
 
     def test_save_and_load_roundtrip(self, cache_dir):
         from tradingagents.screener.cache import load_concept_map, save_concept_map
@@ -200,7 +200,7 @@ class TestConceptMapCache:
         assert result == test_map
 
     @freeze_time("2026-07-15 10:00:00")
-    def test_expired_cache_returns_empty(self, cache_dir):
+    def test_expired_cache_returns_stale_data(self, cache_dir):
         from tradingagents.screener.cache import load_concept_map, save_concept_map
 
         test_map = {"000001.SZ": ["概念A"]}
@@ -215,8 +215,9 @@ class TestConceptMapCache:
         import tradingagents.screener.cache as cache_mod
         cache_mod._CONCEPT_CACHE = None
 
+        # 过期也返回旧数据（概念映射只增不减，不清空）
         result = load_concept_map()
-        assert result == {}
+        assert result == test_map
 
 
 class TestCachedSymbolCount:

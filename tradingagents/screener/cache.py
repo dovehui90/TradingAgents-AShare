@@ -143,22 +143,25 @@ _CONCEPT_CACHE: Optional[dict] = None
 
 
 def load_concept_map() -> dict[str, list[str]]:
-    """Load stock→concepts mapping from cache, or return empty."""
+    """Load stock→concepts mapping from cache.
+
+    概念映射只增不减（增量补齐），不设过期 TTL——旧数据依然有效，
+    避免过期后清空重来导致全量重爬中断时数据残缺。文件不存在或解析失败返回空。
+    """
     global _CONCEPT_CACHE
     if _CONCEPT_CACHE is not None:
         return _CONCEPT_CACHE
 
     path = _CONCEPT_MAP_PATH
-    if path.exists():
-        try:
-            import json
-            age = time.time() - path.stat().st_mtime
-            if age < 30 * 86400:  # 1 month TTL
-                with open(path, encoding='utf-8') as f:
-                    _CONCEPT_CACHE = json.load(f)
-                return _CONCEPT_CACHE
-        except Exception as e:
-            logger.debug(f"[JSON parse] failed: {e}", exc_info=True)
+    if not path.exists():
+        return {}
+    try:
+        import json
+        with open(path, encoding='utf-8') as f:
+            _CONCEPT_CACHE = json.load(f)
+        return _CONCEPT_CACHE
+    except Exception as e:
+        logger.debug(f"[JSON parse] failed: {e}", exc_info=True)
         return {}
 
 

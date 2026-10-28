@@ -3368,11 +3368,6 @@ def _build_concept_cache():
     _os.environ['NO_PROXY'] = '*'
     _os.environ['no_proxy'] = '*'
     try:
-        concept_map = load_concept_map()
-        if concept_map:
-            return  # already built
-        concept_map = {}  # initialize empty cache for building
-
         import requests as _requests
 
         # A-share stock code prefixes (excludes ETFs like 159/510-518/560-589/588)
@@ -3386,8 +3381,14 @@ def _build_concept_cache():
             _log('[ConceptCache] No A-share stocks found')
             return
 
-        _log(f'[ConceptCache] Building cache for {len(symbols)} stocks via THS...')
-        for i, sym in enumerate(symbols):
+        concept_map = load_concept_map() or {}  # 保留已有数据，只补缺失
+        missing = [s for s in symbols if s not in concept_map]
+        if not missing:
+            _log(f'[ConceptCache] Cache complete: {len(concept_map)}/{len(symbols)} stocks')
+            return
+
+        _log(f'[ConceptCache] Filling {len(missing)} missing stocks via THS (have {len(concept_map)})...')
+        for i, sym in enumerate(missing):
             code = sym.split('.')[0]
             try:
                 url = f'https://basic.10jqka.com.cn/{code}/concept.html'
@@ -3404,11 +3405,11 @@ def _build_concept_cache():
 
             if (i + 1) % 200 == 0:
                 save_concept_map(concept_map)
-                _log(f'[ConceptCache] {i+1}/{len(symbols)} stocks, {len(concept_map)} with concepts')
+                _log(f'[ConceptCache] {i+1}/{len(missing)} filled, {len(concept_map)} with concepts')
             _time.sleep(0.15)
 
         save_concept_map(concept_map)
-        _log(f'[ConceptCache] Built: {len(concept_map)}/{len(symbols)} stocks with concepts')
+        _log(f'[ConceptCache] Done: {len(concept_map)}/{len(symbols)} stocks with concepts')
     except Exception as e:
         _log(f'[ConceptCache] Build failed: {e}')
     finally:
