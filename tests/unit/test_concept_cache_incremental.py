@@ -111,3 +111,67 @@ def test_build_concept_cache_no_missing_returns_early(monkeypatch):
     main_mod._build_concept_cache()
 
     assert called["n"] == 0  # 无缺失，不爬
+
+
+def test_build_concept_cache_retries_on_empty(monkeypatch):
+    """概念为空时重试（THS 反爬返回空页），重试后成功则写入。"""
+    existing = {}
+    saved = {}
+
+    monkeypatch.setattr(cache_mod, "load_concept_map", lambda: dict(existing))
+
+    def fake_save(m):
+        saved.clear()
+        saved.update(m)
+
+    monkeypatch.setattr(cache_mod, "save_concept_map", fake_save)
+    stock_map = {"股1": "000001.SZ"}
+    monkeypatch.setattr(main_mod, "_load_cn_stock_map", lambda: stock_map)
+
+    calls = {"n": 0}
+
+    def fake_get(url, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return _FakeResp("<html>no concept</html>")
+        return _FakeResp('<td class="gnName">概念A</td>')
+
+    monkeypatch.setattr(_requests_mod, "get", fake_get)
+    monkeypatch.setattr(_time_mod, "sleep", lambda _: None)
+
+    main_mod._build_concept_cache()
+
+    assert calls["n"] == 3
+    assert saved["000001.SZ"] == ["概念A"]
+
+
+def test_build_concept_cache_retries_on_exception(monkeypatch):
+    """请求异常时重试，重试成功则写入。"""
+    existing = {}
+    saved = {}
+
+    monkeypatch.setattr(cache_mod, "load_concept_map", lambda: dict(existing))
+
+    def fake_save(m):
+        saved.clear()
+        saved.update(m)
+
+    monkeypatch.setattr(cache_mod, "save_concept_map", fake_save)
+    stock_map = {"股1": "000001.SZ"}
+    monkeypatch.setattr(main_mod, "_load_cn_stock_map", lambda: stock_map)
+
+    calls = {"n": 0}
+
+    def fake_get(url, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise RuntimeError("timeout")
+        return _FakeResp('<td class="gnName">概念A</td>')
+
+    monkeypatch.setattr(_requests_mod, "get", fake_get)
+    monkeypatch.setattr(_time_mod, "sleep", lambda _: None)
+
+    main_mod._build_concept_cache()
+
+    assert calls["n"] == 3
+    assert saved["000001.SZ"] == ["概念A"]

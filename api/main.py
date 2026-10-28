@@ -3388,25 +3388,30 @@ def _build_concept_cache():
             return
 
         _log(f'[ConceptCache] Filling {len(missing)} missing stocks via THS (have {len(concept_map)})...')
+        _AS_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                       'Referer': 'https://basic.10jqka.com.cn/'}
         for i, sym in enumerate(missing):
             code = sym.split('.')[0]
-            try:
-                url = f'https://basic.10jqka.com.cn/{code}/concept.html'
-                r = _requests.get(url,
-                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                             'Referer': 'https://basic.10jqka.com.cn/'},
-                    timeout=10)
-                text = r.content.decode('gbk', errors='ignore')
-                names = _re.findall(r'class="gnName"[^>]*>\s*([^<]+?)\s*</td>', text)
-                if names:
-                    concept_map[sym] = [n.strip() for n in names[:5]]
-            except Exception as e:
-                logger.warning(f"[_requests lookup] failed: {e}", exc_info=True)
+            names = None
+            for attempt in range(3):  # 失败退避重试，应对 THS 反爬返回空页/超时
+                try:
+                    url = f'https://basic.10jqka.com.cn/{code}/concept.html'
+                    r = _requests.get(url, headers=_AS_HEADERS, timeout=10)
+                    text = r.content.decode('gbk', errors='ignore')
+                    names = _re.findall(r'class="gnName"[^>]*>\s*([^<]+?)\s*</td>', text)
+                    if names:
+                        break
+                except Exception as e:
+                    logger.warning(f"[_requests lookup] failed: {e}", exc_info=True)
+                if attempt < 2:  # 退避：0.6s, 1.2s
+                    _time.sleep(0.6 * (attempt + 1))
+            if names:
+                concept_map[sym] = [n.strip() for n in names[:5]]
 
             if (i + 1) % 200 == 0:
                 save_concept_map(concept_map)
                 _log(f'[ConceptCache] {i+1}/{len(missing)} filled, {len(concept_map)} with concepts')
-            _time.sleep(0.15)
+            _time.sleep(0.4)  # 成功间隔，降低反爬触发
 
         save_concept_map(concept_map)
         _log(f'[ConceptCache] Done: {len(concept_map)}/{len(symbols)} stocks with concepts')
