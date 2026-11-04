@@ -82,18 +82,15 @@ class GraphSetup:
         self.conditional_logic = conditional_logic
         self.data_collector = data_collector
 
-        # 模型分层策略：关键任务使用深度推理模型
+        # 模型分层策略：仅最终决策（Risk Judge）使用深度推理模型，其余全部快速模型
         self.ANALYST_MODEL_MAPPING = {
-            # 快速模型（数据密集型，简单处理）
             'market': 'quick',
             'social': 'quick',
             'news': 'quick',
             'macro': 'quick',
-
-            # 深度模型（复杂推理任务）
-            'smart_money': 'deep',
-            'volume_price': 'deep',
-            'fundamentals': 'deep',
+            'smart_money': 'quick',
+            'volume_price': 'quick',
+            'fundamentals': 'quick',
         }
 
     def _get_llm_for_analyst(self, analyst_type: str):
@@ -185,7 +182,7 @@ class GraphSetup:
             self.quick_thinking_llm, self.bear_memory
         )
         research_manager_node = factories["create_research_manager"](
-            self.deep_thinking_llm, self.invest_judge_memory, self.data_collector
+            self.quick_thinking_llm, self.invest_judge_memory, self.data_collector
         )
         trader_node = factories["create_trader"](self.quick_thinking_llm, self.trader_memory)
 
@@ -195,7 +192,7 @@ class GraphSetup:
         conservative_analyst = factories["create_conservative_debator"](self.quick_thinking_llm)
         risk_manager_node = factories["create_risk_manager"](
             self.deep_thinking_llm, self.risk_manager_memory, self.data_collector
-        )
+        )  # 最终决策保留深度推理模型
 
         # Create workflow
         workflow = StateGraph(AgentState)

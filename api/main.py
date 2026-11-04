@@ -643,7 +643,7 @@ def _utcnow_iso() -> str:
 
 
 _JOB_TIMEOUT = int(os.getenv("TA_JOB_TIMEOUT", "1800"))  # seconds (默认 30 分钟，适配多 Agent 长流程分析)
-_ANALYZE_CONCURRENCY = int(os.getenv("ANALYZE_CONCURRENCY", "5"))  # API 手动触发分析的最大并发数
+_ANALYZE_CONCURRENCY = int(os.getenv("ANALYZE_CONCURRENCY", "3"))  # API 手动触发分析的最大并发数
 _analyze_slots: Optional[asyncio.Semaphore] = None
 
 
