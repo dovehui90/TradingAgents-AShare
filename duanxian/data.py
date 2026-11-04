@@ -327,6 +327,18 @@ def get_theme_reasons(date: str) -> str:
         except Exception as pw_exc:
             logger.warning(f"playwright 调用异常: {pw_exc}")
 
+        # 最终降级：使用 akshare 行业数据
+        try:
+            import akshare as ak
+            df = ak.stock_zt_pool_em(date=_ymd(date))
+            if df is not None and not df.empty and '所属行业' in df.columns:
+                industry_counts = df['所属行业'].value_counts().head(12)
+                hot = [(idx, cnt) for idx, cnt in industry_counts.items()]
+                return f"{date} 涨停股行业热度 TOP（基于 akshare 所属行业，非问财题材串）：" + \
+                       "、".join(f"{t}×{c}" for t, c in hot)
+        except Exception as ak_exc:
+            logger.warning(f"akshare 行业数据也失败: {ak_exc}")
+
         # 最终降级
         return _degrade_msg("题材涨停原因", date, f"涨停原因题材串未取到：{err}")
     except Exception as exc:  # noqa: BLE001
