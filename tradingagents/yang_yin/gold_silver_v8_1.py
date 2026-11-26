@@ -3,6 +3,8 @@
 11特征：7个阳谱EMA序列 + 4个全市场面板统计。
 """
 
+import hashlib
+import json
 import logging
 
 import numpy as np
@@ -76,17 +78,51 @@ def compute_market_features(panel: pd.DataFrame, trade_date: str) -> dict | None
 
 
 def compute_market_features_all(panel: pd.DataFrame) -> pd.DataFrame:
-    """计算面板中所有日期的大盘情绪特征，返回DataFrame。"""
-    rows = []
-    for td in sorted(panel["trade_date"].unique()):
-        r = compute_market_features(panel, str(td))
-        if r:
-            rows.append(r)
-    if not rows:
+    """向量化计算面板中所有日期的大盘情绪特征。
+
+    等价于旧版逐日 compute_market_features 的结果，但用 groupby 一次算完，
+    避免对 77 万行面板做 O(天数) 次全表过滤（原为 234 次 × 77 万行）。
+    """
+    if panel is None or panel.empty:
         return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    df["trade_date"] = df["trade_date"].astype(str)
-    return df.set_index("trade_date")
+
+    df = panel[["trade_date", "pct_chg", "vol"]]
+
+    is_up = df["pct_chg"] > 0
+    is_down = df["pct_chg"] < 0
+    is_limit_up = df["pct_chg"] >= 9.9
+
+    g = df.groupby("trade_date", sort=True)
+    all_dates = g["pct_chg"].mean().index  # 已排序的全日期索引
+
+    up_mean = (
+        df[is_up].groupby("trade_date", sort=True)["pct_chg"].mean()
+        .reindex(all_dates).fillna(0.0)
+    )
+    up_vol = (
+        df[is_up].groupby("trade_date", sort=True)["vol"].sum()
+        .reindex(all_dates).fillna(0.0)
+    )
+    # 复刻旧语义 max(down_vol, 1.0)：无下跌股 → 1.0，且下限夹到 1.0
+    down_vol = (
+        df[is_down].groupby("trade_date", sort=True)["vol"].sum()
+        .reindex(all_dates).fillna(1.0).clip(lower=1.0)
+    )
+    limit_up_count = (
+        df[is_limit_up].groupby("trade_date", sort=True).size()
+        .reindex(all_dates).fillna(0).astype(int)
+    )
+    mean_chg_raw = g["pct_chg"].mean()
+
+    out = pd.DataFrame({
+        "up_mean": up_mean.values,
+        "vol_ratio_raw": (up_vol / down_vol).values,
+        "limit_up_count": limit_up_count.values,
+        "mean_chg_raw": mean_chg_raw.values,
+    }, index=all_dates)
+    out.index = out.index.astype(str)
+    out.index.name = "trade_date"
+    return out
 
 
 def compute_features(
@@ -240,4 +276,40 @@ def save_gold_finger_history(df: pd.DataFrame, pipeline: YangYinPipeline = None)
         return
     path = _history_path(pipeline)
     df.to_parquet(path, index=False)
+    # 写参数指纹：模型参数一旦变更，下次增量会检测到并回退全量重算
+    try:
+        with open(_fingerprint_path(pipeline), "w", encoding="utf-8") as f:
+            json.dump({"fingerprint": _params_fingerprint()}, f)
+    except Exception as e:
+        logger.warning(f"金/银手指参数指纹写入失败: {e}")
     logger.info(f"金/银手指历史已保存: {path} ({len(df)} 条)")
+
+
+def _fingerprint_path(pipeline: YangYinPipeline = None):
+    if pipeline is None:
+        pipeline = YangYinPipeline()
+    return pipeline.summary_dir / "gold_finger_history.meta.json"
+
+
+def _params_fingerprint() -> str:
+    """模型参数指纹：COEF/SCALER/INTERCEPT 任一变化，指纹随之变化。
+
+    用于增量场景：历史信号是「参数」的函数，参数变了历史必须全量重算，
+    否则新旧日期用不同参数会产生前后不一致。
+    """
+    payload = json.dumps(
+        {"intercept": INTERCEPT, "coef": COEF, "mean": SCALER_MEAN, "std": SCALER_STD},
+        sort_keys=True, default=str,
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def _history_matches_params(pipeline: YangYinPipeline = None) -> bool:
+    """已有历史是否匹配当前模型参数。无指纹/指纹不符 → False（触发全量回填）。"""
+    fp = _fingerprint_path(pipeline)
+    if not fp.exists():
+        return False
+    try:
+        return json.loads(fp.read_text(encoding="utf-8")).get("fingerprint") == _params_fingerprint()
+    except Exception:
+        return False

@@ -205,20 +205,76 @@ def save_prev_yangpu(yang_pct: float, trade_date: str = None,
 
 
 def _update_gold_finger(panel, pipeline, trade_date):
-    """更新金/银手指历史。盘后 panel 已更新时调用。"""
+    """更新金/银手指历史。盘后 panel 已更新时调用。
+
+    增量路径：复用已有历史，只重算今天及缺失日期；首次运行或模型参数
+    变更时回退全量 generate_history。
+    """
     try:
-        from .gold_silver_v8_1 import generate_history, save_gold_finger_history, load_gold_finger_history
+        from .gold_silver_v8_1 import (
+            generate_history, save_gold_finger_history, load_gold_finger_history,
+            _history_matches_params,
+        )
 
         yang_hist = load_history(pipeline)
-        gold_df = generate_history(panel, yang_hist)
+        if yang_hist.empty:
+            return
+
+        prev_history = load_gold_finger_history(pipeline)
+        if prev_history is None or prev_history.empty or not _history_matches_params(pipeline):
+            gold_df = generate_history(panel, yang_hist)   # 首次 / 参数变了 → 全量回填
+        else:
+            gold_df = _incremental_gold_finger(panel, yang_hist, prev_history)
+
         if not gold_df.empty:
             save_gold_finger_history(gold_df, pipeline)
-            latest = gold_df[gold_df["trade_date"] == str(trade_date)]
+            latest = gold_df[gold_df["trade_date"].astype(str) == str(trade_date)]
             if not latest.empty:
                 sig = "金" if latest.iloc[0]["signal"] == 1 else "银"
                 logger.info(f"金/银手指: {trade_date} → {sig} ({latest.iloc[0]['prob']:.3f})")
     except Exception:
         logger.warning("金/银手指更新失败", exc_info=True)
+
+
+def _incremental_gold_finger(panel, yang_hist, prev_history):
+    """增量计算金/银手指：复用历史信号，只重算历史末之后的日期（及最后一天）。
+
+    链式 prev_signal 取「待算日之前最后一天」的 signal，不能取历史最后一行，
+    否则盘中同一交易日第二次扫描会拿「今天的旧值」当 prev 造成自反馈。
+    """
+    from .gold_silver_v8_1 import (
+        compute_market_features_all, compute_features, predict_gold_finger,
+    )
+
+    mkt_feat = compute_market_features_all(panel)
+
+    prev_history = prev_history.sort_values("trade_date").reset_index(drop=True)
+    prev_history["trade_date"] = prev_history["trade_date"].astype(str)
+
+    yang_dates = [str(td) for td in yang_hist["trade_date"].tolist()]
+    if not yang_dates:
+        return prev_history
+
+    last_existing = prev_history.iloc[-1]["trade_date"]
+    # 待算日期 = 历史末之后的新日期；没有新日期则重算最后一天（盘中/盘后覆盖今天）
+    tail = [td for td in yang_dates if td > last_existing]
+    to_compute = tail or [yang_dates[-1]]
+
+    first_td = min(to_compute)
+    prior = prev_history[prev_history["trade_date"] < first_td]
+    prev_signal = int(prior.iloc[-1]["signal"]) if not prior.empty else 1
+
+    # 以历史为底，逐日覆盖/追加，算不出则保留原值（不丢数据）
+    hist_map = {r["trade_date"]: r for r in prev_history.to_dict("records")}
+    for td in to_compute:
+        feats = compute_features(yang_hist, mkt_feat, td, prev_signal)
+        if feats is None:
+            continue
+        signal, prob = predict_gold_finger(feats)
+        hist_map[td] = {"trade_date": td, "signal": signal, "prob": round(prob, 4)}
+        prev_signal = signal
+
+    return pd.DataFrame(list(hist_map.values())).sort_values("trade_date").reset_index(drop=True)
 
 
 # ── 红绿背景（中期趋势）──────────────────────────────
